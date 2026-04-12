@@ -53,7 +53,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
         <div className={`h-16 flex items-center border-b border-gray-100 ${collapsed ? "justify-center px-2" : "justify-between px-5"}`}>
           {!collapsed && (
             <Link href="/admin" className="flex items-center gap-2">
-              <img src="/logo-green.png" alt="Agentro" className="h-7 w-auto" />
+              <img src="/logo-green.png" alt="Agentro" className="h-9 w-auto" />
               <span className="text-[10px] font-semibold bg-violet-100 text-violet-700 px-1.5 py-0.5 rounded-md uppercase tracking-wide">
                 Admin
               </span>
