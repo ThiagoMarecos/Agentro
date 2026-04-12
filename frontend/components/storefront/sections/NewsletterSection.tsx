@@ -47,7 +47,7 @@ export function NewsletterSection({ config }: NewsletterSectionProps) {
             style={{
               backgroundColor: "rgba(255,255,255,0.95)",
               color: "var(--color-text)",
-              ringColor: "var(--color-accent)",
+              outlineColor: "var(--color-accent)",
             }}
           />
           <button

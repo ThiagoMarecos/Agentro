@@ -128,7 +128,7 @@ export async function executeImport(storeId: string, data: ImportRequest): Promi
   const res = await fetch(`${IMPORT_API_URL}/import/execute`, {
     method: "POST",
     headers: authHeaders(storeId),
-    body: JSON.stringify({ url: "", ...data }),
+    body: JSON.stringify({ ...data }),
   });
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
