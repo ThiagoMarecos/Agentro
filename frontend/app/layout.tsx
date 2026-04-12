@@ -22,6 +22,10 @@ const jetbrainsMono = JetBrains_Mono({
 export const metadata: Metadata = {
   title: "Agentro - Tu tienda online. La IA vende por vos.",
   description: "Creá tu tienda en minutos. Sin complicaciones. La inteligencia artificial atiende a tus clientes 24/7.",
+  icons: {
+    icon: "/favicon.png",
+    apple: "/favicon.png",
+  },
 };
 
 export default function RootLayout({
