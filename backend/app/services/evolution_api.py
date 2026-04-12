@@ -9,7 +9,7 @@ from typing import Any
 
 import httpx
 
-from app.config import get_settings
+from app.config import get_dynamic_setting
 
 logger = logging.getLogger(__name__)
 
@@ -28,20 +28,19 @@ class EvolutionAPIError(Exception):
 
 
 def _base_url() -> str:
-    settings = get_settings()
-    url = settings.evolution_api_url.rstrip("/")
+    url = get_dynamic_setting("evolution_api_url").rstrip("/")
     if not url:
         raise EvolutionAPIError("EVOLUTION_API_URL no configurada", 500)
     return url
 
 
 def _headers() -> dict:
-    settings = get_settings()
-    if not settings.evolution_api_key:
+    key = get_dynamic_setting("evolution_api_key")
+    if not key:
         raise EvolutionAPIError("EVOLUTION_API_KEY no configurada", 500)
     return {
         "Content-Type": "application/json",
-        "apikey": settings.evolution_api_key,
+        "apikey": key,
     }
 
 

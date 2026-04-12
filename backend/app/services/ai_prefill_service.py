@@ -13,7 +13,7 @@ import httpx
 from openai import OpenAI
 from sqlalchemy.orm import Session
 
-from app.config import get_settings
+from app.config import get_settings, get_dynamic_setting
 from app.models.product import Product
 
 # Mismo directorio de uploads que el endpoint de upload
@@ -97,8 +97,9 @@ def ai_prefill_product(db: Session, store_id: str, description: str) -> dict:
         una lista de `images` con URLs ya guardadas en el servidor.
     """
     settings = get_settings()
+    openai_key = get_dynamic_setting("openai_api_key")
 
-    if not settings.openai_api_key:
+    if not openai_key:
         raise ValueError("OPENAI_API_KEY no configurada en el servidor.")
 
     # Categorías disponibles en la tienda
@@ -110,7 +111,7 @@ def ai_prefill_product(db: Session, store_id: str, description: str) -> dict:
     next_sku = _get_next_sku(db, store_id)
 
     # ── Llamada a OpenAI ──────────────────────────────────────────────────────
-    client = OpenAI(api_key=settings.openai_api_key)
+    client = OpenAI(api_key=openai_key)
 
     system_prompt = (
         "Sos un experto en e-commerce y copywriting para tiendas online latinoamericanas. "
@@ -162,8 +163,9 @@ Importante:
     images: list[dict] = []
     pexels_query = product_data.pop("pexels_query", description)
 
-    if settings.pexels_api_key:
-        pexels_results = _search_pexels_images(pexels_query, settings.pexels_api_key, count=3)
+    pexels_key = get_dynamic_setting("pexels_api_key")
+    if pexels_key:
+        pexels_results = _search_pexels_images(pexels_query, pexels_key, count=3)
         for i, photo in enumerate(pexels_results):
             saved_url = _download_pexels_image(photo["pexels_url"], store_id)
             if saved_url:

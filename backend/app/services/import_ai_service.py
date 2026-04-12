@@ -13,7 +13,7 @@ from urllib.parse import urlparse
 import httpx
 from openai import OpenAI
 
-from app.config import get_settings
+from app.config import get_settings, get_dynamic_setting
 
 logger = logging.getLogger(__name__)
 
@@ -311,8 +311,9 @@ def generate_missing_descriptions(
     Processes ALL products needing descriptions in a single API call.
     """
     settings = get_settings()
+    openai_key = get_dynamic_setting("openai_api_key")
 
-    if not settings.openai_api_key:
+    if not openai_key:
         logger.warning("OpenAI API key not configured — skipping AI descriptions")
         return products
 
@@ -349,7 +350,7 @@ def generate_missing_descriptions(
     products_text = "\n\n".join(product_entries)
 
     try:
-        client = OpenAI(api_key=settings.openai_api_key)
+        client = OpenAI(api_key=openai_key)
 
         system_prompt = (
             "Sos un experto en productos de consumo con conocimiento enciclopédico de marcas, "

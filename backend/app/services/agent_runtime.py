@@ -14,7 +14,7 @@ from datetime import datetime, timezone
 from openai import OpenAI
 from sqlalchemy.orm import Session
 
-from app.config import get_settings
+from app.config import get_settings, get_dynamic_setting
 from app.models.ai import Conversation, Message, AIAgent
 from app.models.customer import Customer
 from app.models.sales_session import SalesSession, EMPTY_NOTEBOOK
@@ -26,8 +26,10 @@ MAX_TOOL_ITERATIONS = 10
 
 
 def _get_openai_client() -> OpenAI:
-    settings = get_settings()
-    return OpenAI(api_key=settings.openai_api_key)
+    api_key = get_dynamic_setting("openai_api_key")
+    if not api_key:
+        raise ValueError("OPENAI_API_KEY no configurada en el servidor.")
+    return OpenAI(api_key=api_key)
 
 
 def _find_or_create_customer(
