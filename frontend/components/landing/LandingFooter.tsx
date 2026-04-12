@@ -4,8 +4,8 @@ export function LandingFooter() {
   return (
     <footer className="border-t border-white/[0.06]">
       <div className="max-w-5xl mx-auto px-6 py-12 flex flex-col sm:flex-row items-center justify-between gap-6">
-        <Link href="/" className="brand-agentro text-base">
-          Agentro
+        <Link href="/">
+          <img src="/logo-white.png" alt="Agentro" className="h-6 w-auto" />
         </Link>
         <div className="flex gap-6 text-[13px] text-text-muted">
           <Link href="/privacy" className="hover:text-text-primary transition-colors">Privacidad</Link>

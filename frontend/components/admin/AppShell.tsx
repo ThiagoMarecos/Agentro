@@ -78,8 +78,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         {/* Logo */}
         <div className={`h-16 flex items-center border-b border-gray-100 ${collapsed ? "justify-center px-2" : "justify-between px-5"}`}>
           {!collapsed && (
-            <Link href="/app" className="text-xl font-display font-bold bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent">
-              Agentro
+            <Link href="/app">
+              <img src="/logo-green.png" alt="Agentro" className="h-7 w-auto" />
             </Link>
           )}
           <button

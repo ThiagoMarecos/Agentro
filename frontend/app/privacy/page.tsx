@@ -28,8 +28,8 @@ export default function PrivacyPage() {
     <div className="min-h-screen bg-background landing-bg">
       <header className="border-b border-white/10">
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
-          <Link href="/" className="brand-agentro text-xl hover:opacity-90 transition-opacity">
-            Agentro
+          <Link href="/" className="hover:opacity-90 transition-opacity">
+            <img src="/logo-white.png" alt="Agentro" className="h-8 w-auto" />
           </Link>
           <Link href="/" className="text-sm text-text-muted hover:text-white transition">
             Volver al inicio
