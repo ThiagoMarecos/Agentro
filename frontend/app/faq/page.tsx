@@ -10,7 +10,7 @@ export default function FAQPage() {
       <header className="border-b border-white/10">
         <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
           <Link href="/" className="hover:opacity-90 transition-opacity">
-            <img src="/logo-white.png" alt="Agentro" className="h-10 w-auto" />
+            <img src="/logo-white.png" alt="Agentro" className="h-7 w-auto" />
           </Link>
           <nav className="flex gap-6">
             <Link href="/" className="text-text-muted hover:text-text-primary">Inicio</Link>

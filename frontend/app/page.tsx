@@ -38,7 +38,7 @@ function Navbar() {
     <header className="fixed top-0 left-0 right-0 z-50 bg-white/70 backdrop-blur-2xl border-b border-black/[0.04]">
       <nav className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
         <Link href="/">
-          <img src="/logo-green.png" alt="Agentro" className="h-10 w-auto" />
+          <img src="/logo-black.png" alt="Agentro" className="h-7 w-auto" />
         </Link>
         <div className="flex items-center gap-2">
           {isLoading ? (

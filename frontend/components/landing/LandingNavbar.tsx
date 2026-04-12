@@ -23,7 +23,7 @@ export function LandingNavbar() {
     >
       <nav className="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
         <Link href="/">
-          <img src="/logo-white.png" alt="Agentro" className="h-9 w-auto" />
+          <img src="/logo-white.png" alt="Agentro" className="h-7 w-auto" />
         </Link>
 
         <div className="hidden sm:flex items-center gap-1">

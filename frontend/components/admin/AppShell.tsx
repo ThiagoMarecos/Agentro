@@ -79,7 +79,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <div className={`h-16 flex items-center border-b border-gray-100 ${collapsed ? "justify-center px-2" : "justify-between px-5"}`}>
           {!collapsed && (
             <Link href="/app">
-              <img src="/logo-green.png" alt="Agentro" className="h-9 w-auto" />
+              <img src="/logo-black.png" alt="Agentro" className="h-7 w-auto" />
             </Link>
           )}
           <button
