@@ -57,7 +57,7 @@ export function TemplateStep({
         </button>
         <button
           onClick={handleNext}
-          className="bg-gradient-nexora px-6 py-3 rounded-lg font-semibold text-white hover:opacity-90"
+          className="bg-gradient-agentro px-6 py-3 rounded-lg font-semibold text-white hover:opacity-90"
         >
           Siguiente
         </button>

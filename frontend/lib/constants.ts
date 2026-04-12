@@ -1,9 +1,9 @@
 /**
- * Constantes de Nexora
+ * Constantes de Agentro
  */
 
 export const BRAND = {
-  name: "Nexora",
+  name: "Agentro",
   slogan: "Build stores. Let AI sell.",
   colors: {
     primary: "#6366F1",

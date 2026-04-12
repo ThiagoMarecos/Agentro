@@ -1,5 +1,5 @@
 /**
- * Cliente API para Nexora
+ * Cliente API para Agentro
  * Base para llamadas al backend
  */
 

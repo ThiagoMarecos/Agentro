@@ -26,7 +26,7 @@ interface CartContextType {
 const CartContext = createContext<CartContextType | null>(null);
 
 function getStorageKey(slug: string) {
-  return `nexora_cart_${slug}`;
+  return `agentro_cart_${slug}`;
 }
 
 export function CartProvider({ slug, children }: { slug: string; children: React.ReactNode }) {

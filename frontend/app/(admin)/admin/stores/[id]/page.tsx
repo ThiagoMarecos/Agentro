@@ -155,7 +155,7 @@ export default function AdminStoreDetailPage() {
             </div>
             <div>
               <h1 className="text-2xl font-bold text-gray-900">{store.name}</h1>
-              <p className="text-sm text-gray-400">{store.slug}.nexora.com</p>
+              <p className="text-sm text-gray-400">{store.slug}.getagentro.com</p>
             </div>
             {store.is_active ? (
               <span className="ml-2 inline-flex items-center gap-1 text-xs font-medium text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full">

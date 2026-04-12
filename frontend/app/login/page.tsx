@@ -41,12 +41,12 @@ function LoginForm() {
 
   return (
     <div className="w-full max-w-md p-8 rounded-2xl glass">
-      <Link href="/" className="inline-block brand-nexora text-lg mb-6 hover:opacity-90 transition-opacity">
-        Nexora
+      <Link href="/" className="inline-block brand-agentro text-lg mb-6 hover:opacity-90 transition-opacity">
+        Agentro
       </Link>
       <h1 className="heading-page text-2xl mb-2">Iniciar sesion</h1>
       <p className="text-text-muted text-sm mb-6">
-        Accede a tu panel de Nexora
+        Accede a tu panel de Agentro
       </p>
 
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -87,7 +87,7 @@ function LoginForm() {
         <button
           type="submit"
           disabled={loading}
-          className="w-full bg-gradient-nexora py-3 rounded-lg font-semibold text-white hover:opacity-90 transition disabled:opacity-50"
+          className="w-full bg-gradient-agentro py-3 rounded-lg font-semibold text-white hover:opacity-90 transition disabled:opacity-50"
         >
           {loading ? "Entrando..." : "Entrar"}
         </button>

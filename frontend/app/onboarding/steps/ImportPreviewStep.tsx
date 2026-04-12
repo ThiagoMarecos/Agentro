@@ -274,7 +274,7 @@ export function ImportPreviewStep({ data, onNext, onBack }: ImportPreviewStepPro
         </button>
         <button
           onClick={handleNext}
-          className="bg-gradient-nexora px-6 py-3 rounded-xl font-semibold text-white hover:opacity-90 transition"
+          className="bg-gradient-agentro px-6 py-3 rounded-xl font-semibold text-white hover:opacity-90 transition"
         >
           {totalSelections > 0 ? `Continuar con ${totalSelections} elementos` : "Continuar sin importar"}
         </button>

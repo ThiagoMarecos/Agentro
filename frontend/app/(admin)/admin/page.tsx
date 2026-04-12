@@ -79,7 +79,7 @@ export default function AdminDashboardPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-        <p className="text-sm text-gray-500 mt-1">Vista general de toda la plataforma Nexora</p>
+        <p className="text-sm text-gray-500 mt-1">Vista general de toda la plataforma Agentro</p>
       </div>
 
       {/* Stats */}
@@ -129,7 +129,7 @@ export default function AdminDashboardPage() {
                   </div>
                   <div>
                     <p className="text-sm font-medium text-gray-900">{store.name}</p>
-                    <p className="text-xs text-gray-400">{store.slug}.nexora.com</p>
+                    <p className="text-xs text-gray-400">{store.slug}.getagentro.com</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">

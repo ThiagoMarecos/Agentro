@@ -5,7 +5,7 @@ import { useAuth } from "@/app/providers/AuthProvider";
 import { authFetch } from "@/lib/auth";
 
 const API_URL = "/api/v1";
-const STORE_KEY = "nexora_current_store_id";
+const STORE_KEY = "agentro_current_store_id";
 
 export interface Store {
   id: string;

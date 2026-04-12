@@ -191,7 +191,7 @@ export function FinishStep({
         <button
           onClick={handleCreate}
           disabled={loading}
-          className="bg-gradient-nexora px-6 py-3 rounded-xl font-semibold text-white hover:opacity-90 disabled:opacity-50 transition inline-flex items-center gap-2"
+          className="bg-gradient-agentro px-6 py-3 rounded-xl font-semibold text-white hover:opacity-90 disabled:opacity-50 transition inline-flex items-center gap-2"
         >
           {loading ? (
             <>

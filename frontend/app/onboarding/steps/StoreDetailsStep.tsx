@@ -47,7 +47,7 @@ export function StoreDetailsStep({
     <div>
       <h1 className="heading-page text-2xl mb-2">Detalles de tu tienda</h1>
       <p className="text-text-muted mb-6">
-        El slug será la URL de tu tienda: nexora.com/store/tu-slug
+        El slug será la URL de tu tienda: getagentro.com/store/tu-slug
       </p>
 
       {error && (
@@ -89,7 +89,7 @@ export function StoreDetailsStep({
         </button>
         <button
           onClick={handleNext}
-          className="bg-gradient-nexora px-6 py-3 rounded-lg font-semibold text-white hover:opacity-90"
+          className="bg-gradient-agentro px-6 py-3 rounded-lg font-semibold text-white hover:opacity-90"
         >
           Siguiente
         </button>

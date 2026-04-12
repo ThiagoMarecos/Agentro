@@ -17,7 +17,7 @@ export function HeroSection() {
         <h1 className="heading-page text-[clamp(2.5rem,7vw,5.5rem)] leading-[1] tracking-tight mb-8 opacity-0 animate-fade-in-up delay-100">
           Creá tu tienda.
           <br />
-          <span className="text-gradient-nexora">La IA vende por vos.</span>
+          <span className="text-gradient-agentro">La IA vende por vos.</span>
         </h1>
 
         <p className="text-lg sm:text-xl text-text-muted leading-relaxed max-w-lg mx-auto mb-12 opacity-0 animate-fade-in-up delay-200">

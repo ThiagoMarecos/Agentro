@@ -9,13 +9,13 @@ export default function FeaturesPage() {
     <div className="min-h-screen bg-background landing-bg">
       <header className="border-b border-white/10">
         <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
-          <Link href="/" className="brand-nexora text-xl hover:opacity-90 transition-opacity">
-            Nexora
+          <Link href="/" className="brand-agentro text-xl hover:opacity-90 transition-opacity">
+            Agentro
           </Link>
           <nav className="flex gap-6">
             <Link href="/" className="text-text-muted hover:text-text-primary">Inicio</Link>
             <Link href="/login" className="text-text-muted hover:text-text-primary">Iniciar sesión</Link>
-            <Link href="/signup" className="bg-gradient-nexora px-4 py-2 rounded-lg">Registrarse</Link>
+            <Link href="/signup" className="bg-gradient-agentro px-4 py-2 rounded-lg">Registrarse</Link>
           </nav>
         </div>
       </header>

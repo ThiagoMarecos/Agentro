@@ -385,7 +385,7 @@ function ChatPageInner() {
               href="/"
               className="font-semibold text-indigo-600 hover:text-indigo-700 transition"
             >
-              Nexora
+              Agentro
             </Link>
           </p>
         </div>

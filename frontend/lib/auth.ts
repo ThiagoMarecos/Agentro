@@ -3,8 +3,8 @@
  */
 
 const API_URL = "/api/v1";
-const TOKEN_KEY = "nexora_access_token";
-const REFRESH_KEY = "nexora_refresh_token";
+const TOKEN_KEY = "agentro_access_token";
+const REFRESH_KEY = "agentro_refresh_token";
 
 export interface User {
   id: string;

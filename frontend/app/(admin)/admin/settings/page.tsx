@@ -98,7 +98,7 @@ function SettingRow({
       </div>
 
       {/* Value */}
-      <div className="sm:w-2/3 flex items-center gap-2">
+      <div className="sm:w-2/3 flex items-center gap-2 min-w-0">
         {isEditing ? (
           <>
             <input
@@ -139,11 +139,12 @@ function SettingRow({
         ) : (
           <>
             <div
-              className={`flex-1 px-3 py-2.5 rounded-lg border text-sm font-mono select-all cursor-text ${
+              className={`flex-1 min-w-0 px-3 py-2.5 rounded-lg border text-sm font-mono select-all cursor-text truncate ${
                 setting.has_value
                   ? "border-gray-200 bg-gray-50 text-gray-600"
                   : "border-red-200 bg-red-50/50 text-red-400"
               }`}
+              title={setting.has_value ? displayText : "Sin configurar"}
             >
               {setting.has_value ? displayText : "Sin configurar"}
             </div>
@@ -151,7 +152,7 @@ function SettingRow({
             {setting.has_value && setting.is_secret && (
               <button
                 onClick={onToggleReveal}
-                className={`p-2 rounded-lg border transition ${
+                className={`flex-shrink-0 p-2 rounded-lg border transition ${
                   revealed
                     ? "border-violet-200 bg-violet-50 text-violet-600"
                     : "border-gray-200 hover:bg-gray-50 text-gray-400 hover:text-gray-600"
@@ -164,7 +165,7 @@ function SettingRow({
 
             <button
               onClick={onStartEdit}
-              className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 text-gray-400 hover:text-gray-600 transition"
+              className="flex-shrink-0 p-2 rounded-lg border border-gray-200 hover:bg-gray-50 text-gray-400 hover:text-gray-600 transition"
               title="Editar"
             >
               <Pencil className="w-4 h-4" />
@@ -301,7 +302,7 @@ export default function PlatformSettingsPage() {
           <div>
             <h1 className="text-2xl font-bold text-gray-900">API Keys & Configuración</h1>
             <p className="text-sm text-gray-500">
-              Gestiona las claves necesarias para que Nexora funcione al 100%
+              Gestiona las claves necesarias para que Agentro funcione al 100%
             </p>
           </div>
         </div>

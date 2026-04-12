@@ -38,7 +38,7 @@ function Navbar() {
     <header className="fixed top-0 left-0 right-0 z-50 bg-white/70 backdrop-blur-2xl border-b border-black/[0.04]">
       <nav className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
         <Link href="/" className="text-xl font-display font-bold text-gray-900">
-          Nexora
+          Agentro
         </Link>
         <div className="flex items-center gap-2">
           {isLoading ? (
@@ -327,7 +327,7 @@ function AIDemo() {
               </div>
               <div className="flex justify-start">
                 <div className="bg-indigo-500/15 backdrop-blur-sm rounded-2xl rounded-bl-md px-4 py-2.5 max-w-[80%] border border-indigo-500/10">
-                  <p className="text-xs text-indigo-300 font-medium mb-1">Nexora IA</p>
+                  <p className="text-xs text-indigo-300 font-medium mb-1">Agentro IA</p>
                   <p className="text-sm text-gray-200">
                     ¡Hola! Sí, la <strong className="text-white">Remera Oversize</strong> talle L está disponible.
                     Precio: <strong className="text-white">$4.500</strong>. Hay 23 en stock. ¿La agrego al carrito?
@@ -436,7 +436,7 @@ function Footer() {
   return (
     <footer className="bg-white border-t border-gray-100 py-10">
       <div className="max-w-6xl mx-auto px-6 flex items-center justify-between">
-        <span className="text-sm text-gray-400">© {new Date().getFullYear()} Nexora</span>
+        <span className="text-sm text-gray-400">© {new Date().getFullYear()} Agentro</span>
         <div className="flex gap-6 text-sm text-gray-400">
           <Link href="/privacy" className="hover:text-gray-600 transition">Privacidad</Link>
           <Link href="/terms" className="hover:text-gray-600 transition">Términos</Link>

@@ -79,7 +79,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <div className={`h-16 flex items-center border-b border-gray-100 ${collapsed ? "justify-center px-2" : "justify-between px-5"}`}>
           {!collapsed && (
             <Link href="/app" className="text-xl font-display font-bold bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent">
-              Nexora
+              Agentro
             </Link>
           )}
           <button
@@ -190,7 +190,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 </div>
                 <div>
                   <p className="text-sm font-medium text-gray-900">{currentStore.name}</p>
-                  <p className="text-xs text-gray-400">{currentStore.slug}.nexora.com</p>
+                  <p className="text-xs text-gray-400">{currentStore.slug}.getagentro.com</p>
                 </div>
               </>
             )}
@@ -232,7 +232,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   </ul>
                 </div>
                 <p className="text-sm text-gray-400">
-                  Si creés que es un error, contactá al soporte de Nexora para más información.
+                  Si creés que es un error, contactá al soporte de Agentro para más información.
                 </p>
                 {stores.length > 1 && (
                   <p className="text-sm text-indigo-600 mt-4">

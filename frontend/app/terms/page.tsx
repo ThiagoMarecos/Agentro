@@ -1,5 +1,5 @@
 /**
- * Términos de Uso — Nexora
+ * Términos de Uso — Agentro
  */
 
 import Link from "next/link";
@@ -28,8 +28,8 @@ export default function TermsPage() {
     <div className="min-h-screen bg-background landing-bg">
       <header className="border-b border-white/10">
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
-          <Link href="/" className="brand-nexora text-xl hover:opacity-90 transition-opacity">
-            Nexora
+          <Link href="/" className="brand-agentro text-xl hover:opacity-90 transition-opacity">
+            Agentro
           </Link>
           <Link href="/" className="text-sm text-text-muted hover:text-white transition">
             Volver al inicio
@@ -42,14 +42,14 @@ export default function TermsPage() {
         <p className="text-text-muted text-sm mb-12">Última actualización: 9 de marzo de 2026</p>
 
         <Section title="1. Introducción">
-          <p>Bienvenido a Nexora.</p>
+          <p>Bienvenido a Agentro.</p>
           <p>
-            Estos Términos de Uso regulan el acceso y utilización de la plataforma Nexora, incluyendo
+            Estos Términos de Uso regulan el acceso y utilización de la plataforma Agentro, incluyendo
             el sitio web, aplicaciones, servicios, software, herramientas de inteligencia artificial y
             cualquier funcionalidad relacionada.
           </p>
           <p>
-            Al acceder o utilizar Nexora, el usuario acepta quedar sujeto a estos términos. Si el
+            Al acceder o utilizar Agentro, el usuario acepta quedar sujeto a estos términos. Si el
             usuario no está de acuerdo con alguna parte de estos términos, debe abstenerse de utilizar
             el servicio.
           </p>
@@ -57,11 +57,11 @@ export default function TermsPage() {
 
         <Section title="2. Descripción del servicio">
           <p>
-            Nexora es una plataforma tecnológica que permite a usuarios crear tiendas online y utilizar
+            Agentro es una plataforma tecnológica que permite a usuarios crear tiendas online y utilizar
             agentes de inteligencia artificial para interactuar con clientes, automatizar conversaciones
             y facilitar procesos de venta.
           </p>
-          <p>Las funcionalidades de Nexora pueden incluir, entre otras:</p>
+          <p>Las funcionalidades de Agentro pueden incluir, entre otras:</p>
           <List items={[
             "Creación y gestión de tiendas online",
             "Gestión de productos y catálogos",
@@ -72,14 +72,14 @@ export default function TermsPage() {
             "Herramientas de gestión comercial",
           ]} />
           <p>
-            Nexora se reserva el derecho de modificar o actualizar las funcionalidades del servicio en
+            Agentro se reserva el derecho de modificar o actualizar las funcionalidades del servicio en
             cualquier momento.
           </p>
         </Section>
 
         <Section title="3. Registro de usuario">
           <p>
-            Para utilizar ciertas funcionalidades de Nexora, el usuario deberá crear una cuenta.
+            Para utilizar ciertas funcionalidades de Agentro, el usuario deberá crear una cuenta.
           </p>
           <p>El usuario se compromete a:</p>
           <List items={[
@@ -88,13 +88,13 @@ export default function TermsPage() {
             "Ser responsable de toda actividad realizada bajo su cuenta",
           ]} />
           <p>
-            Nexora no será responsable por accesos no autorizados derivados del uso indebido de
+            Agentro no será responsable por accesos no autorizados derivados del uso indebido de
             credenciales por parte del usuario.
           </p>
         </Section>
 
         <Section title="4. Uso permitido de la plataforma">
-          <p>El usuario acepta utilizar Nexora únicamente para fines legales y legítimos.</p>
+          <p>El usuario acepta utilizar Agentro únicamente para fines legales y legítimos.</p>
           <p>El usuario se compromete a no utilizar la plataforma para:</p>
           <List items={[
             "Actividades fraudulentas",
@@ -105,23 +105,23 @@ export default function TermsPage() {
             "Intento de acceso no autorizado a la infraestructura",
           ]} />
           <p>
-            Nexora se reserva el derecho de suspender o cancelar cuentas que incumplan estas normas.
+            Agentro se reserva el derecho de suspender o cancelar cuentas que incumplan estas normas.
           </p>
         </Section>
 
         <Section title="5. Uso de inteligencia artificial">
           <p>
-            Nexora utiliza agentes de inteligencia artificial para generar respuestas automatizadas a
+            Agentro utiliza agentes de inteligencia artificial para generar respuestas automatizadas a
             clientes.
           </p>
           <p>El usuario reconoce que:</p>
           <List items={[
             "Las respuestas generadas por IA pueden contener errores",
-            "Nexora no garantiza la exactitud absoluta de las respuestas generadas",
+            "Agentro no garantiza la exactitud absoluta de las respuestas generadas",
             "El usuario es responsable de supervisar las interacciones con clientes cuando lo considere necesario",
           ]} />
           <p>
-            Nexora no será responsable por decisiones comerciales tomadas exclusivamente a partir de
+            Agentro no será responsable por decisiones comerciales tomadas exclusivamente a partir de
             respuestas generadas por sistemas de inteligencia artificial.
           </p>
         </Section>
@@ -138,14 +138,14 @@ export default function TermsPage() {
             "Utilizar la información únicamente para fines legítimos",
           ]} />
           <p>
-            Nexora actúa únicamente como proveedor de infraestructura tecnológica y no es responsable
+            Agentro actúa únicamente como proveedor de infraestructura tecnológica y no es responsable
             por el uso que los usuarios hagan de los datos de clientes.
           </p>
         </Section>
 
         <Section title="7. Integraciones externas">
           <p>
-            La plataforma Nexora puede integrarse con servicios de terceros como plataformas de
+            La plataforma Agentro puede integrarse con servicios de terceros como plataformas de
             mensajería, proveedores de pago u otras herramientas externas.
           </p>
           <p>
@@ -153,7 +153,7 @@ export default function TermsPage() {
             establecidos por dichos proveedores.
           </p>
           <p>
-            Nexora no se responsabiliza por interrupciones, cambios o limitaciones impuestas por
+            Agentro no se responsabiliza por interrupciones, cambios o limitaciones impuestas por
             servicios externos.
           </p>
         </Section>
@@ -170,14 +170,14 @@ export default function TermsPage() {
           ]} />
           <p>El usuario conserva la propiedad sobre dicho contenido.</p>
           <p>
-            Sin embargo, al utilizar Nexora, el usuario concede a la plataforma una licencia limitada
+            Sin embargo, al utilizar Agentro, el usuario concede a la plataforma una licencia limitada
             para almacenar, procesar y mostrar dicho contenido con el único fin de proporcionar el
             servicio.
           </p>
         </Section>
 
         <Section title="9. Disponibilidad del servicio">
-          <p>Nexora se esfuerza por mantener el servicio disponible de forma continua.</p>
+          <p>Agentro se esfuerza por mantener el servicio disponible de forma continua.</p>
           <p>
             Sin embargo, el usuario reconoce que pueden ocurrir interrupciones debido a:
           </p>
@@ -186,14 +186,14 @@ export default function TermsPage() {
             "Actualizaciones de software",
             "Fallos técnicos",
             "Problemas en servicios externos",
-            "Causas fuera del control de Nexora",
+            "Causas fuera del control de Agentro",
           ]} />
-          <p>Nexora no garantiza disponibilidad ininterrumpida del servicio.</p>
+          <p>Agentro no garantiza disponibilidad ininterrumpida del servicio.</p>
         </Section>
 
         <Section title="10. Limitación de responsabilidad">
           <p>
-            En la medida máxima permitida por la ley, Nexora no será responsable por:
+            En la medida máxima permitida por la ley, Agentro no será responsable por:
           </p>
           <List items={[
             "Pérdidas comerciales",
@@ -206,7 +206,7 @@ export default function TermsPage() {
         </Section>
 
         <Section title="11. Suspensión o terminación de cuentas">
-          <p>Nexora se reserva el derecho de suspender o cancelar cuentas que:</p>
+          <p>Agentro se reserva el derecho de suspender o cancelar cuentas que:</p>
           <List items={[
             "Violen estos términos",
             "Utilicen la plataforma de manera abusiva",
@@ -221,8 +221,8 @@ export default function TermsPage() {
 
         <Section title="12. Propiedad intelectual">
           <p>
-            Todos los derechos relacionados con la plataforma Nexora, incluyendo software, diseño,
-            código, logotipos y funcionalidades, pertenecen a Nexora o a sus respectivos titulares.
+            Todos los derechos relacionados con la plataforma Agentro, incluyendo software, diseño,
+            código, logotipos y funcionalidades, pertenecen a Agentro o a sus respectivos titulares.
           </p>
           <p>
             Queda prohibida la reproducción, distribución o modificación del software sin autorización
@@ -232,7 +232,7 @@ export default function TermsPage() {
 
         <Section title="13. Modificaciones del servicio">
           <p>
-            Nexora puede modificar, suspender o eliminar funcionalidades del servicio en cualquier
+            Agentro puede modificar, suspender o eliminar funcionalidades del servicio en cualquier
             momento. Estas modificaciones pueden incluir:
           </p>
           <List items={[
@@ -242,12 +242,12 @@ export default function TermsPage() {
             "Ajustes técnicos necesarios",
           ]} />
           <p>
-            Nexora no será responsable por posibles impactos derivados de estas modificaciones.
+            Agentro no será responsable por posibles impactos derivados de estas modificaciones.
           </p>
         </Section>
 
         <Section title="14. Cambios en los términos">
-          <p>Nexora puede actualizar estos Términos de Uso en cualquier momento.</p>
+          <p>Agentro puede actualizar estos Términos de Uso en cualquier momento.</p>
           <p>
             Cuando se realicen cambios significativos, los usuarios serán notificados a través de la
             plataforma o por correo electrónico.
@@ -258,7 +258,7 @@ export default function TermsPage() {
         </Section>
 
         <Section title="15. Terminación del servicio">
-          <p>El usuario puede dejar de utilizar Nexora en cualquier momento.</p>
+          <p>El usuario puede dejar de utilizar Agentro en cualquier momento.</p>
           <p>
             La eliminación de una cuenta puede implicar la eliminación de datos asociados, salvo
             aquellos que deban conservarse por razones legales u operativas.
@@ -277,7 +277,7 @@ export default function TermsPage() {
 
         <div className="border-t border-white/10 pt-8 mt-16 text-center">
           <p className="text-text-muted text-sm">
-            © {new Date().getFullYear()} Nexora. Todos los derechos reservados.
+            © {new Date().getFullYear()} Agentro. Todos los derechos reservados.
           </p>
         </div>
       </main>

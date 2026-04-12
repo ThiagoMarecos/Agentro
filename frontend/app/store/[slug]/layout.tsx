@@ -63,7 +63,7 @@ export default function StorefrontLayout({
           <h1 className="text-2xl font-bold text-gray-900 mb-2">Tienda no disponible</h1>
           <p className="text-gray-500 mb-6">
             Esta tienda ha sido suspendida temporalmente por el administrador de la plataforma.
-            Si sos el dueño, contactá al soporte de Nexora para más información.
+            Si sos el dueño, contactá al soporte de Agentro para más información.
           </p>
           <Link
             href="/"
@@ -105,7 +105,7 @@ export default function StorefrontLayout({
           </div>
           <div className="mt-10 pt-6 flex flex-col sm:flex-row justify-between items-center gap-4 text-xs" style={{ borderTop: '1px solid var(--color-border)', color: 'var(--color-text)', opacity: 0.4 }}>
             <span>{store?.name || "Tienda"} - Todos los derechos reservados</span>
-            <span style={{ opacity: 1 }}>Powered by <Link href="/" className="font-medium transition" style={{ color: 'var(--color-primary)' }}>Nexora</Link></span>
+            <span style={{ opacity: 1 }}>Powered by <Link href="/" className="font-medium transition" style={{ color: 'var(--color-primary)' }}>Agentro</Link></span>
           </div>
         </div>
       </footer>

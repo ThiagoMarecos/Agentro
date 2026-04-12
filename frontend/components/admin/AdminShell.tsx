@@ -54,7 +54,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           {!collapsed && (
             <Link href="/admin" className="flex items-center gap-2">
               <span className="text-xl font-display font-bold bg-gradient-to-r from-violet-600 to-purple-600 bg-clip-text text-transparent">
-                Nexora
+                Agentro
               </span>
               <span className="text-[10px] font-semibold bg-violet-100 text-violet-700 px-1.5 py-0.5 rounded-md uppercase tracking-wide">
                 Admin
@@ -145,7 +145,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             </div>
             <div>
               <p className="text-sm font-medium text-gray-900">Panel de Administración</p>
-              <p className="text-xs text-gray-400">Gestión global de Nexora</p>
+              <p className="text-xs text-gray-400">Gestión global de Agentro</p>
             </div>
           </div>
           <Link

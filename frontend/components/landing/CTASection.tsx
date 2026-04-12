@@ -11,7 +11,7 @@ export function CTASection() {
           <h2 className="heading-page text-4xl sm:text-5xl lg:text-6xl leading-[1.05] mb-8">
             Tu tienda online
             <br />
-            <span className="text-gradient-nexora">con vendedor incluido.</span>
+            <span className="text-gradient-agentro">con vendedor incluido.</span>
           </h2>
 
           <p className="text-lg text-text-muted mb-12 max-w-md mx-auto">

@@ -1,5 +1,5 @@
 /**
- * Botón reutilizable con variantes Nexora
+ * Botón reutilizable con variantes Agentro
  */
 
 import { ButtonHTMLAttributes } from "react";
@@ -18,7 +18,7 @@ export function Button({
 }: ButtonProps) {
   const base = "rounded-lg font-medium transition inline-flex items-center justify-center";
   const variants = {
-    primary: "bg-gradient-nexora text-white hover:opacity-90",
+    primary: "bg-gradient-agentro text-white hover:opacity-90",
     secondary: "border border-white/20 hover:bg-white/5",
     ghost: "hover:bg-white/5",
   };

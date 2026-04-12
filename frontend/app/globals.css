@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Nexora - Design tokens y variables CSS */
+/* Agentro - Design tokens y variables CSS */
 :root {
   --color-primary: #6366f1;
   --color-secondary: #8b5cf6;
@@ -11,7 +11,7 @@
   --color-surface: #1e293b;
   --color-text: #f8fafc;
   --color-text-muted: #94a3b8;
-  --gradient-nexora: linear-gradient(135deg, #6366f1, #8b5cf6);
+  --gradient-agentro: linear-gradient(135deg, #6366f1, #8b5cf6);
 }
 
 /* Animated gradient text */
@@ -345,12 +345,12 @@
   }
 }
 
-/* Utilidades para gradiente Nexora */
-.bg-gradient-nexora {
-  background: var(--gradient-nexora);
+/* Utilidades para gradiente Agentro */
+.bg-gradient-agentro {
+  background: var(--gradient-agentro);
 }
 
-.text-gradient-nexora {
+.text-gradient-agentro {
   background: linear-gradient(
     90deg,
     #6366f1 0%,
@@ -370,17 +370,17 @@
 }
 
 /*
- * SISTEMA DE DISEÑO NEXORA - Congruencia en toda la app
- * - brand-nexora: logo/marca "Nexora" (Space Grotesk + gradiente)
+ * SISTEMA DE DISEÑO AGENTRO - Congruencia en toda la app
+ * - brand-agentro: logo/marca "Agentro" (Space Grotesk + gradiente)
  * - heading-page: títulos principales de página (h1)
  * - heading-section: subtítulos de sección (h2, h3)
  * - Colores: primary #6366F1, secondary #8B5CF6, accent #22C55E, background #0F172A, text #F8FAFC
  * - Tipografía: Space Grotesk (display), Inter (sans), JetBrains Mono (código)
  */
-.brand-nexora {
+.brand-agentro {
   font-family: var(--font-space-grotesk), system-ui, sans-serif;
   font-weight: 600;
-  background: var(--gradient-nexora);
+  background: var(--gradient-agentro);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;

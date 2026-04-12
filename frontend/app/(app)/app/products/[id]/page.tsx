@@ -430,7 +430,7 @@ export default function EditProductPage() {
                   />
                   <div>
                     <span className="text-sm font-medium text-gray-700">Rastrear inventario</span>
-                    <p className="text-xs text-gray-400 mt-0.5">Nexora llevará la cuenta del stock disponible</p>
+                    <p className="text-xs text-gray-400 mt-0.5">Agentro llevará la cuenta del stock disponible</p>
                   </div>
                 </label>
                 {trackInventory && !product.has_variants && (

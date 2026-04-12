@@ -206,7 +206,7 @@ function LivePreview({
             <div className="w-2.5 h-2.5 rounded-full bg-yellow-300" />
             <div className="w-2.5 h-2.5 rounded-full bg-green-300" />
             <div className="ml-3 flex-1 h-5 rounded-md bg-gray-200/70 flex items-center justify-center">
-              <span className="text-[9px] text-gray-400 tracking-wide">mitienda.nexora.com</span>
+              <span className="text-[9px] text-gray-400 tracking-wide">mitienda.getagentro.com</span>
             </div>
           </div>
 
@@ -424,7 +424,7 @@ export default function AppearancePage() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "nexora-theme.json";
+    a.download = "agentro-theme.json";
     a.click();
     URL.revokeObjectURL(url);
   };

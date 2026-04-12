@@ -1,5 +1,5 @@
 /**
- * Política de Privacidad — Nexora
+ * Política de Privacidad — Agentro
  */
 
 import Link from "next/link";
@@ -28,8 +28,8 @@ export default function PrivacyPage() {
     <div className="min-h-screen bg-background landing-bg">
       <header className="border-b border-white/10">
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
-          <Link href="/" className="brand-nexora text-xl hover:opacity-90 transition-opacity">
-            Nexora
+          <Link href="/" className="brand-agentro text-xl hover:opacity-90 transition-opacity">
+            Agentro
           </Link>
           <Link href="/" className="text-sm text-text-muted hover:text-white transition">
             Volver al inicio
@@ -42,18 +42,18 @@ export default function PrivacyPage() {
         <p className="text-text-muted text-sm mb-12">Última actualización: 9 de marzo de 2026</p>
 
         <Section title="1. Introducción">
-          <p>Bienvenido a Nexora.</p>
+          <p>Bienvenido a Agentro.</p>
           <p>
-            Nexora es una plataforma SaaS que permite a emprendedores y empresas crear tiendas online
+            Agentro es una plataforma SaaS que permite a emprendedores y empresas crear tiendas online
             y utilizar agentes de inteligencia artificial para interactuar con clientes, automatizar
             conversaciones y facilitar procesos de venta a través de distintos canales digitales.
           </p>
           <p>
             La presente Política de Privacidad describe cómo recopilamos, utilizamos, almacenamos y
             protegemos la información cuando utilizas nuestros servicios, nuestro sitio web o cualquier
-            producto relacionado con Nexora.
+            producto relacionado con Agentro.
           </p>
-          <p>Al utilizar Nexora, aceptás las prácticas descritas en esta política.</p>
+          <p>Al utilizar Agentro, aceptás las prácticas descritas en esta política.</p>
         </Section>
 
         <Section title="2. Información que recopilamos">
@@ -62,7 +62,7 @@ export default function PrivacyPage() {
           </p>
 
           <h3 className="text-white font-medium mt-6 mb-2">2.1 Información de registro</h3>
-          <p>Cuando creás una cuenta en Nexora podemos recopilar:</p>
+          <p>Cuando creás una cuenta en Agentro podemos recopilar:</p>
           <List items={[
             "Nombre completo",
             "Dirección de correo electrónico",
@@ -73,19 +73,19 @@ export default function PrivacyPage() {
           <p>Esta información es necesaria para crear y administrar tu cuenta dentro de la plataforma.</p>
 
           <h3 className="text-white font-medium mt-6 mb-2">2.2 Información de tiendas</h3>
-          <p>Cuando utilizás Nexora para crear una tienda online podemos almacenar:</p>
+          <p>Cuando utilizás Agentro para crear una tienda online podemos almacenar:</p>
           <List items={[
             "Nombre de la tienda",
             "URL o slug de la tienda",
             "Catálogo de productos (imágenes, categorías, descripciones, precios, inventario)",
           ]} />
           <p>
-            Estos datos pertenecen exclusivamente al usuario propietario de la tienda. Nexora actúa
+            Estos datos pertenecen exclusivamente al usuario propietario de la tienda. Agentro actúa
             únicamente como plataforma tecnológica para almacenar y gestionar dicha información.
           </p>
 
           <h3 className="text-white font-medium mt-6 mb-2">2.3 Información de clientes</h3>
-          <p>Cuando utilizás Nexora para interactuar con clientes, pueden recopilarse datos como:</p>
+          <p>Cuando utilizás Agentro para interactuar con clientes, pueden recopilarse datos como:</p>
           <List items={[
             "Nombre del cliente",
             "Número de teléfono",
@@ -101,7 +101,7 @@ export default function PrivacyPage() {
 
           <h3 className="text-white font-medium mt-6 mb-2">2.4 Información de conversaciones</h3>
           <p>
-            Cuando los clientes interactúan con los agentes de IA de Nexora, el sistema puede almacenar:
+            Cuando los clientes interactúan con los agentes de IA de Agentro, el sistema puede almacenar:
           </p>
           <List items={[
             "Mensajes enviados por el cliente",
@@ -136,7 +136,7 @@ export default function PrivacyPage() {
         <Section title="3. Uso de la información">
           <p>Utilizamos la información recopilada para los siguientes fines:</p>
           <List items={[
-            "Proporcionar acceso a la plataforma Nexora",
+            "Proporcionar acceso a la plataforma Agentro",
             "Permitir la creación y administración de tiendas online",
             "Facilitar la interacción entre agentes de inteligencia artificial y clientes",
             "Procesar solicitudes y consultas",
@@ -149,7 +149,7 @@ export default function PrivacyPage() {
 
         <Section title="4. Uso de inteligencia artificial">
           <p>
-            Nexora utiliza sistemas de inteligencia artificial para generar respuestas automatizadas
+            Agentro utiliza sistemas de inteligencia artificial para generar respuestas automatizadas
             en conversaciones con clientes.
           </p>
           <p>Estos sistemas pueden analizar:</p>
@@ -164,14 +164,14 @@ export default function PrivacyPage() {
             atención y automatizar procesos comerciales.
           </p>
           <p>
-            Las respuestas generadas por la IA pueden no ser perfectas y Nexora recomienda a los
+            Las respuestas generadas por la IA pueden no ser perfectas y Agentro recomienda a los
             usuarios supervisar las interacciones cuando sea necesario.
           </p>
         </Section>
 
         <Section title="5. Integraciones con terceros">
           <p>
-            Nexora puede integrarse con servicios de terceros para proporcionar funcionalidades
+            Agentro puede integrarse con servicios de terceros para proporcionar funcionalidades
             adicionales. Entre estos servicios pueden incluirse:
           </p>
           <List items={[
@@ -182,7 +182,7 @@ export default function PrivacyPage() {
             "Herramientas de análisis",
           ]} />
           <p>
-            Cada uno de estos servicios tiene sus propias políticas de privacidad. Nexora no es
+            Cada uno de estos servicios tiene sus propias políticas de privacidad. Agentro no es
             responsable por las prácticas de privacidad de servicios externos.
           </p>
         </Section>
@@ -194,14 +194,14 @@ export default function PrivacyPage() {
           </p>
           <p>
             El usuario es responsable de asegurarse de cumplir con las políticas y condiciones de
-            dichas plataformas. Nexora actúa únicamente como intermediario tecnológico entre el
+            dichas plataformas. Agentro actúa únicamente como intermediario tecnológico entre el
             sistema de mensajería y el agente de inteligencia artificial.
           </p>
         </Section>
 
         <Section title="7. Seguridad de la información">
           <p>
-            La seguridad de los datos es una prioridad para Nexora. Implementamos diversas medidas
+            La seguridad de los datos es una prioridad para Agentro. Implementamos diversas medidas
             técnicas y organizativas para proteger la información, incluyendo:
           </p>
           <List items={[
@@ -213,7 +213,7 @@ export default function PrivacyPage() {
             "Auditoría de eventos",
           ]} />
           <p>
-            A pesar de estas medidas, ningún sistema es completamente seguro y Nexora no puede
+            A pesar de estas medidas, ningún sistema es completamente seguro y Agentro no puede
             garantizar seguridad absoluta.
           </p>
         </Section>
@@ -233,7 +233,7 @@ export default function PrivacyPage() {
         </Section>
 
         <Section title="9. Derechos del usuario">
-          <p>Los usuarios de Nexora tienen derecho a:</p>
+          <p>Los usuarios de Agentro tienen derecho a:</p>
           <List items={[
             "Acceder a sus datos",
             "Modificar información incorrecta",
@@ -245,7 +245,7 @@ export default function PrivacyPage() {
         </Section>
 
         <Section title="10. Responsabilidad del usuario">
-          <p>Los usuarios de Nexora son responsables de:</p>
+          <p>Los usuarios de Agentro son responsables de:</p>
           <List items={[
             "Utilizar la plataforma de manera legal",
             "Cumplir con regulaciones aplicables",
@@ -253,13 +253,13 @@ export default function PrivacyPage() {
             "Manejar de forma responsable los datos de clientes",
           ]} />
           <p>
-            Nexora no se responsabiliza por el uso indebido de la plataforma por parte de sus usuarios.
+            Agentro no se responsabiliza por el uso indebido de la plataforma por parte de sus usuarios.
           </p>
         </Section>
 
         <Section title="11. Cambios en la política de privacidad">
           <p>
-            Nexora puede actualizar esta política de privacidad en cualquier momento para reflejar
+            Agentro puede actualizar esta política de privacidad en cualquier momento para reflejar
             cambios en nuestros servicios o requisitos legales.
           </p>
           <p>
@@ -274,7 +274,7 @@ export default function PrivacyPage() {
 
         <div className="border-t border-white/10 pt-8 mt-16 text-center">
           <p className="text-text-muted text-sm">
-            © {new Date().getFullYear()} Nexora. Todos los derechos reservados.
+            © {new Date().getFullYear()} Agentro. Todos los derechos reservados.
           </p>
         </div>
       </main>

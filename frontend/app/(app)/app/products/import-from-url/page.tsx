@@ -19,7 +19,7 @@ type Step = "input" | "analyzing" | "preview";
 const LEGAL_ITEMS = [
   "Todo el contenido importado (imágenes, textos, precios) pertenece a sus respectivos propietarios y está protegido por derechos de autor.",
   "El uso de esta herramienta se realiza bajo la exclusiva responsabilidad del propietario de la cuenta.",
-  "Nexora actúa únicamente como intermediario tecnológico y no se hace responsable por el uso que se le dé a los datos importados.",
+  "Agentro actúa únicamente como intermediario tecnológico y no se hace responsable por el uso que se le dé a los datos importados.",
   "El usuario se compromete a verificar que el uso del contenido cumple con las leyes de su jurisdicción.",
   "Queda prohibido usar esta función para copiar catálogos de competidores con fines de competencia desleal.",
   "Al aceptar, se genera un registro de auditoría con validez de documento legal (usuario, fecha, hora, IP y URL).",
@@ -254,7 +254,7 @@ export default function ImportFromUrlPage() {
       // Single product — go to new product form pre-filled
       const product = selected[0];
       sessionStorage.setItem(
-        "nexora_import_product",
+        "agentro_import_product",
         JSON.stringify({
           name: product.name || "",
           description: product.description || "",

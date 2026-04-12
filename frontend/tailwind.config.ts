@@ -17,7 +17,7 @@ const config: Config = {
         "text-muted": "#94A3B8",
       },
       backgroundImage: {
-        "gradient-nexora": "linear-gradient(135deg, #6366F1, #8B5CF6)",
+        "gradient-agentro": "linear-gradient(135deg, #6366F1, #8B5CF6)",
       },
       fontFamily: {
         sans: ["var(--font-inter)", "system-ui", "sans-serif"],

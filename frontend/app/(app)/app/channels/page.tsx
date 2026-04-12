@@ -39,7 +39,7 @@ function authHeaders(storeId: string) {
 interface DomainStatus {
   custom_domain: string | null;
   domain_verified: boolean;
-  nexora_subdomain: string;
+  agentro_subdomain: string;
   dns_target: string;
   required_records: { type: string; name: string; value: string; description: string }[];
 }
@@ -238,7 +238,7 @@ export default function ChannelsPage() {
   }
 
   const storeSlug = currentStore.slug || "mi-tienda";
-  const subdomain = domainStatus?.nexora_subdomain || `${storeSlug}.nexora.app`;
+  const subdomain = domainStatus?.agentro_subdomain || `${storeSlug}.agentro.app`;
   const hasDomain = !!domainStatus?.custom_domain;
   const isDomainVerified = !!domainStatus?.domain_verified;
 
@@ -282,7 +282,7 @@ export default function ChannelsPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
 
           {/* ═══════════════════════════════════════════ */}
-          {/* CANAL 1: Tu tienda Nexora                   */}
+          {/* CANAL 1: Tu tienda Agentro                   */}
           {/* ═══════════════════════════════════════════ */}
           <div className="bg-white rounded-xl border border-gray-200/60 p-6 flex flex-col">
             <div className="flex items-start gap-4 mb-4">
@@ -291,7 +291,7 @@ export default function ChannelsPage() {
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
-                  <h2 className="font-display font-semibold text-gray-900">Tu tienda Nexora</h2>
+                  <h2 className="font-display font-semibold text-gray-900">Tu tienda Agentro</h2>
                   <StatusBadge label="Activa" color="green" />
                 </div>
                 <p className="text-sm text-gray-500">
@@ -423,7 +423,7 @@ export default function ChannelsPage() {
                 <p className="text-sm text-gray-500">
                   {hasDomain
                     ? `Tu dominio ${domainStatus?.custom_domain} ${isDomainVerified ? "esta conectado y funcionando." : "esta configurado pero falta verificar el DNS."}`
-                    : "Usa tu propio dominio (ej: www.mitienda.com) en vez del subdominio de Nexora."
+                    : "Usa tu propio dominio (ej: www.mitienda.com) en vez del subdominio de Agentro."
                   }
                 </p>
               </div>
@@ -520,7 +520,7 @@ export default function ChannelsPage() {
           <div className="rounded-xl bg-violet-50/50 border border-violet-200/40 p-4">
             <p className="text-sm text-gray-600">
               Si ya tenes tu pagina web (WordPress, Wix, Shopify, o la que sea), podes agregar una burbuja de chat en tu sitio.
-              Tus clientes te van a poder escribir sin salir de tu pagina, y el agente IA de Nexora les responde automaticamente.
+              Tus clientes te van a poder escribir sin salir de tu pagina, y el agente IA de Agentro les responde automaticamente.
             </p>
           </div>
 
@@ -560,7 +560,7 @@ export default function ChannelsPage() {
 
           <div className="flex items-start gap-2.5 text-xs text-gray-500 bg-gray-50 rounded-lg p-3">
             <HelpCircle className="w-4 h-4 shrink-0 mt-0.5 text-gray-400" />
-            <span>El chat usa los mismos agentes IA que configuraste en Nexora. Si cambias algo aca, se actualiza automaticamente en tu web.</span>
+            <span>El chat usa los mismos agentes IA que configuraste en Agentro. Si cambias algo aca, se actualiza automaticamente en tu web.</span>
           </div>
         </div>
       </Modal>
@@ -577,7 +577,7 @@ export default function ChannelsPage() {
                 En vez de que tus clientes entren a <span className="font-mono text-indigo-600">{subdomain}</span>, pueden entrar a tu propio dominio como <span className="font-mono text-indigo-600">www.mitienda.com</span>.
               </p>
               <p className="text-sm text-gray-600">
-                Necesitas tener un dominio propio (se compra en sitios como GoDaddy, Namecheap o Cloudflare por ~$10/anio). Si no tenes uno, no te preocupes: tu tienda ya funciona perfectamente con tu direccion de Nexora.
+                Necesitas tener un dominio propio (se compra en sitios como GoDaddy, Namecheap o Cloudflare por ~$10/anio). Si no tenes uno, no te preocupes: tu tienda ya funciona perfectamente con tu direccion de Agentro.
               </p>
             </div>
           )}
@@ -603,7 +603,7 @@ export default function ChannelsPage() {
                   <div className="mt-2">
                     <CopyField
                       label="Valor del registro CNAME"
-                      value={domainStatus?.dns_target || "nexora-stores.vercel.app"}
+                      value={domainStatus?.dns_target || "agentro-stores.vercel.app"}
                       onCopy={copyToClipboard}
                       mono
                     />
@@ -645,7 +645,7 @@ export default function ChannelsPage() {
       <Modal open={faqModal} onClose={() => setFaqModal(false)} title="Preguntas frecuentes">
         <div className="space-y-5 text-sm">
           <div>
-            <h3 className="font-medium text-gray-900">Ya tengo mi pagina web, necesito la tienda de Nexora?</h3>
+            <h3 className="font-medium text-gray-900">Ya tengo mi pagina web, necesito la tienda de Agentro?</h3>
             <p className="text-gray-500 mt-1">
               No. Si ya tenes tu web, podes usar solo el <strong>widget de chat</strong> y/o <strong>WhatsApp</strong>.
               Instalas el codigo en tu sitio y tus clientes hablan con tu agente IA sin que cambies nada de tu pagina actual.
@@ -661,14 +661,14 @@ export default function ChannelsPage() {
           <div>
             <h3 className="font-medium text-gray-900">El link de chat funciona sin tener pagina web?</h3>
             <p className="text-gray-500 mt-1">
-              Si. El link de chat es una pagina propia de Nexora. Lo compartis en Instagram, Facebook,
+              Si. El link de chat es una pagina propia de Agentro. Lo compartis en Instagram, Facebook,
               o lo imprimis como QR en una tarjeta, y tus clientes hablan con tu agente IA directamente.
             </p>
           </div>
           <div>
             <h3 className="font-medium text-gray-900">Necesito un dominio propio?</h3>
             <p className="text-gray-500 mt-1">
-              No es necesario. Tu tienda ya funciona con tu direccion de Nexora (<span className="font-mono text-indigo-600">{subdomain}</span>).
+              No es necesario. Tu tienda ya funciona con tu direccion de Agentro (<span className="font-mono text-indigo-600">{subdomain}</span>).
               El dominio propio es opcional y es para quienes quieren una URL personalizada como www.mitienda.com.
             </p>
           </div>

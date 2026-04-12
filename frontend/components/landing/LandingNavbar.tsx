@@ -22,8 +22,8 @@ export function LandingNavbar() {
       }`}
     >
       <nav className="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
-        <Link href="/" className="brand-nexora text-lg">
-          Nexora
+        <Link href="/" className="brand-agentro text-lg">
+          Agentro
         </Link>
 
         <div className="hidden sm:flex items-center gap-1">

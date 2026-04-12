@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 
 const LINES = [
-  { cmd: "nexora.init()", output: "Creating store..." },
+  { cmd: "agentro.init()", output: "Creating store..." },
   { cmd: "upload_products()", output: "Products ready" },
   { cmd: "deploy_ai_agent()", output: "AI agent online" },
   { cmd: "sales.start()", output: "Customers detected" },

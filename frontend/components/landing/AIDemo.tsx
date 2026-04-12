@@ -3,8 +3,8 @@
 import { useState } from "react";
 
 const DEMO_EXCHANGE = {
-  user: "How does Nexora work?",
-  ai: "Nexora helps you create a store and deploy AI agents that convert conversations into sales. You upload products, configure your AI, and it handles customer questions 24/7.",
+  user: "How does Agentro work?",
+  ai: "Agentro helps you create a store and deploy AI agents that convert conversations into sales. You upload products, configure your AI, and it handles customer questions 24/7.",
 };
 
 export function AIDemo() {
@@ -13,7 +13,7 @@ export function AIDemo() {
   return (
     <div className="bg-surface/60 border border-white/10 rounded-xl overflow-hidden max-w-md mx-auto">
       <div className="px-4 py-3 border-b border-white/10">
-        <span className="text-sm font-medium text-text-primary">Chat with Nexora AI</span>
+        <span className="text-sm font-medium text-text-primary">Chat with Agentro AI</span>
       </div>
       <div className="p-4 space-y-4 min-h-[200px]">
         <div className="flex justify-end">
@@ -32,7 +32,7 @@ export function AIDemo() {
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="Ask Nexora AI something"
+          placeholder="Ask Agentro AI something"
           className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-primary/50 transition"
         />
       </div>

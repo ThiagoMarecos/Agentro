@@ -92,11 +92,11 @@ export default function NewProductPage() {
 
   // Check sessionStorage for data imported from external URL
   useEffect(() => {
-    const raw = sessionStorage.getItem("nexora_import_product");
+    const raw = sessionStorage.getItem("agentro_import_product");
     if (!raw) return;
     try {
       const data = JSON.parse(raw);
-      sessionStorage.removeItem("nexora_import_product");
+      sessionStorage.removeItem("agentro_import_product");
       if (data.name) setName(data.name);
       if (data.name) { setSlug(slugify(data.name)); setSlugManuallyEdited(true); }
       if (data.description) setDescription(data.description);
@@ -564,7 +564,7 @@ export default function NewProductPage() {
                     />
                     <div>
                       <span className="text-sm font-medium text-gray-700">Rastrear inventario</span>
-                      <p className="text-xs text-gray-400 mt-0.5">Nexora llevar\u00e1 la cuenta del stock autom\u00e1ticamente</p>
+                      <p className="text-xs text-gray-400 mt-0.5">Agentro llevar\u00e1 la cuenta del stock autom\u00e1ticamente</p>
                     </div>
                   </label>
                   {trackInventory && productType === "simple" && (
