@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(wc -l /c/Users/userp/Desktop/nexora/backend/app/api/v1/*.py)",
+      "Skill(update-config)",
+      "Skill(update-config:*)",
+      "Bash(ls -la /c/Users/userp/Desktop/nexora/backend/app/services/*.py)"
+    ]
+  }
+}

@@ -1,0 +1,401 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Nexora - Design tokens y variables CSS */
+:root {
+  --color-primary: #6366f1;
+  --color-secondary: #8b5cf6;
+  --color-accent: #22c55e;
+  --color-background: #0f172a;
+  --color-surface: #1e293b;
+  --color-text: #f8fafc;
+  --color-text-muted: #94a3b8;
+  --gradient-nexora: linear-gradient(135deg, #6366f1, #8b5cf6);
+}
+
+/* Animated gradient text */
+@keyframes gradient-flow {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.text-gradient-animated {
+  background: linear-gradient(
+    90deg,
+    #6366f1 0%,
+    #8b5cf6 15%,
+    #a78bfa 30%,
+    #c084fc 45%,
+    #8b5cf6 60%,
+    #6366f1 75%,
+    #4f46e5 90%,
+    #6366f1 100%
+  );
+  background-size: 300% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: gradient-flow 4s ease infinite;
+}
+
+/* Glassmorphism estilo Apple - reforzado para contraste */
+.glass {
+  background: rgba(30, 41, 59, 0.35);
+  backdrop-filter: blur(28px) saturate(180%);
+  -webkit-backdrop-filter: blur(28px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12);
+}
+
+.glass-light {
+  background: rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(32px) saturate(150%);
+  -webkit-backdrop-filter: blur(32px) saturate(150%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+}
+
+/* Animaciones */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(30px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes fadeInScale {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes slideInLeft {
+  from { opacity: 0; transform: translateX(-40px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(40px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-12px); }
+}
+
+@keyframes floatSlow {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-8px) rotate(1deg); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 40px -8px rgba(99, 102, 241, 0.4); }
+  50% { box-shadow: 0 0 60px -5px rgba(99, 102, 241, 0.7); }
+}
+
+@keyframes borderGlow {
+  0%, 100% { border-color: rgba(99, 102, 241, 0.2); }
+  50% { border-color: rgba(99, 102, 241, 0.5); }
+}
+
+@keyframes orbMove {
+  0% { transform: translate(0, 0) scale(1); }
+  25% { transform: translate(30px, -20px) scale(1.1); }
+  50% { transform: translate(-10px, 20px) scale(0.95); }
+  75% { transform: translate(-30px, -10px) scale(1.05); }
+  100% { transform: translate(0, 0) scale(1); }
+}
+
+@keyframes countUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes typewriter {
+  from { width: 0; }
+  to { width: 100%; }
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.6s ease-out forwards;
+}
+
+.animate-fade-in-scale {
+  animation: fadeInScale 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-slide-in-left {
+  animation: slideInLeft 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-slide-in-right {
+  animation: slideInRight 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-float {
+  animation: float 5s ease-in-out infinite;
+}
+
+.animate-float-slow {
+  animation: floatSlow 7s ease-in-out infinite;
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 3s ease-in-out infinite;
+}
+
+.animate-border-glow {
+  animation: borderGlow 3s ease-in-out infinite;
+}
+
+.animate-orb {
+  animation: orbMove 15s ease-in-out infinite;
+}
+
+.animate-count-up {
+  animation: countUp 0.5s ease-out forwards;
+}
+
+/* Stagger delays */
+.delay-100 { animation-delay: 100ms; }
+.delay-200 { animation-delay: 200ms; }
+.delay-300 { animation-delay: 300ms; }
+.delay-400 { animation-delay: 400ms; }
+.delay-500 { animation-delay: 500ms; }
+.delay-600 { animation-delay: 600ms; }
+.delay-700 { animation-delay: 700ms; }
+.delay-800 { animation-delay: 800ms; }
+
+/* Fondo landing - orbes de luz */
+.landing-bg {
+  background: 
+    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(99, 102, 241, 0.18), transparent),
+    radial-gradient(ellipse 50% 40% at 100% 50%, rgba(139, 92, 246, 0.1), transparent),
+    radial-gradient(ellipse 50% 40% at 0% 80%, rgba(99, 102, 241, 0.08), transparent),
+    radial-gradient(ellipse 40% 30% at 50% 100%, rgba(34, 197, 94, 0.04), transparent);
+}
+
+/* Grid de puntos sutil */
+.dot-grid {
+  background-image: radial-gradient(circle, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+/* Líneas de gradiente decorativas */
+.glow-line {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(99, 102, 241, 0.5), transparent);
+}
+
+/* Hover card con glow */
+.hover-glow {
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.hover-glow:hover {
+  box-shadow: 0 0 40px -10px rgba(99, 102, 241, 0.3);
+  border-color: rgba(99, 102, 241, 0.3);
+  transform: translateY(-4px);
+}
+
+/* Glow que recorre el borde + glassmorphism */
+@keyframes auroraRotate {
+  from { transform: translate(-50%, -50%) rotate(0deg); }
+  to { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+/* Botón glass + glow - secciones oscuras */
+.btn-glass-glow {
+  position: relative;
+  overflow: hidden;
+  z-index: 0;
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.btn-glass-glow::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 500%;
+  height: 500%;
+  background: conic-gradient(
+    transparent 0deg,
+    transparent 340deg,
+    rgba(99, 102, 241, 0.8) 348deg,
+    rgba(139, 92, 246, 1) 352deg,
+    rgba(99, 102, 241, 0.8) 356deg,
+    transparent 360deg
+  );
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+  z-index: -2;
+}
+.btn-glass-glow::after {
+  content: '';
+  position: absolute;
+  inset: 2px;
+  border-radius: inherit;
+  background: inherit;
+  pointer-events: none;
+  z-index: -1;
+}
+.btn-glass-glow:hover {
+  background: rgba(255, 255, 255, 0.1) !important;
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  box-shadow:
+    0 8px 32px rgba(99, 102, 241, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  border-color: transparent;
+  transform: translateY(-2px) scale(1.02);
+}
+.btn-glass-glow:hover::before {
+  opacity: 1;
+  animation: auroraRotate 2.5s linear infinite;
+}
+.btn-glass-glow:active {
+  transform: translateY(0) scale(0.98);
+}
+
+/* Botón glass + glow - secciones claras, texto oscuro */
+.btn-glass-glow-light {
+  position: relative;
+  overflow: hidden;
+  z-index: 0;
+  color: #111827 !important;
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.btn-glass-glow-light::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 500%;
+  height: 500%;
+  background: conic-gradient(
+    transparent 0deg,
+    transparent 340deg,
+    rgba(99, 102, 241, 0.8) 348deg,
+    rgba(139, 92, 246, 1) 352deg,
+    rgba(99, 102, 241, 0.8) 356deg,
+    transparent 360deg
+  );
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+  z-index: -2;
+}
+.btn-glass-glow-light::after {
+  content: '';
+  position: absolute;
+  inset: 2px;
+  border-radius: inherit;
+  background: inherit;
+  pointer-events: none;
+  z-index: -1;
+}
+.btn-glass-glow-light:hover {
+  background: rgba(255, 255, 255, 0.55) !important;
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  box-shadow:
+    0 8px 32px rgba(99, 102, 241, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  border-color: transparent;
+  transform: translateY(-2px) scale(1.03);
+}
+.btn-glass-glow-light:hover::before {
+  opacity: 1;
+  animation: auroraRotate 2.5s linear infinite;
+}
+.btn-glass-glow-light:active {
+  transform: translateY(0) scale(0.98);
+}
+
+/* Slider infinito de productos */
+@keyframes scrollLeft {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+@layer base {
+  body {
+    @apply bg-background text-text-primary antialiased;
+    background-color: var(--color-background);
+    color: var(--color-text);
+  }
+}
+
+/* Utilidades para gradiente Nexora */
+.bg-gradient-nexora {
+  background: var(--gradient-nexora);
+}
+
+.text-gradient-nexora {
+  background: linear-gradient(
+    90deg,
+    #6366f1 0%,
+    #8b5cf6 15%,
+    #a78bfa 30%,
+    #c084fc 45%,
+    #8b5cf6 60%,
+    #6366f1 75%,
+    #4f46e5 90%,
+    #6366f1 100%
+  );
+  background-size: 300% 100%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: gradient-flow 4s ease infinite;
+}
+
+/*
+ * SISTEMA DE DISEÑO NEXORA - Congruencia en toda la app
+ * - brand-nexora: logo/marca "Nexora" (Space Grotesk + gradiente)
+ * - heading-page: títulos principales de página (h1)
+ * - heading-section: subtítulos de sección (h2, h3)
+ * - Colores: primary #6366F1, secondary #8B5CF6, accent #22C55E, background #0F172A, text #F8FAFC
+ * - Tipografía: Space Grotesk (display), Inter (sans), JetBrains Mono (código)
+ */
+.brand-nexora {
+  font-family: var(--font-space-grotesk), system-ui, sans-serif;
+  font-weight: 600;
+  background: var(--gradient-nexora);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Tipografía consistente - títulos de página */
+.heading-page {
+  font-family: var(--font-space-grotesk), system-ui, sans-serif;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+/* Tipografía consistente - subtítulos */
+.heading-section {
+  font-family: var(--font-space-grotesk), system-ui, sans-serif;
+  font-weight: 600;
+  color: var(--color-text);
+}

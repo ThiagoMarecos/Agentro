@@ -1,0 +1,41 @@
+========================================
+  Nexora - Requisitos para ejecutar
+========================================
+
+Para que iniciar.bat funcione correctamente, necesitas:
+
+1. NODE.JS (para el frontend)
+   - Descarga: https://nodejs.org
+   - Versión LTS recomendada
+
+2. PYTHON 3.11+ (para el backend)
+   - Descarga: https://www.python.org/downloads/
+   - Marca "Add Python to PATH" al instalar
+
+3. BASE DE DATOS
+   - Por defecto usa SQLite (no requiere instalacion)
+   - El archivo nexora.db se crea automaticamente en backend/
+   - Para PostgreSQL: cambia DATABASE_URL en .env
+
+4. REDIS (opcional para algunas funciones)
+   - Instala Redis en localhost:6379
+   - O usa Docker: docker run -d -p 6379:6379 redis
+
+5. GOOGLE OAUTH (para "Iniciar con Google")
+   - Crea credenciales en Google Cloud Console
+   - Añade GOOGLE_CLIENT_ID y GOOGLE_CLIENT_SECRET en .env
+
+----------------------------------------
+  Si el backend falla al iniciar
+----------------------------------------
+
+- Verifica que el archivo .env exista en la raíz
+- Las migraciones se ejecutan automaticamente con iniciar.bat
+
+----------------------------------------
+  Puertos
+----------------------------------------
+
+- Frontend: http://localhost:5000
+- Backend API: http://localhost:8000
+- Documentación API: http://localhost:8000/docs

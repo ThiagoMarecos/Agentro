@@ -1,0 +1,610 @@
+"use client";
+
+import { useEffect, useState, useRef } from "react";
+import { useStore } from "@/lib/context/StoreContext";
+import {
+  getConversations,
+  getConversation,
+  type ConversationDetail,
+} from "@/lib/api/conversations";
+import {
+  getSalesSession,
+  type SalesSessionDetail,
+  type NotebookSection,
+} from "@/lib/api/sales-sessions";
+import {
+  Loader2,
+  MessageSquare,
+  User,
+  Bot,
+  ChevronDown,
+  ChevronRight,
+  BookOpen,
+  Search,
+  ShoppingBag,
+  DollarSign,
+  Truck,
+  CreditCard,
+  ClipboardList,
+  Crosshair,
+  Heart,
+  Settings2,
+  Filter,
+  MailOpen,
+} from "lucide-react";
+
+/* ── Stage config ────────────────────────────────── */
+
+const STAGE_LABELS: Record<string, string> = {
+  incoming: "Entrante",
+  discovery: "Descubrimiento",
+  recommendation: "Recomendacion",
+  validation: "Validacion",
+  closing: "Cierre",
+  payment: "Pago",
+  order_created: "Orden Creada",
+  shipping: "Envio",
+  completed: "Completado",
+  lost: "Perdido",
+  abandoned: "Abandonado",
+};
+
+const STAGE_BADGE_COLORS: Record<string, string> = {
+  incoming: "bg-blue-100 text-blue-700",
+  discovery: "bg-purple-100 text-purple-700",
+  recommendation: "bg-indigo-100 text-indigo-700",
+  validation: "bg-amber-100 text-amber-700",
+  closing: "bg-orange-100 text-orange-700",
+  payment: "bg-yellow-100 text-yellow-700",
+  order_created: "bg-emerald-100 text-emerald-700",
+  shipping: "bg-cyan-100 text-cyan-700",
+  completed: "bg-green-100 text-green-700",
+  lost: "bg-red-100 text-red-700",
+  abandoned: "bg-gray-100 text-gray-500",
+};
+
+/* ── Notebook Collapsible ────────────────────────── */
+
+function NotebookCollapsible({
+  title,
+  icon: Icon,
+  data,
+  color,
+}: {
+  title: string;
+  icon: React.ElementType;
+  data: Record<string, any>;
+  color: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const hasData = Object.values(data).some(
+    (v) =>
+      v !== "" &&
+      v !== 0 &&
+      v !== false &&
+      v !== null &&
+      v !== undefined &&
+      !(Array.isArray(v) && v.length === 0)
+  );
+
+  return (
+    <div className="border border-gray-100 rounded-xl overflow-hidden">
+      <button
+        onClick={() => setOpen(!open)}
+        className={`w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-gray-50/80 transition-all duration-200 ${
+          hasData ? "text-gray-900" : "text-gray-400"
+        }`}
+      >
+        <div
+          className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 ${color}`}
+        >
+          <Icon className="w-3.5 h-3.5" />
+        </div>
+        <span className="text-xs font-semibold flex-1">{title}</span>
+        {hasData && (
+          <span className="w-2 h-2 rounded-full bg-indigo-400 flex-shrink-0" />
+        )}
+        {open ? (
+          <ChevronDown className="w-4 h-4 text-gray-400" />
+        ) : (
+          <ChevronRight className="w-4 h-4 text-gray-400" />
+        )}
+      </button>
+      {open && (
+        <div className="px-4 pb-4 border-t border-gray-100">
+          <div className="mt-3 space-y-2">
+            {Object.entries(data).map(([key, value]) => {
+              const display =
+                typeof value === "object"
+                  ? JSON.stringify(value, null, 0)
+                  : String(value);
+              if (
+                !display ||
+                display === '""' ||
+                display === "0" ||
+                display === "false" ||
+                display === "[]" ||
+                display === "{}"
+              )
+                return null;
+              return (
+                <div key={key} className="flex gap-3">
+                  <span className="text-[11px] text-gray-400 font-medium min-w-[90px]">
+                    {key}:
+                  </span>
+                  <span className="text-[11px] text-gray-700 break-all leading-relaxed">
+                    {display}
+                  </span>
+                </div>
+              );
+            })}
+            {!hasData && (
+              <p className="text-[11px] text-gray-400 italic">Sin datos</p>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ── Notebook Panel ──────────────────────────────── */
+
+function NotebookPanel({ notebook }: { notebook: NotebookSection }) {
+  const sections = [
+    {
+      title: "Cliente",
+      icon: User,
+      data: notebook.customer,
+      color: "bg-blue-100 text-blue-600",
+    },
+    {
+      title: "Intencion",
+      icon: Crosshair,
+      data: notebook.intent,
+      color: "bg-purple-100 text-purple-600",
+    },
+    {
+      title: "Interes",
+      icon: Heart,
+      data: notebook.interest,
+      color: "bg-pink-100 text-pink-600",
+    },
+    {
+      title: "Recomendacion",
+      icon: Search,
+      data: notebook.recommendation,
+      color: "bg-indigo-100 text-indigo-600",
+    },
+    {
+      title: "Pricing",
+      icon: DollarSign,
+      data: notebook.pricing,
+      color: "bg-green-100 text-green-600",
+    },
+    {
+      title: "Disponibilidad",
+      icon: ShoppingBag,
+      data: notebook.availability,
+      color: "bg-amber-100 text-amber-600",
+    },
+    {
+      title: "Envio",
+      icon: Truck,
+      data: notebook.shipping,
+      color: "bg-cyan-100 text-cyan-600",
+    },
+    {
+      title: "Pago",
+      icon: CreditCard,
+      data: notebook.payment,
+      color: "bg-yellow-100 text-yellow-600",
+    },
+    {
+      title: "Orden",
+      icon: ClipboardList,
+      data: notebook.order,
+      color: "bg-emerald-100 text-emerald-600",
+    },
+    {
+      title: "Control del Agente",
+      icon: Settings2,
+      data: notebook.agent_control,
+      color: "bg-gray-200 text-gray-600",
+    },
+  ];
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center gap-2.5 px-1 mb-4">
+        <div className="p-2 rounded-lg bg-indigo-50">
+          <BookOpen className="w-4 h-4 text-indigo-500" />
+        </div>
+        <div>
+          <h3 className="text-sm font-bold text-gray-900">Sales Notebook</h3>
+          <p className="text-[10px] text-gray-400">Datos de la venta</p>
+        </div>
+      </div>
+      {sections.map((s) => (
+        <NotebookCollapsible key={s.title} {...s} />
+      ))}
+    </div>
+  );
+}
+
+/* ── Conversation List Item ──────────────────────── */
+
+function ConversationItem({
+  conv,
+  isSelected,
+  onClick,
+}: {
+  conv: ConversationDetail;
+  isSelected: boolean;
+  onClick: () => void;
+}) {
+  const lastMsg = conv.messages?.[conv.messages.length - 1];
+  const name = conv.customer_name || conv.customer_email || "Cliente";
+  const initials = name
+    .split(" ")
+    .map((w) => w[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+
+  return (
+    <button
+      onClick={onClick}
+      className={`w-full text-left px-5 py-4 border-b border-gray-50 hover:bg-gray-50/80 transition-all duration-200 ${
+        isSelected
+          ? "bg-indigo-50/80 border-l-[3px] border-l-indigo-500"
+          : "border-l-[3px] border-l-transparent"
+      }`}
+    >
+      <div className="flex items-start gap-3">
+        {/* Avatar */}
+        <div
+          className={`w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
+            isSelected
+              ? "bg-indigo-100 text-indigo-600"
+              : "bg-gray-100 text-gray-500"
+          }`}
+        >
+          {initials}
+        </div>
+
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center justify-between mb-1.5">
+            <span className="text-sm font-semibold text-gray-900 truncate">
+              {name}
+            </span>
+            {conv.current_stage && (
+              <span
+                className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ml-2 shrink-0 ${
+                  STAGE_BADGE_COLORS[conv.current_stage] || "bg-gray-100"
+                }`}
+              >
+                {STAGE_LABELS[conv.current_stage] || conv.current_stage}
+              </span>
+            )}
+          </div>
+          {lastMsg && (
+            <p className="text-xs text-gray-500 truncate leading-relaxed">
+              {lastMsg.role === "assistant" && (
+                <Bot className="w-3 h-3 inline mr-1 -mt-0.5" />
+              )}
+              {lastMsg.content.substring(0, 80)}
+            </p>
+          )}
+        </div>
+      </div>
+    </button>
+  );
+}
+
+/* ── Message in conversation detail ──────────────── */
+
+function ConversationMessage({
+  msg,
+}: {
+  msg: { id?: string; role: string; content: string };
+}) {
+  const isUser = msg.role === "user";
+
+  return (
+    <div className={`flex gap-3 ${isUser ? "justify-end" : "justify-start"}`}>
+      {!isUser && (
+        <div className="w-9 h-9 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0 mt-1">
+          <Bot className="w-4 h-4 text-indigo-600" />
+        </div>
+      )}
+      <div
+        className={`max-w-[70%] rounded-2xl px-5 py-3 text-sm leading-relaxed ${
+          isUser
+            ? "bg-indigo-600 text-white rounded-br-md"
+            : "bg-gray-100 text-gray-800 rounded-bl-md"
+        }`}
+      >
+        <p className="whitespace-pre-wrap">{msg.content}</p>
+      </div>
+      {isUser && (
+        <div className="w-9 h-9 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0 mt-1">
+          <User className="w-4 h-4 text-gray-600" />
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════════════════ */
+/*              CONVERSATIONS PAGE                     */
+/* ════════════════════════════════════════════════════ */
+
+export default function ConversationsPage() {
+  const { currentStore } = useStore();
+  const [conversations, setConversations] = useState<ConversationDetail[]>([]);
+  const [selected, setSelected] = useState<ConversationDetail | null>(null);
+  const [notebook, setNotebook] = useState<NotebookSection | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [loadingDetail, setLoadingDetail] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [stageFilter, setStageFilter] = useState<string>("all");
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!currentStore) return;
+    setLoading(true);
+    getConversations(currentStore.id)
+      .then(setConversations)
+      .catch(() => setConversations([]))
+      .finally(() => setLoading(false));
+  }, [currentStore]);
+
+  const selectConversation = async (conv: ConversationDetail) => {
+    if (!currentStore) return;
+    setLoadingDetail(true);
+    setNotebook(null);
+    try {
+      const detail = await getConversation(currentStore.id, conv.id);
+      setSelected(detail);
+      if (detail.session_id) {
+        const session = await getSalesSession(
+          currentStore.id,
+          detail.session_id
+        );
+        setNotebook(session.notebook || null);
+      }
+    } catch {
+      setSelected(conv);
+    } finally {
+      setLoadingDetail(false);
+    }
+  };
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [selected?.messages]);
+
+  /* ── Filtered conversations ────────────────────── */
+  const filteredConversations = conversations.filter((conv) => {
+    const matchesSearch =
+      !searchTerm ||
+      (conv.customer_name || "")
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase()) ||
+      (conv.customer_email || "")
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase());
+    const matchesStage =
+      stageFilter === "all" || conv.current_stage === stageFilter;
+    return matchesSearch && matchesStage;
+  });
+
+  /* ── Active stages for filter ──────────────────── */
+  const activeStages = Array.from(
+    new Set(conversations.map((c) => c.current_stage).filter(Boolean))
+  );
+
+  if (!currentStore) {
+    return (
+      <div className="flex items-center justify-center h-64 text-gray-500">
+        <p className="text-sm">Selecciona una tienda</p>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="w-8 h-8 animate-spin text-indigo-500" />
+          <p className="text-sm text-gray-400">Cargando conversaciones...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="h-[calc(100vh-7rem)]">
+      {/* Page header */}
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Conversaciones</h1>
+          <p className="text-sm text-gray-500 mt-1">
+            {conversations.length} conversaciones en total
+          </p>
+        </div>
+      </div>
+
+      {/* 3-column layout */}
+      <div className="flex gap-5 h-[calc(100%-4.5rem)]">
+        {/* ── Left: Conversation list ────────────── */}
+        <div className="w-[340px] flex-shrink-0 bg-white rounded-xl border border-gray-200/60 overflow-hidden flex flex-col">
+          {/* Search & Filter */}
+          <div className="p-4 border-b border-gray-100 space-y-3">
+            <div className="relative">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Buscar por nombre o email..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2.5 rounded-lg bg-gray-50 border border-gray-200 text-sm focus:outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 transition-all duration-200"
+              />
+            </div>
+            {activeStages.length > 1 && (
+              <div className="flex items-center gap-2">
+                <Filter className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                <div className="flex gap-1.5 overflow-x-auto">
+                  <button
+                    onClick={() => setStageFilter("all")}
+                    className={`px-2.5 py-1 rounded-full text-[10px] font-semibold whitespace-nowrap transition-all duration-200 ${
+                      stageFilter === "all"
+                        ? "bg-indigo-100 text-indigo-700"
+                        : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+                    }`}
+                  >
+                    Todas
+                  </button>
+                  {activeStages.map((stage) => (
+                    <button
+                      key={stage}
+                      onClick={() => setStageFilter(stage!)}
+                      className={`px-2.5 py-1 rounded-full text-[10px] font-semibold whitespace-nowrap transition-all duration-200 ${
+                        stageFilter === stage
+                          ? STAGE_BADGE_COLORS[stage!] || "bg-gray-200"
+                          : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+                      }`}
+                    >
+                      {STAGE_LABELS[stage!] || stage}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Conversation list */}
+          <div className="flex-1 overflow-y-auto">
+            {filteredConversations.length === 0 && (
+              <div className="flex flex-col items-center justify-center py-16 text-gray-400">
+                <div className="w-14 h-14 rounded-2xl bg-gray-100 flex items-center justify-center mb-4">
+                  <MessageSquare className="w-6 h-6 opacity-50" />
+                </div>
+                <p className="text-sm font-medium mb-1">
+                  {searchTerm || stageFilter !== "all"
+                    ? "Sin resultados"
+                    : "Sin conversaciones"}
+                </p>
+                <p className="text-xs text-gray-400">
+                  {searchTerm || stageFilter !== "all"
+                    ? "Prueba con otros filtros"
+                    : "Las conversaciones apareceran aqui"}
+                </p>
+              </div>
+            )}
+            {filteredConversations.map((conv) => (
+              <ConversationItem
+                key={conv.id}
+                conv={conv}
+                isSelected={selected?.id === conv.id}
+                onClick={() => selectConversation(conv)}
+              />
+            ))}
+          </div>
+        </div>
+
+        {/* ── Center: Messages ───────────────────── */}
+        <div className="flex-1 flex flex-col bg-white rounded-xl border border-gray-200/60 overflow-hidden">
+          {!selected ? (
+            <div className="flex-1 flex items-center justify-center text-gray-400">
+              <div className="text-center">
+                <div className="w-16 h-16 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-5">
+                  <MailOpen className="w-7 h-7 opacity-40" />
+                </div>
+                <p className="text-sm font-medium text-gray-500 mb-1">
+                  Selecciona una conversacion
+                </p>
+                <p className="text-xs text-gray-400">
+                  Elige una conversacion para ver los mensajes
+                </p>
+              </div>
+            </div>
+          ) : loadingDetail ? (
+            <div className="flex-1 flex items-center justify-center">
+              <div className="flex flex-col items-center gap-3">
+                <Loader2 className="w-6 h-6 animate-spin text-indigo-500" />
+                <p className="text-xs text-gray-400">Cargando mensajes...</p>
+              </div>
+            </div>
+          ) : (
+            <>
+              {/* Conversation header */}
+              <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center">
+                    <User className="w-5 h-5 text-indigo-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-gray-900">
+                      {selected.customer_name ||
+                        selected.customer_email ||
+                        "Cliente"}
+                    </p>
+                    {selected.customer_email && (
+                      <p className="text-xs text-gray-400 mt-0.5">
+                        {selected.customer_email}
+                      </p>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  {selected.current_stage && (
+                    <span
+                      className={`text-xs font-semibold px-3 py-1.5 rounded-full ${
+                        STAGE_BADGE_COLORS[selected.current_stage] ||
+                        "bg-gray-100"
+                      }`}
+                    >
+                      {STAGE_LABELS[selected.current_stage] ||
+                        selected.current_stage}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Messages */}
+              <div className="flex-1 overflow-y-auto px-6 py-6 space-y-4">
+                {(selected.messages || []).map((msg, i) => (
+                  <ConversationMessage key={msg.id || i} msg={msg} />
+                ))}
+                <div ref={messagesEndRef} />
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* ── Right: Notebook panel ──────────────── */}
+        <div className="w-[300px] flex-shrink-0 bg-white rounded-xl border border-gray-200/60 overflow-y-auto p-4">
+          {notebook ? (
+            <NotebookPanel notebook={notebook} />
+          ) : (
+            <div className="flex flex-col items-center justify-center h-full text-gray-400">
+              <div className="w-14 h-14 rounded-2xl bg-gray-100 flex items-center justify-center mb-4">
+                <BookOpen className="w-6 h-6 opacity-40" />
+              </div>
+              <p className="text-sm font-medium text-gray-500 mb-1">
+                {selected ? "Sin notebook activo" : "Sales Notebook"}
+              </p>
+              <p className="text-xs text-gray-400 text-center max-w-[180px]">
+                {selected
+                  ? "Esta conversacion no tiene notebook"
+                  : "Selecciona una conversacion para ver su notebook"}
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
