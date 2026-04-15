@@ -283,6 +283,7 @@ function TerminalView({
       const { FitAddon } = await import("@xterm/addon-fit");
 
       // Importar CSS
+      // @ts-ignore
       await import("xterm/css/xterm.css");
 
       // Crear terminal
