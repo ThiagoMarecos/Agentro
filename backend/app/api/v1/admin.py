@@ -31,13 +31,34 @@ router = APIRouter()
 
 # ── Schemas ──────────────────────────────────────────────────────────
 
+class SaaSFinancials(BaseModel):
+    gmv_today: float          # Gross Merchandise Volume hoy (total vendido todas las tiendas)
+    gmv_week: float           # GMV últimos 7 días
+    gmv_month: float          # GMV últimos 30 días
+    gmv_all_time: float       # GMV histórico
+    commission_percent: float  # % de comisión
+    revenue_today: float      # Ingresos Agentro hoy (GMV * comisión)
+    revenue_week: float
+    revenue_month: float
+    revenue_all_time: float
+    orders_today: int
+    orders_week: int
+    orders_month: int
+    orders_all_time: int
+    avg_order_value: float    # Ticket promedio
+    top_stores: list[dict]    # Top 5 tiendas por ventas del mes
+
+
 class DashboardResponse(BaseModel):
     total_stores: int
     active_stores: int
     suspended_stores: int
     total_users: int
     whatsapp_connected: int
+    stores_today: int         # Tiendas registradas hoy
+    stores_week: int          # Tiendas registradas esta semana
     recent_stores: list[dict]
+    financials: SaaSFinancials
 
 
 class StoreListItem(BaseModel):
@@ -209,7 +230,18 @@ def admin_dashboard(
     admin: User = Depends(require_superadmin),
     db: Session = Depends(get_db),
 ):
-    """Métricas generales del Super Admin."""
+    """Métricas generales del Super Admin con datos financieros del SaaS."""
+    from app.services.platform_settings_service import get_setting_value
+
+    now = datetime.now(timezone.utc)
+    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    week_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    # Retroceder al lunes
+    from datetime import timedelta
+    week_start = today_start - timedelta(days=today_start.weekday())
+    month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+
+    # ── Contadores básicos ──
     total_stores = db.query(func.count(Store.id)).scalar() or 0
     active_stores = db.query(func.count(Store.id)).filter(Store.is_active == True).scalar() or 0
     suspended_stores = total_stores - active_stores
@@ -219,6 +251,102 @@ def admin_dashboard(
         AIChannel.connection_status.in_(["open", "connected"]),
     ).scalar() or 0
 
+    # Tiendas nuevas
+    stores_today = db.query(func.count(Store.id)).filter(Store.created_at >= today_start).scalar() or 0
+    stores_week = db.query(func.count(Store.id)).filter(Store.created_at >= week_start).scalar() or 0
+
+    # ── Financials ──
+    # Comisión desde settings
+    commission_str = get_setting_value(db, "saas_commission_percent") or "0"
+    try:
+        commission_percent = float(commission_str)
+    except ValueError:
+        commission_percent = 0.0
+
+    # Filtro: solo órdenes no canceladas
+    valid_statuses = ["pending", "confirmed", "processing", "shipped", "delivered"]
+
+    def _gmv_query(since=None):
+        q = db.query(func.coalesce(func.sum(Order.total), 0)).filter(
+            Order.status.in_(valid_statuses)
+        )
+        if since:
+            q = q.filter(Order.created_at >= since)
+        return float(q.scalar() or 0)
+
+    def _order_count(since=None):
+        q = db.query(func.count(Order.id)).filter(
+            Order.status.in_(valid_statuses)
+        )
+        if since:
+            q = q.filter(Order.created_at >= since)
+        return q.scalar() or 0
+
+    gmv_today = _gmv_query(today_start)
+    gmv_week = _gmv_query(week_start)
+    gmv_month = _gmv_query(month_start)
+    gmv_all_time = _gmv_query()
+
+    orders_today = _order_count(today_start)
+    orders_week = _order_count(week_start)
+    orders_month = _order_count(month_start)
+    orders_all_time = _order_count()
+
+    avg_order_value = round(gmv_all_time / orders_all_time, 2) if orders_all_time > 0 else 0
+
+    commission_rate = commission_percent / 100
+
+    # Top 5 tiendas por ventas del mes
+    top_stores_q = (
+        db.query(
+            Store.id,
+            Store.name,
+            Store.slug,
+            func.coalesce(func.sum(Order.total), 0).label("total_sales"),
+            func.count(Order.id).label("order_count"),
+        )
+        .join(Order, Order.store_id == Store.id)
+        .filter(
+            Order.status.in_(valid_statuses),
+            Order.created_at >= month_start,
+        )
+        .group_by(Store.id, Store.name, Store.slug)
+        .order_by(func.sum(Order.total).desc())
+        .limit(5)
+        .all()
+    )
+
+    top_stores = []
+    for row in top_stores_q:
+        total_sales = float(row.total_sales)
+        top_stores.append({
+            "id": row.id,
+            "name": row.name,
+            "slug": row.slug,
+            "total_sales": round(total_sales, 2),
+            "order_count": row.order_count,
+            "commission": round(total_sales * commission_rate, 2),
+        })
+
+    financials = SaaSFinancials(
+        gmv_today=round(gmv_today, 2),
+        gmv_week=round(gmv_week, 2),
+        gmv_month=round(gmv_month, 2),
+        gmv_all_time=round(gmv_all_time, 2),
+        commission_percent=commission_percent,
+        revenue_today=round(gmv_today * commission_rate, 2),
+        revenue_week=round(gmv_week * commission_rate, 2),
+        revenue_month=round(gmv_month * commission_rate, 2),
+        revenue_all_time=round(gmv_all_time * commission_rate, 2),
+        orders_today=orders_today,
+        orders_week=orders_week,
+        orders_month=orders_month,
+        orders_all_time=orders_all_time,
+        avg_order_value=avg_order_value,
+        top_stores=top_stores,
+    )
+
+    # ── Últimas tiendas ──
     recent = db.query(Store).order_by(Store.created_at.desc()).limit(5).all()
     recent_stores = []
     for s in recent:
@@ -237,7 +365,10 @@ def admin_dashboard(
         suspended_stores=suspended_stores,
         total_users=total_users,
         whatsapp_connected=whatsapp_connected,
+        stores_today=stores_today,
+        stores_week=stores_week,
         recent_stores=recent_stores,
+        financials=financials,
     )
 
 
@@ -457,6 +588,39 @@ def admin_update_user_status(
     db.commit()
 
     return {"ok": True, "is_active": user.is_active}
+
+
+class PromoteRequest(BaseModel):
+    email: str
+
+
+@router.post("/users/promote-superadmin")
+def admin_promote_superadmin(
+    body: PromoteRequest,
+    admin: User = Depends(require_superadmin),
+    db: Session = Depends(get_db),
+):
+    """Promover un usuario a Super Admin por email."""
+    user = db.query(User).filter(User.email == body.email).first()
+    if not user:
+        raise HTTPException(status_code=404, detail=f"Usuario con email {body.email} no encontrado")
+    if user.is_superadmin:
+        return {"ok": True, "message": f"{body.email} ya es Super Admin"}
+
+    user.is_superadmin = True
+    db.commit()
+
+    log = AuditLog(
+        user_id=admin.id,
+        action="user_promoted_superadmin",
+        resource_type="user",
+        resource_id=user.id,
+        details=f"Super Admin promovió a {user.email} como Super Admin",
+    )
+    db.add(log)
+    db.commit()
+
+    return {"ok": True, "message": f"{body.email} ahora es Super Admin"}
 
 
 # ── Logs de plataforma ─────────────────────────────────────────────

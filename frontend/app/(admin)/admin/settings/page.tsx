@@ -50,6 +50,12 @@ const CATEGORY_META: Record<string, { label: string; icon: React.ElementType; co
     color: "text-purple-600 bg-purple-50",
     description: "API Key de Pexels para imágenes de stock automáticas.",
   },
+  billing: {
+    label: "Facturación SaaS",
+    icon: CreditCard,
+    color: "text-emerald-600 bg-emerald-50",
+    description: "Porcentaje de comisión que Agentro cobra por cada venta de las tiendas.",
+  },
   stripe: {
     label: "Stripe (Pagos)",
     icon: CreditCard,

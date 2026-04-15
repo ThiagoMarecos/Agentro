@@ -17,6 +17,7 @@ import {
 import {
   getAdminUsers,
   updateUserStatus,
+  promoteSuperAdmin,
   UserListItem,
   UserListResponse,
 } from "@/lib/api/admin";
@@ -29,6 +30,8 @@ export default function AdminUsersPage() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [page, setPage] = useState(1);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [promoteEmail, setPromoteEmail] = useState("");
+  const [promoteMsg, setPromoteMsg] = useState("");
 
   const pageSize = 20;
 
@@ -81,6 +84,40 @@ export default function AdminUsersPage() {
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Usuarios</h1>
         <p className="text-sm text-gray-500 mt-1">Gestión de todos los usuarios registrados en la plataforma</p>
+      </div>
+
+      {/* Promote superadmin */}
+      <div className="bg-white rounded-xl border border-gray-200/60 p-4 flex flex-col sm:flex-row items-end gap-3">
+        <div className="flex-1 w-full">
+          <label className="text-xs font-semibold text-gray-700 mb-1 block">Promover a Super Admin</label>
+          <input
+            type="email"
+            value={promoteEmail}
+            onChange={(e) => setPromoteEmail(e.target.value)}
+            placeholder="email@ejemplo.com"
+            className="w-full px-3 py-2.5 rounded-lg border border-gray-200 bg-white text-sm focus:outline-none focus:border-violet-400 focus:ring-1 focus:ring-violet-400"
+          />
+        </div>
+        <button
+          onClick={async () => {
+            if (!promoteEmail.trim()) return;
+            try {
+              const res = await promoteSuperAdmin(promoteEmail.trim());
+              setPromoteMsg(res.message);
+              setPromoteEmail("");
+              fetchUsers();
+            } catch (e: any) {
+              setPromoteMsg(e.message);
+            }
+          }}
+          className="px-4 py-2.5 rounded-lg bg-violet-600 text-white text-sm font-medium hover:bg-violet-700 transition whitespace-nowrap"
+        >
+          <Shield className="w-4 h-4 inline mr-1.5" />
+          Promover
+        </button>
+        {promoteMsg && (
+          <p className="text-xs text-gray-600 self-center">{promoteMsg}</p>
+        )}
       </div>
 
       {/* Filters */}

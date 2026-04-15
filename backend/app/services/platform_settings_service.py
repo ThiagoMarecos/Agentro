@@ -56,6 +56,8 @@ PLATFORM_KEYS = [
     {"key": "stripe_publishable_key", "label": "Stripe Publishable Key", "category": "stripe", "is_secret": False},
     {"key": "stripe_secret_key", "label": "Stripe Secret Key", "category": "stripe", "is_secret": True},
     {"key": "stripe_webhook_secret", "label": "Stripe Webhook Secret", "category": "stripe", "is_secret": True},
+    # Comisiones SaaS
+    {"key": "saas_commission_percent", "label": "Comisión por venta (%)", "category": "billing", "is_secret": False},
     # VPS / SSH
     {"key": "vps_ssh_host", "label": "VPS IP / Host", "category": "vps", "is_secret": False},
     {"key": "vps_ssh_port", "label": "VPS SSH Port", "category": "vps", "is_secret": False},

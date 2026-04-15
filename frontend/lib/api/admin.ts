@@ -6,12 +6,39 @@ import { authFetch } from "@/lib/auth";
 
 const API_URL = "/api/v1";
 
+export interface SaaSFinancials {
+  gmv_today: number;
+  gmv_week: number;
+  gmv_month: number;
+  gmv_all_time: number;
+  commission_percent: number;
+  revenue_today: number;
+  revenue_week: number;
+  revenue_month: number;
+  revenue_all_time: number;
+  orders_today: number;
+  orders_week: number;
+  orders_month: number;
+  orders_all_time: number;
+  avg_order_value: number;
+  top_stores: Array<{
+    id: string;
+    name: string;
+    slug: string;
+    total_sales: number;
+    order_count: number;
+    commission: number;
+  }>;
+}
+
 export interface DashboardData {
   total_stores: number;
   active_stores: number;
   suspended_stores: number;
   total_users: number;
   whatsapp_connected: number;
+  stores_today: number;
+  stores_week: number;
   recent_stores: Array<{
     id: string;
     name: string;
@@ -20,6 +47,7 @@ export interface DashboardData {
     created_at: string;
     owner_email: string | null;
   }>;
+  financials: SaaSFinancials;
 }
 
 export interface StoreListItem {
@@ -243,6 +271,19 @@ export interface HealthData {
   overall: "ok" | "error" | "degraded";
   services: ServiceHealth[];
   vps: VPSResources | null;
+}
+
+export async function promoteSuperAdmin(email: string): Promise<{ ok: boolean; message: string }> {
+  const res = await authFetch(`${API_URL}/admin/users/promote-superadmin`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || "Error al promover usuario");
+  }
+  return res.json();
 }
 
 export async function getAdminHealth(): Promise<HealthData> {
