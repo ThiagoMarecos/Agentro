@@ -21,7 +21,6 @@ import {
   ChevronUp,
   Terminal,
   ArrowRight,
-  Brain,
 } from "lucide-react";
 import { getAdminHealth, HealthData, ServiceHealth, VPSResources } from "@/lib/api/admin";
 
