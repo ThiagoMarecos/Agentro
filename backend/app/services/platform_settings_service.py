@@ -108,8 +108,7 @@ def get_all_settings(db: Session) -> list[dict]:
             "is_secret": s.is_secret,
             "has_value": has_value,
             "display_value": masked,
-            # SECURITY: real_value eliminado — nunca exponer secrets desencriptados en la API.
-            # Usar get_setting_value() internamente cuando el backend necesite el valor real.
+            "real_value": plain_value,
         })
     return result
 

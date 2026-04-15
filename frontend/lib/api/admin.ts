@@ -222,11 +222,27 @@ export interface ServiceHealth {
   status: "ok" | "error" | "degraded";
   latency_ms: number | null;
   details: string | null;
+  actions: string[] | null;
+}
+
+export interface VPSResources {
+  cpu_percent: number;
+  memory_used_mb: number;
+  memory_total_mb: number;
+  memory_percent: number;
+  disk_used_gb: number;
+  disk_total_gb: number;
+  disk_percent: number;
+  uptime_seconds: number;
+  load_avg_1m: number;
+  load_avg_5m: number;
+  load_avg_15m: number;
 }
 
 export interface HealthData {
   overall: "ok" | "error" | "degraded";
   services: ServiceHealth[];
+  vps: VPSResources | null;
 }
 
 export async function getAdminHealth(): Promise<HealthData> {

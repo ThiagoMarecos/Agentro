@@ -132,11 +132,27 @@ class ServiceHealth(BaseModel):
     status: str  # "ok" | "error" | "degraded"
     latency_ms: float | None
     details: str | None
+    actions: list[str] | None = None  # acciones recomendadas
+
+
+class VPSResources(BaseModel):
+    cpu_percent: float
+    memory_used_mb: float
+    memory_total_mb: float
+    memory_percent: float
+    disk_used_gb: float
+    disk_total_gb: float
+    disk_percent: float
+    uptime_seconds: float
+    load_avg_1m: float
+    load_avg_5m: float
+    load_avg_15m: float
 
 
 class HealthResponse(BaseModel):
     overall: str
     services: list[ServiceHealth]
+    vps: VPSResources | None = None
 
 
 # ── Helpers ──────────────────────────────────────────────────────────
@@ -489,12 +505,91 @@ def admin_platform_logs(
 
 # ── Salud del sistema ──────────────────────────────────────────────
 
+def _get_vps_resources() -> VPSResources | None:
+    """Lee recursos del sistema operativo."""
+    try:
+        import psutil, time as _time
+        mem = psutil.virtual_memory()
+        disk = psutil.disk_usage("/")
+        load = psutil.getloadavg()
+        return VPSResources(
+            cpu_percent=psutil.cpu_percent(interval=0.5),
+            memory_used_mb=round(mem.used / (1024 * 1024), 1),
+            memory_total_mb=round(mem.total / (1024 * 1024), 1),
+            memory_percent=mem.percent,
+            disk_used_gb=round(disk.used / (1024 ** 3), 1),
+            disk_total_gb=round(disk.total / (1024 ** 3), 1),
+            disk_percent=round(disk.used / disk.total * 100, 1),
+            uptime_seconds=round(_time.time() - psutil.boot_time()),
+            load_avg_1m=load[0],
+            load_avg_5m=load[1],
+            load_avg_15m=load[2],
+        )
+    except Exception:
+        return None
+
+
+def _recommend_actions(service: str, status: str, details: str | None) -> list[str]:
+    """Genera acciones recomendadas según el servicio y su estado."""
+    if status == "ok":
+        return []
+
+    actions_map = {
+        "PostgreSQL": {
+            "error": [
+                "Verificar que el container agentro-postgres esté corriendo: docker ps",
+                "Revisar logs: docker logs agentro-postgres --tail 50",
+                "Reiniciar container: docker restart agentro-postgres",
+                "Verificar espacio en disco del VPS",
+            ],
+        },
+        "Redis": {
+            "error": [
+                "Verificar container: docker ps | grep redis",
+                "Reiniciar Redis: docker restart agentro-redis",
+                "Verificar REDIS_URL en .env del backend",
+                "Revisar logs: docker logs agentro-redis --tail 50",
+            ],
+        },
+        "Evolution API": {
+            "error": [
+                "Configurar Evolution API URL y Key en Admin > API Keys",
+                "Verificar container: docker ps | grep evolution",
+                "Reiniciar: docker restart agentro-evolution",
+                "Revisar logs: docker logs agentro-evolution --tail 50",
+            ],
+            "degraded": [
+                "Verificar que la API Key sea correcta en Admin > API Keys",
+                "Revisar logs: docker logs agentro-evolution --tail 50",
+                "Verificar conectividad de red del container",
+            ],
+        },
+        "OpenAI": {
+            "error": [
+                "Configurar OpenAI API Key en Admin > API Keys",
+                "Verificar saldo en platform.openai.com/usage",
+                "Generar nueva key en platform.openai.com/api-keys",
+            ],
+            "degraded": [
+                "Verificar límites de rate en platform.openai.com",
+                "Verificar que la API Key no esté expirada",
+                "Revisar saldo en platform.openai.com/usage",
+            ],
+        },
+    }
+
+    return actions_map.get(service, {}).get(status, [
+        f"Revisar la configuración del servicio {service}",
+        "Contactar soporte si el problema persiste",
+    ])
+
+
 @router.get("/health", response_model=HealthResponse)
 async def admin_system_health(
     admin: User = Depends(require_superadmin),
     db: Session = Depends(get_db),
 ):
-    """Estado de salud de todos los servicios de la plataforma."""
+    """Estado de salud de todos los servicios de la plataforma + recursos VPS."""
     import time
     services: list[ServiceHealth] = []
 
@@ -503,9 +598,12 @@ async def admin_system_health(
         t0 = time.time()
         db.execute(text("SELECT 1"))
         latency = round((time.time() - t0) * 1000, 1)
-        services.append(ServiceHealth(name="PostgreSQL", status="ok", latency_ms=latency, details="Conexión activa"))
+        status = "ok"
+        details = "Conexión activa"
+        services.append(ServiceHealth(name="PostgreSQL", status=status, latency_ms=latency, details=details, actions=_recommend_actions("PostgreSQL", status, details)))
     except Exception as e:
-        services.append(ServiceHealth(name="PostgreSQL", status="error", latency_ms=None, details=str(e)[:200]))
+        details = str(e)[:200]
+        services.append(ServiceHealth(name="PostgreSQL", status="error", latency_ms=None, details=details, actions=_recommend_actions("PostgreSQL", "error", details)))
 
     # 2. Redis
     try:
@@ -515,16 +613,21 @@ async def admin_system_health(
         r.ping()
         latency = round((time.time() - t0) * 1000, 1)
         r.close()
-        services.append(ServiceHealth(name="Redis", status="ok", latency_ms=latency, details="Conexión activa"))
+        status = "ok"
+        details = "Conexión activa"
+        services.append(ServiceHealth(name="Redis", status=status, latency_ms=latency, details=details, actions=_recommend_actions("Redis", status, details)))
     except Exception as e:
-        services.append(ServiceHealth(name="Redis", status="error", latency_ms=None, details=str(e)[:200]))
+        details = str(e)[:200]
+        services.append(ServiceHealth(name="Redis", status="error", latency_ms=None, details=details, actions=_recommend_actions("Redis", "error", details)))
 
     # 3. Evolution API (WhatsApp)
     try:
         evo_url = get_dynamic_setting("evolution_api_url")
         evo_key = get_dynamic_setting("evolution_api_key")
         if not evo_url or not evo_key:
-            services.append(ServiceHealth(name="Evolution API", status="error", latency_ms=None, details="URL o API Key no configurada"))
+            status = "error"
+            details = "URL o API Key no configurada"
+            services.append(ServiceHealth(name="Evolution API", status=status, latency_ms=None, details=details, actions=_recommend_actions("Evolution API", status, details)))
         else:
             import httpx
             t0 = time.time()
@@ -532,17 +635,23 @@ async def admin_system_health(
                 resp = await client.get(f"{evo_url}/instance/fetchInstances", headers={"apikey": evo_key})
             latency = round((time.time() - t0) * 1000, 1)
             if resp.status_code == 200:
-                services.append(ServiceHealth(name="Evolution API", status="ok", latency_ms=latency, details=f"HTTP {resp.status_code}"))
+                status = "ok"
+                details = f"HTTP {resp.status_code}"
             else:
-                services.append(ServiceHealth(name="Evolution API", status="degraded", latency_ms=latency, details=f"HTTP {resp.status_code}"))
+                status = "degraded"
+                details = f"HTTP {resp.status_code}"
+            services.append(ServiceHealth(name="Evolution API", status=status, latency_ms=latency, details=details, actions=_recommend_actions("Evolution API", status, details)))
     except Exception as e:
-        services.append(ServiceHealth(name="Evolution API", status="error", latency_ms=None, details=str(e)[:200]))
+        details = str(e)[:200]
+        services.append(ServiceHealth(name="Evolution API", status="error", latency_ms=None, details=details, actions=_recommend_actions("Evolution API", "error", details)))
 
     # 4. OpenAI
     try:
         openai_key = get_dynamic_setting("openai_api_key")
         if not openai_key:
-            services.append(ServiceHealth(name="OpenAI", status="error", latency_ms=None, details="API Key no configurada"))
+            status = "error"
+            details = "API Key no configurada"
+            services.append(ServiceHealth(name="OpenAI", status=status, latency_ms=None, details=details, actions=_recommend_actions("OpenAI", status, details)))
         else:
             import httpx
             t0 = time.time()
@@ -550,11 +659,15 @@ async def admin_system_health(
                 resp = await client.get("https://api.openai.com/v1/models", headers={"Authorization": f"Bearer {openai_key}"})
             latency = round((time.time() - t0) * 1000, 1)
             if resp.status_code == 200:
-                services.append(ServiceHealth(name="OpenAI", status="ok", latency_ms=latency, details="API accesible"))
+                status = "ok"
+                details = "API accesible"
             else:
-                services.append(ServiceHealth(name="OpenAI", status="degraded", latency_ms=latency, details=f"HTTP {resp.status_code}"))
+                status = "degraded"
+                details = f"HTTP {resp.status_code}"
+            services.append(ServiceHealth(name="OpenAI", status=status, latency_ms=latency, details=details, actions=_recommend_actions("OpenAI", status, details)))
     except Exception as e:
-        services.append(ServiceHealth(name="OpenAI", status="error", latency_ms=None, details=str(e)[:200]))
+        details = str(e)[:200]
+        services.append(ServiceHealth(name="OpenAI", status="error", latency_ms=None, details=details, actions=_recommend_actions("OpenAI", "error", details)))
 
     # Overall
     statuses = [s.status for s in services]
@@ -565,4 +678,7 @@ async def admin_system_health(
     else:
         overall = "degraded"
 
-    return HealthResponse(overall=overall, services=services)
+    # VPS Resources
+    vps = _get_vps_resources()
+
+    return HealthResponse(overall=overall, services=services, vps=vps)
