@@ -52,8 +52,12 @@ PLATFORM_KEYS = [
     {"key": "evolution_api_key", "label": "Evolution API Key", "category": "whatsapp", "is_secret": True},
     # Pexels
     {"key": "pexels_api_key", "label": "Pexels API Key", "category": "pexels", "is_secret": True},
-    # App
-    {"key": "secret_key", "label": "JWT Secret Key", "category": "security", "is_secret": True},
+    # Stripe
+    {"key": "stripe_publishable_key", "label": "Stripe Publishable Key", "category": "stripe", "is_secret": False},
+    {"key": "stripe_secret_key", "label": "Stripe Secret Key", "category": "stripe", "is_secret": True},
+    {"key": "stripe_webhook_secret", "label": "Stripe Webhook Secret", "category": "stripe", "is_secret": True},
+    # SECURITY: secret_key (JWT signing key) se gestiona SOLO por variable de entorno,
+    # nunca por la DB ni por la API. Exponer su valor permitiría forjar tokens JWT.
 ]
 
 
@@ -104,7 +108,8 @@ def get_all_settings(db: Session) -> list[dict]:
             "is_secret": s.is_secret,
             "has_value": has_value,
             "display_value": masked,
-            "real_value": plain_value,
+            # SECURITY: real_value eliminado — nunca exponer secrets desencriptados en la API.
+            # Usar get_setting_value() internamente cuando el backend necesite el valor real.
         })
     return result
 

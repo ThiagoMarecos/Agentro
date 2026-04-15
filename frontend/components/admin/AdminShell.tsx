@@ -7,6 +7,9 @@ import {
   LayoutDashboard,
   Building2,
   Key,
+  Users,
+  ScrollText,
+  Activity,
   LogOut,
   ChevronLeft,
   Shield,
@@ -16,6 +19,9 @@ import { useAuth } from "@/app/providers/AuthProvider";
 const navItems = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/stores", label: "Tiendas", icon: Building2 },
+  { href: "/admin/users", label: "Usuarios", icon: Users },
+  { href: "/admin/logs", label: "Logs", icon: ScrollText },
+  { href: "/admin/health", label: "Sistema", icon: Activity },
   { href: "/admin/settings", label: "API Keys", icon: Key },
 ];
 
@@ -53,7 +59,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
         <div className={`h-16 flex items-center border-b border-gray-100 ${collapsed ? "justify-center px-2" : "justify-between px-5"}`}>
           {!collapsed && (
             <Link href="/admin" className="flex items-center gap-2">
-              <img src="/logo-black.png" alt="Agentro" className="h-7 w-auto" />
+              <img src="/logo-black.png" alt="Agentro" className="h-6 w-auto" />
               <span className="text-[10px] font-semibold bg-violet-100 text-violet-700 px-1.5 py-0.5 rounded-md uppercase tracking-wide">
                 Admin
               </span>

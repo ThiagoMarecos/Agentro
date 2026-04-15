@@ -47,8 +47,18 @@ TOOL_EXECUTORS = {
 }
 
 
+# Tools de solo lectura que se habilitan por defecto (sin configuración explícita)
+_DEFAULT_SAFE_TOOLS = {"product_search", "product_detail", "check_availability"}
+
+
 def get_tools_for_agent(enabled_tools: list[str] | None) -> list[dict]:
-    """Filtra definiciones de tools según las habilitadas para un agente."""
+    """
+    Retorna las tools habilitadas para un agente.
+    SECURITY: deny-by-default — si enabled_tools es None o vacío, solo se
+    retornan tools de lectura seguras. Las tools destructivas (create_order,
+    create_payment_link) requieren habilitación explícita en la config del agente.
+    """
     if not enabled_tools:
-        return ALL_TOOL_DEFINITIONS
+        # Solo tools seguras de solo lectura por defecto
+        return [t for t in ALL_TOOL_DEFINITIONS if t["function"]["name"] in _DEFAULT_SAFE_TOOLS]
     return [t for t in ALL_TOOL_DEFINITIONS if t["function"]["name"] in enabled_tools]

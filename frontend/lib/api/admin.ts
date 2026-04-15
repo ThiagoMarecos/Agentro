@@ -124,3 +124,116 @@ export async function getStoreActivity(storeId: string, limit = 20): Promise<Act
   }
   return res.json();
 }
+
+// ── Usuarios ──────────────────────────────────────────────────────
+
+export interface UserListItem {
+  id: string;
+  email: string;
+  full_name: string | null;
+  is_active: boolean;
+  is_superadmin: boolean;
+  auth_provider: string | null;
+  created_at: string;
+  last_login_at: string | null;
+  store_count: number;
+}
+
+export interface UserListResponse {
+  users: UserListItem[];
+  total: number;
+  page: number;
+  page_size: number;
+}
+
+export async function getAdminUsers(params?: {
+  page?: number;
+  page_size?: number;
+  search?: string;
+  status?: string;
+}): Promise<UserListResponse> {
+  const sp = new URLSearchParams();
+  if (params?.page) sp.set("page", String(params.page));
+  if (params?.page_size) sp.set("page_size", String(params.page_size));
+  if (params?.search) sp.set("search", params.search);
+  if (params?.status) sp.set("status", params.status);
+
+  const res = await authFetch(`${API_URL}/admin/users?${sp.toString()}`);
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || "Error al obtener usuarios");
+  }
+  return res.json();
+}
+
+export async function updateUserStatus(userId: string, isActive: boolean): Promise<void> {
+  const res = await authFetch(`${API_URL}/admin/users/${userId}/status`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ is_active: isActive }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || "Error al actualizar usuario");
+  }
+}
+
+// ── Logs ──────────────────────────────────────────────────────────
+
+export interface PlatformLogItem {
+  id: string;
+  action: string;
+  resource_type: string | null;
+  details: string | null;
+  created_at: string;
+  user_email: string | null;
+  store_name: string | null;
+}
+
+export interface PlatformLogResponse {
+  logs: PlatformLogItem[];
+  total: number;
+  page: number;
+  page_size: number;
+}
+
+export async function getAdminLogs(params?: {
+  page?: number;
+  page_size?: number;
+  action_filter?: string;
+}): Promise<PlatformLogResponse> {
+  const sp = new URLSearchParams();
+  if (params?.page) sp.set("page", String(params.page));
+  if (params?.page_size) sp.set("page_size", String(params.page_size));
+  if (params?.action_filter) sp.set("action_filter", params.action_filter);
+
+  const res = await authFetch(`${API_URL}/admin/logs?${sp.toString()}`);
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || "Error al obtener logs");
+  }
+  return res.json();
+}
+
+// ── System Health ─────────────────────────────────────────────────
+
+export interface ServiceHealth {
+  name: string;
+  status: "ok" | "error" | "degraded";
+  latency_ms: number | null;
+  details: string | null;
+}
+
+export interface HealthData {
+  overall: "ok" | "error" | "degraded";
+  services: ServiceHealth[];
+}
+
+export async function getAdminHealth(): Promise<HealthData> {
+  const res = await authFetch(`${API_URL}/admin/health`);
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || "Error al obtener estado del sistema");
+  }
+  return res.json();
+}

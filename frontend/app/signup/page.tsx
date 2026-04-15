@@ -35,7 +35,7 @@ export default function SignupPage() {
     <div className="min-h-screen bg-background landing-bg flex items-center justify-center">
       <div className="w-full max-w-md p-8 rounded-2xl glass">
         <Link href="/" className="inline-block mb-6 hover:opacity-90 transition-opacity">
-          <img src="/logo-white.png" alt="Agentro" className="h-7 w-auto" />
+          <img src="/logo-white.png" alt="Agentro" className="h-6 w-auto" />
         </Link>
         <h1 className="heading-page text-2xl mb-2">Crear cuenta</h1>
         <p className="text-text-muted text-sm mb-6">

@@ -29,7 +29,7 @@ export default function TermsPage() {
       <header className="border-b border-white/10">
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
           <Link href="/" className="hover:opacity-90 transition-opacity">
-            <img src="/logo-white.png" alt="Agentro" className="h-7 w-auto" />
+            <img src="/logo-white.png" alt="Agentro" className="h-6 w-auto" />
           </Link>
           <Link href="/" className="text-sm text-text-muted hover:text-white transition">
             Volver al inicio
@@ -219,7 +219,27 @@ export default function TermsPage() {
           </p>
         </Section>
 
-        <Section title="12. Propiedad intelectual">
+        <Section title="12. Acceso administrativo a las tiendas">
+          <p>
+            El usuario reconoce y acepta que el equipo administrador de Agentro podrá acceder a las
+            tiendas creadas en la plataforma con los siguientes fines:
+          </p>
+          <List items={[
+            "Soporte técnico y resolución de incidencias reportadas por el usuario",
+            "Verificación del cumplimiento de estos Términos de Uso",
+            "Investigación de actividades sospechosas, fraudulentas o que representen un riesgo para la seguridad de la plataforma",
+            "Mantenimiento, auditoría y mejora del servicio",
+            "Cumplimiento de requerimientos legales o regulatorios",
+          ]} />
+          <p>
+            Agentro se compromete a tratar la información de las tiendas con confidencialidad y a
+            acceder únicamente cuando sea necesario para los fines descritos anteriormente. Este acceso
+            no implica control ni responsabilidad sobre el contenido o las operaciones comerciales del
+            usuario.
+          </p>
+        </Section>
+
+        <Section title="13. Propiedad intelectual">
           <p>
             Todos los derechos relacionados con la plataforma Agentro, incluyendo software, diseño,
             código, logotipos y funcionalidades, pertenecen a Agentro o a sus respectivos titulares.
@@ -230,7 +250,7 @@ export default function TermsPage() {
           </p>
         </Section>
 
-        <Section title="13. Modificaciones del servicio">
+        <Section title="14. Modificaciones del servicio">
           <p>
             Agentro puede modificar, suspender o eliminar funcionalidades del servicio en cualquier
             momento. Estas modificaciones pueden incluir:
@@ -246,7 +266,7 @@ export default function TermsPage() {
           </p>
         </Section>
 
-        <Section title="14. Cambios en los términos">
+        <Section title="15. Cambios en los términos">
           <p>Agentro puede actualizar estos Términos de Uso en cualquier momento.</p>
           <p>
             Cuando se realicen cambios significativos, los usuarios serán notificados a través de la
@@ -257,7 +277,7 @@ export default function TermsPage() {
           </p>
         </Section>
 
-        <Section title="15. Terminación del servicio">
+        <Section title="16. Terminación del servicio">
           <p>El usuario puede dejar de utilizar Agentro en cualquier momento.</p>
           <p>
             La eliminación de una cuenta puede implicar la eliminación de datos asociados, salvo
@@ -265,7 +285,7 @@ export default function TermsPage() {
           </p>
         </Section>
 
-        <Section title="16. Legislación aplicable">
+        <Section title="17. Legislación aplicable">
           <p>
             Estos términos se regirán por las leyes aplicables en la jurisdicción correspondiente al
             proveedor del servicio.

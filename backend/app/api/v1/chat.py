@@ -21,6 +21,9 @@ def _get_store_by_header(
     store = db.query(Store).filter(Store.id == x_store_id).first()
     if not store:
         raise HTTPException(status_code=404, detail="Tienda no encontrada")
+    # SECURITY: rechazar tiendas inactivas/suspendidas
+    if not store.is_active:
+        raise HTTPException(status_code=403, detail="Tienda no disponible")
     return store
 
 

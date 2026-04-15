@@ -242,9 +242,11 @@ def create_storefront_order(
         product = db.query(Product).filter(
             Product.id == item.product_id,
             Product.store_id == store.id,
+            Product.is_active == True,
+            Product.status == "active",
         ).first()
         if not product:
-            raise HTTPException(400, f"Producto {item.product_id} no encontrado")
+            raise HTTPException(400, f"Producto {item.product_id} no disponible")
 
         unit_price = Decimal(str(product.price))
         total_price = unit_price * item.quantity

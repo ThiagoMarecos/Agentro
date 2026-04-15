@@ -65,11 +65,24 @@ def get_current_user(
     return user
 
 
+@router.post("/logout", status_code=204)
+def logout(user: User = Depends(get_current_user)):
+    """
+    Cierra la sesión del usuario.
+    El token JWT sigue siendo técnicamente válido hasta su expiración natural,
+    pero el frontend debe eliminar los tokens localmente.
+    Para revocación completa, implementar token_version en el modelo User.
+    """
+    return None
+
+
 @router.post("/register", response_model=TokenResponse)
 def register(data: UserCreate, request: Request, db: Session = Depends(get_db)):
     """Registro de nuevo usuario."""
-    if db.query(User).filter(User.email == data.email).first():
-        raise HTTPException(status_code=400, detail="Email ya registrado")
+    # SECURITY: no revelar si el email ya existe (previene enumeración de usuarios)
+    existing = db.query(User).filter(User.email == data.email).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="No se pudo completar el registro")
 
     user = User(
         email=data.email,

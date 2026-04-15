@@ -129,21 +129,38 @@ async def whatsapp_webhook(
     event = body.get("event")
     instance_name = body.get("instance")
 
+    if not instance_name:
+        raise HTTPException(status_code=400, detail="Missing instance name")
+
+    # Buscar canal antes de procesar cualquier evento
+    channel = db.query(AIChannel).filter(
+        AIChannel.instance_name == instance_name,
+    ).first()
+
+    if not channel:
+        logger.warning(f"No channel found for instance: {instance_name}")
+        raise HTTPException(status_code=404, detail="Canal no encontrado")
+
+    # SECURITY: validar secret ANTES de procesar cualquier evento, incluido CONNECTION_UPDATE
+    # Canal sin secret configurado rechaza todas las llamadas
+    webhook_secret = request.headers.get("x-webhook-secret")
+    if not channel.webhook_secret:
+        logger.warning(f"Channel {instance_name} has no webhook_secret — rejecting request")
+        raise HTTPException(status_code=403, detail="Webhook secret no configurado en el canal")
+    if webhook_secret != channel.webhook_secret:
+        logger.warning(f"Invalid webhook secret for instance: {instance_name}")
+        raise HTTPException(status_code=403, detail="Webhook secret inválido")
+
     if event == "CONNECTION_UPDATE":
         data = body.get("data", {})
         state = data.get("state", "").lower()
-        if instance_name:
-            channel = db.query(AIChannel).filter(
-                AIChannel.instance_name == instance_name
-            ).first()
-            if channel:
-                if state == "open":
-                    channel.connection_status = "connected"
-                elif state in ("close", "closed"):
-                    channel.connection_status = "disconnected"
-                else:
-                    channel.connection_status = state
-                db.commit()
+        if state == "open":
+            channel.connection_status = "connected"
+        elif state in ("close", "closed"):
+            channel.connection_status = "disconnected"
+        else:
+            channel.connection_status = state
+        db.commit()
         return {"status": "ok"}
 
     if event == "QRCODE_UPDATED":
@@ -153,20 +170,11 @@ async def whatsapp_webhook(
     if not msg_data:
         return {"status": "ignored"}
 
-    channel = db.query(AIChannel).filter(
-        AIChannel.instance_name == msg_data["instance_name"],
-        AIChannel.channel_type == "whatsapp",
-        AIChannel.is_active == True,
-    ).first()
+    if not channel.is_active:
+        return {"status": "channel_inactive"}
 
-    if not channel:
-        logger.warning(f"No channel found for instance: {msg_data['instance_name']}")
-        return {"status": "no_channel"}
-
-    webhook_secret = request.headers.get("x-webhook-secret")
-    if channel.webhook_secret and webhook_secret != channel.webhook_secret:
-        logger.warning(f"Invalid webhook secret for instance: {msg_data['instance_name']}")
-        raise HTTPException(status_code=403, detail="Invalid webhook secret")
+    if channel.channel_type != "whatsapp":
+        return {"status": "ignored"}
 
     background_tasks.add_task(
         _process_whatsapp_message,

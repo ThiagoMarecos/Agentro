@@ -17,6 +17,7 @@ import {
   RotateCcw,
   Pencil,
   AlertTriangle,
+  CreditCard,
 } from "lucide-react";
 import {
   getPlatformSettings,
@@ -48,6 +49,12 @@ const CATEGORY_META: Record<string, { label: string; icon: React.ElementType; co
     icon: Image,
     color: "text-purple-600 bg-purple-50",
     description: "API Key de Pexels para imágenes de stock automáticas.",
+  },
+  stripe: {
+    label: "Stripe (Pagos)",
+    icon: CreditCard,
+    color: "text-indigo-600 bg-indigo-50",
+    description: "Claves de Stripe para procesar pagos. Obtener en dashboard.stripe.com/apikeys.",
   },
   security: {
     label: "Seguridad",

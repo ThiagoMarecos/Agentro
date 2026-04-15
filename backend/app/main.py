@@ -14,6 +14,7 @@ from app.config import get_settings
 from app.api.router import api_router
 from app.middlewares.tenant import TenantMiddleware
 from app.middlewares.security_headers import SecurityHeadersMiddleware
+from app.middlewares.rate_limit import RateLimitMiddleware
 from app.utils.logging import setup_logging, get_logger
 from app.utils.exceptions import NexoraException
 from app.core.exceptions import (
@@ -33,8 +34,6 @@ logger = get_logger(__name__)
 async def lifespan(app: FastAPI):
     """Ciclo de vida de la aplicación."""
     s = get_settings()
-    if s.is_production and s.secret_key == "change-me-in-production":
-        logger.warning("SECRET_KEY usa valor por defecto. Configure SECRET_KEY en producción.")
     if not s.google_client_id or not s.google_client_secret:
         logger.warning(
             "Google OAuth no configurado. Configure GOOGLE_CLIENT_ID y GOOGLE_CLIENT_SECRET en .env "
@@ -58,6 +57,12 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
+    # Rate limiting (primero en la cadena para bloquear antes de cualquier procesamiento)
+    app.add_middleware(
+        RateLimitMiddleware,
+        requests_per_window=settings.rate_limit_requests,
+        window_seconds=settings.rate_limit_window,
+    )
     # Middleware de tenant
     app.add_middleware(TenantMiddleware)
     # Headers de seguridad

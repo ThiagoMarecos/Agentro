@@ -50,8 +50,9 @@ class Settings(BaseSettings):
     # Redis
     redis_url: str = "redis://localhost:6379/0"
 
-    # Seguridad
-    secret_key: str = "change-me-in-production"
+    # Seguridad — SECRET_KEY no tiene valor por defecto intencionalmente.
+    # Si no está definida en el entorno, la app falla al iniciar.
+    secret_key: str
     jwt_algorithm: str = "HS256"
     jwt_access_token_expire_minutes: int = 60
     jwt_refresh_token_expire_days: int = 7
@@ -96,8 +97,15 @@ class Settings(BaseSettings):
 
 @lru_cache
 def get_settings() -> Settings:
-    """Obtiene la configuración (cacheada)."""
-    return Settings()
+    """Obtiene la configuración (cacheada). Falla si SECRET_KEY no está definida."""
+    try:
+        return Settings()
+    except Exception as e:
+        raise RuntimeError(
+            "SECRET_KEY no está definida en el entorno. "
+            "Agrega SECRET_KEY=<valor-aleatorio-largo> en tu archivo .env o variable de entorno. "
+            f"Detalle: {e}"
+        ) from e
 
 
 def get_dynamic_setting(key: str) -> str:

@@ -75,7 +75,12 @@ def tool_create_order(db: Session, session: SalesSession, **params) -> str:
     order_items = []
 
     for item in items_data:
-        product = db.query(Product).filter(Product.id == item.get("product_id")).first()
+        # SECURITY: filtrar por store_id para evitar IDOR cross-tenant
+        product = db.query(Product).filter(
+            Product.id == item.get("product_id"),
+            Product.store_id == session.store_id,
+            Product.is_active == True,
+        ).first()
         if not product:
             continue
 

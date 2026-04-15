@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Building2,
   Search,
@@ -21,6 +22,7 @@ import {
 } from "@/lib/api/admin";
 
 export default function AdminStoresPage() {
+  const router = useRouter();
   const [data, setData] = useState<StoreListResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -131,7 +133,11 @@ export default function AdminStoresPage() {
                 </tr>
               ) : data && data.stores.length > 0 ? (
                 data.stores.map((store) => (
-                  <tr key={store.id} className="hover:bg-gray-50/50 transition">
+                  <tr
+                    key={store.id}
+                    className="hover:bg-gray-50/50 transition cursor-pointer"
+                    onClick={() => router.push(`/admin/stores/${store.id}`)}
+                  >
                     <td className="px-5 py-3.5">
                       <div className="flex items-center gap-3">
                         <div className="w-9 h-9 rounded-lg bg-violet-50 flex items-center justify-center text-violet-600 flex-shrink-0">
@@ -170,7 +176,7 @@ export default function AdminStoresPage() {
                       <span className="text-sm text-gray-500">{formatDate(store.created_at)}</span>
                     </td>
                     <td className="px-5 py-3.5">
-                      <div className="flex items-center justify-end gap-2">
+                      <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
                         <Link
                           href={`/admin/stores/${store.id}`}
                           className="p-2 rounded-lg hover:bg-violet-50 text-gray-400 hover:text-violet-600 transition"

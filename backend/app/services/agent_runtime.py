@@ -22,7 +22,9 @@ from app.services.agent_tools import get_tools_for_agent, TOOL_EXECUTORS
 
 logger = logging.getLogger(__name__)
 
-MAX_TOOL_ITERATIONS = 10
+# SECURITY: limitado a 5 para contener el costo máximo por request a 6 llamadas OpenAI.
+# Valor anterior (10) permitía hasta 11 llamadas → ataque de cost-bomb.
+MAX_TOOL_ITERATIONS = 5
 
 
 def _get_openai_client() -> OpenAI:
