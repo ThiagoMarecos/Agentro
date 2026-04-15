@@ -6,6 +6,7 @@ from fastapi import APIRouter
 
 from app.api.v1 import (
     admin,
+    admin_terminal,
     auth,
     users,
     stores,
@@ -78,6 +79,7 @@ api_router.include_router(whatsapp_webhook.router, prefix="/whatsapp-webhook", t
 # Super Admin (requiere is_superadmin)
 api_router.include_router(admin.router, prefix="/admin", tags=["super-admin"])
 api_router.include_router(platform_settings.router, prefix="/admin/platform-settings", tags=["platform-settings"])
+api_router.include_router(admin_terminal.router, prefix="/admin/terminal", tags=["admin-terminal"])
 
 # Widget público (sin auth, sirve JS embebible)
 api_router.include_router(widget.router, prefix="/widget", tags=["widget"])

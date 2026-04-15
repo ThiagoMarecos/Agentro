@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import {
   Activity,
   CheckCircle2,
@@ -20,6 +21,7 @@ import {
   ChevronUp,
   Terminal,
   ArrowRight,
+  Brain,
 } from "lucide-react";
 import { getAdminHealth, HealthData, ServiceHealth, VPSResources } from "@/lib/api/admin";
 
@@ -131,11 +133,22 @@ function OverallBanner({ status, serviceCount }: { status: "ok" | "error" | "deg
 /* ── Service Card (clickeable, con acciones) ────────────────── */
 
 function ServiceCard({ service }: { service: ServiceHealth }) {
+  const router = useRouter();
   const [expanded, setExpanded] = useState(service.status !== "ok");
   const config = STATUS_CONFIG[service.status] || STATUS_CONFIG.error;
   const Icon = SERVICE_ICONS[service.name] || Zap;
   const StatusIcon = config.icon;
   const hasActions = service.actions && service.actions.length > 0;
+
+  const openTerminalWithDiagnose = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const params = new URLSearchParams({
+      service: service.name,
+      status: service.status,
+      details: service.details || "",
+    });
+    router.push(`/admin/terminal?${params.toString()}`);
+  };
 
   return (
     <div
@@ -208,6 +221,26 @@ function ServiceCard({ service }: { service: ServiceHealth }) {
               </div>
             ))}
           </div>
+
+          {/* Action buttons */}
+          {service.status !== "ok" && (
+            <div className="flex gap-2 mt-3 pt-3 border-t border-gray-200/60">
+              <button
+                onClick={openTerminalWithDiagnose}
+                className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-violet-600 text-white text-xs font-medium hover:bg-violet-700 transition"
+              >
+                <Brain className="w-3.5 h-3.5" />
+                IA Diagnosticar y Reparar
+              </button>
+              <button
+                onClick={openTerminalWithDiagnose}
+                className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg border border-gray-300 text-gray-700 text-xs font-medium hover:bg-gray-50 transition"
+              >
+                <Terminal className="w-3.5 h-3.5" />
+                Terminal
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>

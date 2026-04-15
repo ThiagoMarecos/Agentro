@@ -56,6 +56,12 @@ const CATEGORY_META: Record<string, { label: string; icon: React.ElementType; co
     color: "text-indigo-600 bg-indigo-50",
     description: "Claves de Stripe para procesar pagos. Obtener en dashboard.stripe.com/apikeys.",
   },
+  vps: {
+    label: "VPS / SSH",
+    icon: Shield,
+    color: "text-slate-600 bg-slate-50",
+    description: "Credenciales SSH para acceder al VPS desde la terminal integrada del panel admin.",
+  },
   security: {
     label: "Seguridad",
     icon: Lock,

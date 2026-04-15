@@ -56,6 +56,11 @@ PLATFORM_KEYS = [
     {"key": "stripe_publishable_key", "label": "Stripe Publishable Key", "category": "stripe", "is_secret": False},
     {"key": "stripe_secret_key", "label": "Stripe Secret Key", "category": "stripe", "is_secret": True},
     {"key": "stripe_webhook_secret", "label": "Stripe Webhook Secret", "category": "stripe", "is_secret": True},
+    # VPS / SSH
+    {"key": "vps_ssh_host", "label": "VPS IP / Host", "category": "vps", "is_secret": False},
+    {"key": "vps_ssh_port", "label": "VPS SSH Port", "category": "vps", "is_secret": False},
+    {"key": "vps_ssh_user", "label": "VPS SSH User", "category": "vps", "is_secret": False},
+    {"key": "vps_ssh_password", "label": "VPS SSH Password", "category": "vps", "is_secret": True},
     # SECURITY: secret_key (JWT signing key) se gestiona SOLO por variable de entorno,
     # nunca por la DB ni por la API. Exponer su valor permitiría forjar tokens JWT.
 ]

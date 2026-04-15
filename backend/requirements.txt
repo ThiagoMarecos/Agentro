@@ -45,6 +45,9 @@ cryptography>=42.0.0
 # System monitoring
 psutil>=5.9.0
 
+# SSH
+paramiko>=3.4.0
+
 # Utils
 python-multipart==0.0.9
 python-dotenv==1.0.1

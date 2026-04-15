@@ -10,6 +10,7 @@ import {
   Users,
   ScrollText,
   Activity,
+  Terminal,
   LogOut,
   ChevronLeft,
   Shield,
@@ -22,6 +23,7 @@ const navItems = [
   { href: "/admin/users", label: "Usuarios", icon: Users },
   { href: "/admin/logs", label: "Logs", icon: ScrollText },
   { href: "/admin/health", label: "Sistema", icon: Activity },
+  { href: "/admin/terminal", label: "Terminal", icon: Terminal },
   { href: "/admin/settings", label: "API Keys", icon: Key },
 ];
 
