@@ -29,10 +29,12 @@ function AIPanel({
   serviceName,
   serviceContext,
   onCommandExecuted,
+  onLog,
 }: {
   serviceName: string | null;
   serviceContext: string | null;
   onCommandExecuted?: () => void;
+  onLog?: (text: string) => void;
 }) {
   const [diagnosing, setDiagnosing] = useState(false);
   const [fixing, setFixing] = useState(false);
@@ -61,11 +63,21 @@ function AIPanel({
     setFixing(true);
     setError("");
     try {
+      onLog?.(`\r\n\x1b[1;35m═══ AI Auto-Fix: ${serviceName} ═══\x1b[0m\r\n`);
       const res = await aiAutoFix(serviceName, serviceContext, diagnosis.commands);
       setFixResult(res);
+      // Mostrar cada resultado en la terminal
+      for (const r of res.results) {
+        onLog?.(`\x1b[36m$ ${r.command}\x1b[0m\r\n`);
+        if (r.stdout) onLog?.(r.stdout.replace(/\n/g, "\r\n"));
+        if (r.stderr) onLog?.(`\x1b[31m${r.stderr.replace(/\n/g, "\r\n")}\x1b[0m`);
+        onLog?.(`\x1b[${r.exit_code === 0 ? "32" : "31"}m[exit: ${r.exit_code}]\x1b[0m\r\n`);
+      }
+      onLog?.(`\r\n\x1b[1;35m═══ ${res.summary} ═══\x1b[0m\r\n\r\n`);
       onCommandExecuted?.();
     } catch (e: any) {
       setError(e.message);
+      onLog?.(`\r\n\x1b[31mError: ${e.message}\x1b[0m\r\n`);
     } finally {
       setFixing(false);
     }
@@ -261,8 +273,10 @@ function AIPanel({
 
 function TerminalView({
   onConnectedChange,
+  writeRef,
 }: {
   onConnectedChange?: (connected: boolean) => void;
+  writeRef?: React.MutableRefObject<((text: string) => void) | null>;
 }) {
   const termRef = useRef<HTMLDivElement>(null);
   const wsRef = useRef<WebSocket | null>(null);
@@ -328,6 +342,11 @@ function TerminalView({
 
       termInstance.current = term;
       fitAddon.current = fit;
+
+      // Exponer write para que el AI panel pueda escribir
+      if (writeRef) {
+        writeRef.current = (text: string) => term.write(text);
+      }
 
       term.writeln("\x1b[1;35m═══ Agentro VPS Terminal ═══\x1b[0m");
       term.writeln("\x1b[90mConectando al servidor...\x1b[0m\r\n");
@@ -487,10 +506,17 @@ export default function AdminTerminalPage() {
   const serviceStatus = searchParams.get("status");
   const serviceDetails = searchParams.get("details");
   const [terminalConnected, setTerminalConnected] = useState(false);
+  const termWriteRef = useRef<((text: string) => void) | null>(null);
 
   const serviceContext = serviceName
     ? `Servicio ${serviceName} con estado ${serviceStatus || "error"}. Detalle: ${serviceDetails || "Sin detalles"}`
     : null;
+
+  const handleLog = useCallback((text: string) => {
+    if (termWriteRef.current) {
+      termWriteRef.current(text);
+    }
+  }, []);
 
   return (
     <div className="h-[calc(100vh-8rem)] flex gap-4">
@@ -506,7 +532,7 @@ export default function AdminTerminalPage() {
           </p>
         </div>
         <div className="flex-1 flex flex-col">
-          <TerminalView onConnectedChange={setTerminalConnected} />
+          <TerminalView onConnectedChange={setTerminalConnected} writeRef={termWriteRef} />
         </div>
       </div>
 
@@ -515,6 +541,7 @@ export default function AdminTerminalPage() {
         <AIPanel
           serviceName={serviceName}
           serviceContext={serviceContext}
+          onLog={handleLog}
         />
       </div>
     </div>

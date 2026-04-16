@@ -137,15 +137,17 @@ def ai_diagnose(
 Tu trabajo es diagnosticar problemas en un VPS que corre una aplicación Docker.
 
 La infraestructura es:
-- VPS Ubuntu con Docker
+- VPS Ubuntu 24.04 con Docker (CLI moderna: usar "docker compose" CON ESPACIO, NO "docker-compose")
 - Containers: agentro-backend, agentro-frontend, agentro-postgres, agentro-redis, agentro-evolution
 - Docker network: agentro_default
 - App directory: /var/www/agentro
-- Backend: FastAPI (Python)
-- Frontend: Next.js
-- DB: PostgreSQL
-- Cache: Redis
-- WhatsApp: Evolution API
+- Backend: FastAPI (Python) en container agentro-backend
+- Frontend: Next.js en container agentro-frontend
+- DB: PostgreSQL en container agentro-postgres
+- Cache: Redis en container agentro-redis
+- WhatsApp: Evolution API en container agentro-evolution
+- Reverse proxy: Nginx con SSL Let's Encrypt
+- IMPORTANTE: Usar SIEMPRE "docker" (no "docker-compose"). Ejemplo: "docker restart agentro-redis", "docker logs agentro-backend --tail 50"
 
 Responde SIEMPRE en este formato JSON exacto:
 {
