@@ -63,6 +63,9 @@ PLATFORM_KEYS = [
     {"key": "vps_ssh_port", "label": "VPS SSH Port", "category": "vps", "is_secret": False},
     {"key": "vps_ssh_user", "label": "VPS SSH User", "category": "vps", "is_secret": False},
     {"key": "vps_ssh_password", "label": "VPS SSH Password", "category": "vps", "is_secret": True},
+    # Agente IA
+    {"key": "agent_master_prompt", "label": "Prompt maestro del agente de ventas", "category": "agent", "is_secret": False},
+    {"key": "agent_model", "label": "Modelo OpenAI del agente", "category": "agent", "is_secret": False},
     # SECURITY: secret_key (JWT signing key) se gestiona SOLO por variable de entorno,
     # nunca por la DB ni por la API. Exponer su valor permitiría forjar tokens JWT.
 ]

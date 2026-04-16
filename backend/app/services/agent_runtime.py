@@ -22,6 +22,7 @@ from app.models.store import Store
 from app.models.sales_session import SalesSession, EMPTY_NOTEBOOK
 from app.services.agent_tools import get_tools_for_agent, TOOL_EXECUTORS
 from app.services.agent_prompts import build_sales_prompt
+from app.services.platform_settings_service import get_setting_value
 
 logger = logging.getLogger(__name__)
 
@@ -240,12 +241,20 @@ def process_message(
     custom_instructions = _get_custom_instructions(agent)
 
     # ── 3. Prompt maestro de ventas ──
+    # Lee prompt maestro desde platform settings (configurable desde admin)
+    master_prompt_override = get_setting_value(db, "agent_master_prompt")
     system_prompt = build_sales_prompt(
         store_name=store_name,
         store_config=store_config,
         session=session,
         custom_instructions=custom_instructions,
+        master_prompt_override=master_prompt_override,
     )
+
+    # Modelo configurable desde platform settings
+    model_override = get_setting_value(db, "agent_model")
+    if model_override:
+        agent_config["model"] = model_override
 
     # ── 4. Tools ──
     enabled_tools = _get_enabled_tools(agent)

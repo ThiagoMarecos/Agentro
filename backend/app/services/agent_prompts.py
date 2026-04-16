@@ -17,11 +17,30 @@ def build_sales_prompt(
     store_config: dict,
     session: SalesSession,
     custom_instructions: str | None = None,
+    master_prompt_override: str | None = None,
 ) -> str:
     """Construye el system prompt completo del agente de ventas."""
 
     nb = session.get_notebook()
     stage = session.current_stage
+
+    # Si hay un prompt maestro configurado desde admin, usarlo como base
+    # e inyectarle solo el contexto dinámico (notebook, etapa, tienda)
+    if master_prompt_override and master_prompt_override.strip():
+        context_block = (
+            f"\n\n## CONTEXTO DINÁMICO DE LA VENTA\n"
+            f"Tienda: {store_config.get('store_name', 'la tienda')}\n"
+            f"Moneda: {store_config.get('currency', 'USD')}\n"
+            f"Etapa actual: {stage}\n"
+            f"Cliente: {json.dumps(nb.get('customer', {}), ensure_ascii=False)}\n"
+            f"Interés: {json.dumps(nb.get('interest', {}), ensure_ascii=False)}\n"
+            f"Pricing: {json.dumps(nb.get('pricing', {}), ensure_ascii=False)}\n"
+            f"Pago: {json.dumps(nb.get('payment', {}), ensure_ascii=False)}\n"
+            f"Orden: {json.dumps(nb.get('order', {}), ensure_ascii=False)}\n"
+        )
+        if custom_instructions:
+            context_block += f"\nInstrucciones específicas de esta tienda:\n{custom_instructions}\n"
+        return master_prompt_override + context_block
 
     # ── Contexto de la tienda ──
     currency = store_config.get("currency", "USD")
