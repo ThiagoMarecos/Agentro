@@ -506,10 +506,10 @@ export default function AIAgentsPage() {
             </div>
             <div>
               <h2 className="text-lg font-bold text-gray-900">
-                Agentes Genericos
+                Agente de Ventas
               </h2>
               <p className="text-xs text-gray-400 mt-0.5">
-                Agentes personalizados para tareas especificas fuera del pipeline
+                Tu vendedor IA &middot; El flujo de venta es automático, solo configurá las instrucciones de tu negocio
               </p>
             </div>
           </div>
@@ -573,13 +573,17 @@ export default function AIAgentsPage() {
               </div>
 
               <div>
-                <label className={labelClass}>System Prompt</label>
+                <label className={labelClass}>Instrucciones personalizadas</label>
+                <p className="text-[11px] text-gray-400 mb-2 -mt-1">
+                  El flujo de venta (saludar, buscar productos, cobrar, etc.) ya es automático.
+                  Acá solo escribí las reglas específicas de <strong>tu negocio</strong>.
+                </p>
                 <textarea
                   value={formPrompt}
                   onChange={(e) => setFormPrompt(e.target.value)}
                   rows={5}
                   className={`${inputClass} font-mono text-xs`}
-                  placeholder="Define las instrucciones del agente..."
+                  placeholder={"Ejemplo:\n- Somos una tienda de ropa urbana en Paraguay\n- Envío gratis en compras mayores a 200.000 Gs\n- Tratá a los clientes de 'vos'\n- Horario de entrega: lunes a viernes 9 a 18hs\n- Si preguntan por tallas, tenemos S, M, L, XL"}
                 />
               </div>
 

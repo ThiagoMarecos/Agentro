@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useStore } from "@/lib/context/StoreContext";
 import {
   getSalesPipeline,
@@ -14,6 +15,7 @@ import {
   Clock,
   DollarSign,
   AlertCircle,
+  MessageSquare,
 } from "lucide-react";
 
 const STAGE_LABELS: Record<string, string> = {
@@ -69,14 +71,22 @@ function timeAgo(dateStr: string | null): string {
 }
 
 function SessionCard({ session }: { session: SalesSessionListItem }) {
+  const router = useRouter();
   const priorityColors: Record<string, string> = {
     high: "bg-red-100 text-red-700",
     medium: "bg-yellow-100 text-yellow-700",
     low: "bg-gray-100 text-gray-600",
   };
 
+  const handleClick = () => {
+    router.push(`/app/conversations?conv=${session.conversation_id}`);
+  };
+
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-3 shadow-sm hover:shadow-md transition-shadow">
+    <div
+      onClick={handleClick}
+      className="bg-white rounded-lg border border-gray-200 p-3 shadow-sm hover:shadow-md hover:border-indigo-300 hover:bg-indigo-50/30 transition-all cursor-pointer group"
+    >
       <div className="flex items-start justify-between mb-2">
         <div className="flex items-center gap-2 min-w-0">
           <div className="w-7 h-7 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0">
@@ -114,12 +124,15 @@ function SessionCard({ session }: { session: SalesSessionListItem }) {
           <Clock className="w-3 h-3" />
           <span>{timeAgo(session.stage_entered_at)}</span>
         </div>
-        {session.follow_up_count > 0 && (
-          <div className="flex items-center gap-1">
-            <AlertCircle className="w-3 h-3" />
-            <span>{session.follow_up_count} follow-ups</span>
-          </div>
-        )}
+        <div className="flex items-center gap-2">
+          {session.follow_up_count > 0 && (
+            <div className="flex items-center gap-1">
+              <AlertCircle className="w-3 h-3" />
+              <span>{session.follow_up_count} follow-ups</span>
+            </div>
+          )}
+          <MessageSquare className="w-3 h-3 text-indigo-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+        </div>
       </div>
     </div>
   );

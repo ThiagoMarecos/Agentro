@@ -17,6 +17,7 @@ export interface NotebookSection {
 
 export interface SalesSessionListItem {
   id: string;
+  conversation_id: string;
   current_stage: string;
   status: string;
   estimated_value: number | null;

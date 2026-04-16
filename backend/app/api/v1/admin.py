@@ -18,7 +18,7 @@ from app.models.store import Store, StoreMember
 from app.models.product import Product
 from app.models.order import Order
 from app.models.customer import Customer
-from app.models.ai import AIChannel
+from app.models.ai import AIChannel, AIAgent
 from app.models.audit import AuditLog
 from app.core.dependencies import require_superadmin
 from app.config import get_settings, get_dynamic_setting
@@ -846,3 +846,73 @@ async def admin_system_health(
     vps = _get_vps_resources()
 
     return HealthResponse(overall=overall, services=services, vps=vps)
+
+
+# ── AI Agents overview ───────────────────────────────────────────────────────
+
+class AgentItemResponse(BaseModel):
+    id: str
+    name: str
+    description: str | None
+    agent_type: str
+    is_active: bool
+    enabled_tools: list[str] | None
+    system_prompt: str | None
+    config: dict
+    created_at: str
+
+
+class StoreAgentSummary(BaseModel):
+    store_id: str
+    store_name: str
+    store_slug: str
+    agents: list[AgentItemResponse]
+
+
+@router.get("/ai-agents", response_model=list[StoreAgentSummary])
+def admin_ai_agents(
+    admin: User = Depends(require_superadmin),
+    db: Session = Depends(get_db),
+):
+    """Lista todos los agentes IA agrupados por tienda."""
+    import json as _json
+
+    stores = db.query(Store).filter(Store.is_active == True).order_by(Store.name).all()
+    result = []
+
+    for store in stores:
+        agents = db.query(AIAgent).filter(
+            AIAgent.store_id == store.id,
+        ).order_by(AIAgent.created_at.desc()).all()
+
+        agent_items = []
+        for a in agents:
+            try:
+                tools = _json.loads(a.enabled_tools) if a.enabled_tools else None
+            except Exception:
+                tools = None
+            try:
+                cfg = _json.loads(a.config) if a.config else {}
+            except Exception:
+                cfg = {}
+
+            agent_items.append(AgentItemResponse(
+                id=a.id,
+                name=a.name,
+                description=a.description,
+                agent_type=a.agent_type or "generic",
+                is_active=a.is_active,
+                enabled_tools=tools,
+                system_prompt=a.system_prompt or None,
+                config=cfg,
+                created_at=str(a.created_at) if a.created_at else "",
+            ))
+
+        result.append(StoreAgentSummary(
+            store_id=store.id,
+            store_name=store.name,
+            store_slug=store.slug,
+            agents=agent_items,
+        ))
+
+    return result

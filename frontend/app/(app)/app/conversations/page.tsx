@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
+import { useSearchParams } from "next/navigation";
 import { useStore } from "@/lib/context/StoreContext";
 import {
   getConversations,
@@ -342,6 +343,9 @@ function ConversationMessage({
 
 export default function ConversationsPage() {
   const { currentStore } = useStore();
+  const searchParams = useSearchParams();
+  const convIdFromUrl = searchParams.get("conv");
+
   const [conversations, setConversations] = useState<ConversationDetail[]>([]);
   const [selected, setSelected] = useState<ConversationDetail | null>(null);
   const [notebook, setNotebook] = useState<NotebookSection | null>(null);
@@ -350,15 +354,27 @@ export default function ConversationsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [stageFilter, setStageFilter] = useState<string>("all");
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const autoOpenDone = useRef(false);
 
   useEffect(() => {
     if (!currentStore) return;
     setLoading(true);
+    autoOpenDone.current = false;
     getConversations(currentStore.id)
       .then(setConversations)
       .catch(() => setConversations([]))
       .finally(() => setLoading(false));
   }, [currentStore]);
+
+  // Auto-abrir conversación si viene desde el pipeline con ?conv=
+  useEffect(() => {
+    if (!convIdFromUrl || !conversations.length || autoOpenDone.current) return;
+    const target = conversations.find((c) => c.id === convIdFromUrl);
+    if (target) {
+      autoOpenDone.current = true;
+      selectConversation(target);
+    }
+  }, [convIdFromUrl, conversations]);
 
   const selectConversation = async (conv: ConversationDetail) => {
     if (!currentStore) return;

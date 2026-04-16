@@ -37,6 +37,7 @@ def _session_to_list_item(session: SalesSession, db: Session) -> SalesSessionLis
 
     return SalesSessionListItem(
         id=session.id,
+        conversation_id=session.conversation_id,
         current_stage=session.current_stage,
         status=session.status,
         estimated_value=session.estimated_value,

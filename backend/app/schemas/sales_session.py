@@ -57,6 +57,7 @@ class SalesSessionUpdate(BaseModel):
 
 class SalesSessionListItem(BaseModel):
     id: str
+    conversation_id: str
     current_stage: str
     status: str
     estimated_value: Decimal | None
