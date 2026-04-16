@@ -869,6 +869,37 @@ class StoreAgentSummary(BaseModel):
     agents: list[AgentItemResponse]
 
 
+class AgentUpdateRequest(BaseModel):
+    store_id: str
+    system_prompt: str | None = None
+    is_active: bool | None = None
+
+
+@router.patch("/ai-agents/{agent_id}")
+def admin_update_agent(
+    agent_id: str,
+    data: AgentUpdateRequest,
+    admin: User = Depends(require_superadmin),
+    db: Session = Depends(get_db),
+):
+    """Actualiza instrucciones personalizadas o estado de un agente."""
+    agent = db.query(AIAgent).filter(
+        AIAgent.id == agent_id,
+        AIAgent.store_id == data.store_id,
+    ).first()
+    if not agent:
+        raise HTTPException(status_code=404, detail="Agente no encontrado")
+
+    if data.system_prompt is not None:
+        agent.system_prompt = data.system_prompt or None
+    if data.is_active is not None:
+        agent.is_active = data.is_active
+
+    db.add(agent)
+    db.commit()
+    return {"ok": True}
+
+
 @router.get("/ai-agents", response_model=list[StoreAgentSummary])
 def admin_ai_agents(
     admin: User = Depends(require_superadmin),

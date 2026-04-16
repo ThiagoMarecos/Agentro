@@ -286,6 +286,31 @@ export async function promoteSuperAdmin(email: string): Promise<{ ok: boolean; m
   return res.json();
 }
 
+export async function getAdminAIAgents(): Promise<any[]> {
+  const res = await authFetch(`${API_URL}/admin/ai-agents`);
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || "Error al obtener agentes");
+  }
+  return res.json();
+}
+
+export async function updateAdminAgent(
+  storeId: string,
+  agentId: string,
+  data: { system_prompt?: string; is_active?: boolean }
+): Promise<void> {
+  const res = await authFetch(`${API_URL}/admin/ai-agents/${agentId}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ store_id: storeId, ...data }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || "Error al actualizar agente");
+  }
+}
+
 export async function getAdminHealth(): Promise<HealthData> {
   const res = await authFetch(`${API_URL}/admin/health`);
   if (!res.ok) {
