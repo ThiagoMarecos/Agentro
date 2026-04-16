@@ -25,12 +25,19 @@ from app.services.agent_tools.notification_tools import (
     tool_notify_owner,
     NOTIFICATION_TOOL_DEFINITIONS,
 )
+from app.services.agent_tools.store_tools import (
+    tool_get_store_info,
+    tool_get_store_discounts,
+    tool_escalate_to_human,
+    STORE_TOOL_DEFINITIONS,
+)
 
 ALL_TOOL_DEFINITIONS = (
     PRODUCT_TOOL_DEFINITIONS
     + ORDER_TOOL_DEFINITIONS
     + NOTEBOOK_TOOL_DEFINITIONS
     + NOTIFICATION_TOOL_DEFINITIONS
+    + STORE_TOOL_DEFINITIONS
 )
 
 TOOL_EXECUTORS = {
@@ -44,21 +51,38 @@ TOOL_EXECUTORS = {
     "update_notebook": tool_update_notebook,
     "move_stage": tool_move_stage,
     "notify_owner": tool_notify_owner,
+    "get_store_info": tool_get_store_info,
+    "get_store_discounts": tool_get_store_discounts,
+    "escalate_to_human": tool_escalate_to_human,
 }
 
+# ── Tools habilitadas por defecto ──
+# Lectura segura + notebook + stage + store info siempre disponibles.
+# Las tools destructivas (create_order, create_payment_link) se habilitan
+# automáticamente para el agente de ventas principal.
+_DEFAULT_SAFE_TOOLS = {
+    "product_search", "product_detail", "check_availability",
+    "recommend_product", "get_store_info", "get_store_discounts",
+    "update_notebook", "move_stage", "notify_owner", "escalate_to_human",
+}
 
-# Tools de solo lectura que se habilitan por defecto (sin configuración explícita)
-_DEFAULT_SAFE_TOOLS = {"product_search", "product_detail", "check_availability"}
+# Todas las tools — se usan cuando el agente tiene modo "full_sales"
+ALL_TOOL_NAMES = set(TOOL_EXECUTORS.keys())
 
 
 def get_tools_for_agent(enabled_tools: list[str] | None) -> list[dict]:
     """
     Retorna las tools habilitadas para un agente.
-    SECURITY: deny-by-default — si enabled_tools es None o vacío, solo se
-    retornan tools de lectura seguras. Las tools destructivas (create_order,
-    create_payment_link) requieren habilitación explícita en la config del agente.
+    - Si enabled_tools es None → tools seguras por defecto (lectura + notebook + store)
+    - Si enabled_tools contiene "all" → TODAS las tools
+    - De lo contrario → solo las tools listadas explícitamente
     """
     if not enabled_tools:
-        # Solo tools seguras de solo lectura por defecto
         return [t for t in ALL_TOOL_DEFINITIONS if t["function"]["name"] in _DEFAULT_SAFE_TOOLS]
-    return [t for t in ALL_TOOL_DEFINITIONS if t["function"]["name"] in enabled_tools]
+
+    if "all" in enabled_tools:
+        return list(ALL_TOOL_DEFINITIONS)
+
+    # Siempre incluir las safe tools + las explícitamente habilitadas
+    allowed = _DEFAULT_SAFE_TOOLS | set(enabled_tools)
+    return [t for t in ALL_TOOL_DEFINITIONS if t["function"]["name"] in allowed]

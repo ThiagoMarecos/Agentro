@@ -22,6 +22,7 @@ import {
   DiagnoseResult,
   AutoFixResult,
 } from "@/lib/api/terminal";
+import "xterm/css/xterm.css";
 
 /* ── AI Panel ───────────────────────────────────────────────── */
 
@@ -295,10 +296,6 @@ function TerminalView({
       // Cargar xterm dinámicamente (solo cliente)
       const { Terminal } = await import("xterm");
       const { FitAddon } = await import("@xterm/addon-fit");
-
-      // Importar CSS
-      // @ts-ignore
-      await import("xterm/css/xterm.css");
 
       // Crear terminal
       const term = new Terminal({
