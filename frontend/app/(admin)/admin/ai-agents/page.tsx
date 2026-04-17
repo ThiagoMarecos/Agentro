@@ -418,7 +418,7 @@ function TabStats() {
   if (loading) return <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-violet-500" /></div>;
   if (!stats) return <div className="text-center text-gray-400 py-20">No se pudieron cargar las estadísticas</div>;
 
-  const stageEntries = Object.entries(stats.sessions_by_stage).sort((a, b) => b[1] - a[1]);
+  const stageEntries = Object.entries(stats.sessions_by_stage ?? {}).sort((a, b) => b[1] - a[1]);
 
   return (
     <div className="space-y-6">
