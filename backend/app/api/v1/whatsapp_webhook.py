@@ -126,6 +126,8 @@ async def whatsapp_webhook(
     except Exception:
         raise HTTPException(status_code=400, detail="Invalid JSON")
 
+    logger.info(f"WEBHOOK_BODY: {json.dumps(body)[:2000]}")
+
     event = body.get("event")
     instance_name = body.get("instance")
 
