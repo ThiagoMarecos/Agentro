@@ -18,6 +18,8 @@ import {
   Pencil,
   AlertTriangle,
   CreditCard,
+  Copy,
+  ClipboardCheck,
 } from "lucide-react";
 import {
   getPlatformSettings,
@@ -99,7 +101,15 @@ function SettingRow({
   onSaveSingle: () => void;
   isSaving: boolean;
 }) {
+  const [copied, setCopied] = useState(false);
   const displayText = revealed ? setting.real_value : setting.display_value;
+
+  const handleCopy = () => {
+    if (!setting.real_value) return;
+    navigator.clipboard.writeText(setting.real_value);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   return (
     <div className="flex flex-col sm:flex-row sm:items-center gap-3 py-4 border-b border-gray-100 last:border-0">
@@ -179,6 +189,20 @@ function SettingRow({
                 title={revealed ? "Ocultar" : "Mostrar valor real"}
               >
                 {revealed ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            )}
+
+            {setting.has_value && (
+              <button
+                onClick={handleCopy}
+                className={`flex-shrink-0 p-2 rounded-lg border transition ${
+                  copied
+                    ? "border-emerald-200 bg-emerald-50 text-emerald-600"
+                    : "border-gray-200 hover:bg-gray-50 text-gray-400 hover:text-gray-600"
+                }`}
+                title={copied ? "¡Copiado!" : "Copiar valor"}
+              >
+                {copied ? <ClipboardCheck className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
               </button>
             )}
 
