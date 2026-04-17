@@ -18,7 +18,7 @@ from app.models.store import Store, StoreMember
 from app.models.product import Product
 from app.models.order import Order
 from app.models.customer import Customer
-from app.models.ai import AIChannel, AIAgent
+from app.models.ai import AIChannel, AIAgent, Conversation, Message
 from app.models.audit import AuditLog
 from app.core.dependencies import require_superadmin
 from app.config import get_settings, get_dynamic_setting
@@ -947,3 +947,220 @@ def admin_ai_agents(
         ))
 
     return result
+
+
+# ── Admin Conversations (todas las tiendas) ──────────────────────────────────
+
+class AdminMessageItem(BaseModel):
+    id: str
+    role: str
+    content: str
+    created_at: str
+
+
+class AdminConversationItem(BaseModel):
+    id: str
+    store_id: str
+    store_name: str
+    customer_name: str | None
+    customer_phone: str | None
+    channel_type: str | None
+    current_stage: str | None
+    status: str
+    last_message: str | None
+    last_message_role: str | None
+    last_message_at: str | None
+    message_count: int
+    updated_at: str | None
+
+
+class AdminConversationDetail(BaseModel):
+    id: str
+    store_name: str
+    customer_name: str | None
+    customer_phone: str | None
+    channel_type: str | None
+    current_stage: str | None
+    messages: list[AdminMessageItem]
+
+
+class AdminAgentStats(BaseModel):
+    total_conversations: int
+    active_conversations: int
+    messages_today: int
+    messages_week: int
+    sessions_by_stage: dict[str, int]
+    top_stores: list[dict]
+
+
+@router.get("/conversations", response_model=list[AdminConversationItem])
+def admin_all_conversations(
+    admin: User = Depends(require_superadmin),
+    db: Session = Depends(get_db),
+    limit: int = 50,
+    store_id: str | None = None,
+):
+    """Lista todas las conversaciones de todas las tiendas."""
+    from app.models.sales_session import SalesSession as SS
+
+    query = db.query(Conversation).filter(Conversation.status == "active")
+    if store_id:
+        query = query.filter(Conversation.store_id == store_id)
+    convs = query.order_by(Conversation.updated_at.desc()).limit(limit).all()
+
+    store_names: dict[str, str] = {}
+
+    result = []
+    for c in convs:
+        # Store name (cache)
+        if c.store_id not in store_names:
+            st = db.query(Store).filter(Store.id == c.store_id).first()
+            store_names[c.store_id] = st.name if st else "Tienda"
+
+        # Customer
+        customer_name = None
+        customer_phone = None
+        if c.customer_id:
+            cust = db.query(Customer).filter(Customer.id == c.customer_id).first()
+            if cust:
+                customer_name = f"{cust.first_name or ''} {cust.last_name or ''}".strip() or cust.email
+                customer_phone = cust.phone
+
+        # Last message
+        last_msg = (
+            db.query(Message)
+            .filter(Message.conversation_id == c.id)
+            .order_by(Message.created_at.desc())
+            .first()
+        )
+        msg_count = db.query(Message).filter(Message.conversation_id == c.id).count()
+
+        # Stage
+        ss = db.query(SS).filter(
+            SS.conversation_id == c.id,
+            SS.status == "active",
+        ).first()
+
+        result.append(AdminConversationItem(
+            id=c.id,
+            store_id=c.store_id,
+            store_name=store_names[c.store_id],
+            customer_name=customer_name,
+            customer_phone=customer_phone,
+            channel_type=c.channel_type,
+            current_stage=ss.current_stage if ss else None,
+            status=c.status,
+            last_message=last_msg.content[:120] if last_msg else None,
+            last_message_role=last_msg.role if last_msg else None,
+            last_message_at=str(last_msg.created_at) if last_msg else None,
+            message_count=msg_count,
+            updated_at=str(c.updated_at) if c.updated_at else None,
+        ))
+
+    return result
+
+
+@router.get("/conversations/{conversation_id}", response_model=AdminConversationDetail)
+def admin_conversation_detail(
+    conversation_id: str,
+    admin: User = Depends(require_superadmin),
+    db: Session = Depends(get_db),
+):
+    """Detalle completo de una conversación (todos los mensajes)."""
+    from app.models.sales_session import SalesSession as SS
+
+    conv = db.query(Conversation).filter(Conversation.id == conversation_id).first()
+    if not conv:
+        raise HTTPException(status_code=404, detail="Conversación no encontrada")
+
+    store = db.query(Store).filter(Store.id == conv.store_id).first()
+    customer_name = None
+    customer_phone = None
+    if conv.customer_id:
+        cust = db.query(Customer).filter(Customer.id == conv.customer_id).first()
+        if cust:
+            customer_name = f"{cust.first_name or ''} {cust.last_name or ''}".strip() or cust.email
+            customer_phone = cust.phone
+
+    msgs = (
+        db.query(Message)
+        .filter(Message.conversation_id == conv.id)
+        .order_by(Message.created_at.asc())
+        .all()
+    )
+
+    ss = db.query(SS).filter(
+        SS.conversation_id == conv.id,
+        SS.status == "active",
+    ).first()
+
+    return AdminConversationDetail(
+        id=conv.id,
+        store_name=store.name if store else "Tienda",
+        customer_name=customer_name,
+        customer_phone=customer_phone,
+        channel_type=conv.channel_type,
+        current_stage=ss.current_stage if ss else None,
+        messages=[
+            AdminMessageItem(
+                id=m.id,
+                role=m.role,
+                content=m.content,
+                created_at=str(m.created_at),
+            )
+            for m in msgs
+        ],
+    )
+
+
+@router.get("/agent-stats", response_model=AdminAgentStats)
+def admin_agent_stats(
+    admin: User = Depends(require_superadmin),
+    db: Session = Depends(get_db),
+):
+    """Estadísticas globales del agente de ventas."""
+    from datetime import timedelta
+    from app.models.sales_session import SalesSession as SS
+
+    now = datetime.now(timezone.utc)
+    today = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    week_ago = now - timedelta(days=7)
+
+    total_convs = db.query(Conversation).count()
+    active_convs = db.query(Conversation).filter(Conversation.status == "active").count()
+
+    msgs_today = db.query(Message).filter(Message.created_at >= today).count()
+    msgs_week = db.query(Message).filter(Message.created_at >= week_ago).count()
+
+    # Sessions by stage
+    from sqlalchemy import func as sqlfunc
+    stage_rows = (
+        db.query(SS.current_stage, sqlfunc.count(SS.id))
+        .filter(SS.status == "active")
+        .group_by(SS.current_stage)
+        .all()
+    )
+    sessions_by_stage = {row[0]: row[1] for row in stage_rows}
+
+    # Top stores by conversation count
+    store_rows = (
+        db.query(Conversation.store_id, sqlfunc.count(Conversation.id).label("cnt"))
+        .filter(Conversation.status == "active")
+        .group_by(Conversation.store_id)
+        .order_by(sqlfunc.count(Conversation.id).desc())
+        .limit(5)
+        .all()
+    )
+    top_stores = []
+    for store_id, cnt in store_rows:
+        st = db.query(Store).filter(Store.id == store_id).first()
+        top_stores.append({"store_name": st.name if st else store_id, "active_conversations": cnt})
+
+    return AdminAgentStats(
+        total_conversations=total_convs,
+        active_conversations=active_convs,
+        messages_today=msgs_today,
+        messages_week=msgs_week,
+        sessions_by_stage=sessions_by_stage,
+        top_stores=top_stores,
+    )
