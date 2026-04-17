@@ -25,8 +25,8 @@ def _extract_message_data(body: dict) -> dict | None:
     Extrae los datos relevantes de un evento MESSAGES_UPSERT de Evolution API.
     Retorna None si no es un mensaje de texto entrante válido.
     """
-    event = body.get("event")
-    if event != "MESSAGES_UPSERT":
+    event = (body.get("event") or "").lower().replace(".", "_")
+    if event != "messages_upsert":
         return None
 
     data = body.get("data", {})
@@ -153,7 +153,8 @@ async def whatsapp_webhook(
         logger.warning(f"Invalid webhook secret for instance: {instance_name}")
         raise HTTPException(status_code=403, detail="Webhook secret inválido")
 
-    if event == "CONNECTION_UPDATE":
+    event_norm = (event or "").lower().replace(".", "_")
+    if event_norm == "connection_update":
         data = body.get("data", {})
         state = data.get("state", "").lower()
         if state == "open":
@@ -165,7 +166,7 @@ async def whatsapp_webhook(
         db.commit()
         return {"status": "ok"}
 
-    if event == "QRCODE_UPDATED":
+    if event_norm in ("qrcode_updated", "qr_updated"):
         return {"status": "ok"}
 
     msg_data = _extract_message_data(body)
