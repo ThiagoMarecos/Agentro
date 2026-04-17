@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { authFetch } from "@/lib/auth";
 
-const API = "/api/v1";
+const SETTINGS_URL = "/api/v1/admin/platform-settings";
 
 const DEFAULT_PROMPT = `Eres un agente de ventas experto y amigable. Tu único objetivo es ayudar al cliente a encontrar lo que necesita y cerrar la venta.
 
@@ -36,7 +36,7 @@ export default function AdminAIAgentsPage() {
 
   // Cargar settings actuales
   useEffect(() => {
-    authFetch(`${API}/admin/settings`)
+    authFetch(SETTINGS_URL)
       .then((r) => r.json())
       .then((settings: any[]) => {
         const promptSetting = settings.find((s: any) => s.key === "agent_master_prompt");
@@ -53,12 +53,14 @@ export default function AdminAIAgentsPage() {
     setError("");
     setSaved(false);
     try {
-      const res = await authFetch(`${API}/admin/settings`, {
-        method: "PUT",
+      const res = await authFetch(SETTINGS_URL, {
+        method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          agent_master_prompt: masterPrompt,
-          agent_model: agentModel,
+          settings: {
+            agent_master_prompt: masterPrompt,
+            agent_model: agentModel,
+          },
         }),
       });
       if (!res.ok) {
