@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useStore } from "@/lib/context/StoreContext";
 import {
@@ -143,14 +143,21 @@ export default function PipelinePage() {
   const [pipeline, setPipeline] = useState<PipelineResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const fetchPipeline = (storeId: string, showLoader = false) => {
+    if (showLoader) setLoading(true);
+    getSalesPipeline(storeId)
+      .then(setPipeline)
+      .catch((e) => setError(e.message))
+      .finally(() => { if (showLoader) setLoading(false); });
+  };
 
   useEffect(() => {
     if (!currentStore) return;
-    setLoading(true);
-    getSalesPipeline(currentStore.id)
-      .then(setPipeline)
-      .catch((e) => setError(e.message))
-      .finally(() => setLoading(false));
+    fetchPipeline(currentStore.id, true);
+    intervalRef.current = setInterval(() => fetchPipeline(currentStore.id), 10000);
+    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
   }, [currentStore]);
 
   if (!currentStore) {
