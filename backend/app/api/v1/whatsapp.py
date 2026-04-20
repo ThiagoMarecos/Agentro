@@ -222,7 +222,12 @@ async def get_qr_code(
     store: Store = Depends(get_current_store),
     db: Session = Depends(get_db),
 ):
-    """Genera un nuevo QR code para conectar WhatsApp."""
+    """Genera un nuevo QR code para conectar WhatsApp.
+    Si la instancia no existe en Evolution API (ej: después de un reinicio),
+    la recrea automáticamente antes de generar el QR.
+    """
+    import secrets as _secrets
+
     channel = db.query(AIChannel).filter(
         AIChannel.store_id == store.id,
         AIChannel.channel_type == "whatsapp",
@@ -239,6 +244,42 @@ async def get_qr_code(
             return QRCodeResponse(instance_name=channel.instance_name, status="already_connected")
     except evolution_api.EvolutionAPIError:
         pass
+
+    # Si la instancia no existe en Evolution API (ej: tras reinicio del contenedor),
+    # la recreamos automáticamente antes de intentar generar el QR.
+    instance_exists = await evolution_api.fetch_instance(channel.instance_name) is not None
+
+    if not instance_exists:
+        logger.info(
+            f"Instance {channel.instance_name} not found in Evolution API — recreating automatically"
+        )
+        settings = get_settings()
+        webhook_secret = channel.webhook_secret or _secrets.token_urlsafe(32)
+        webhook_url = f"{settings.backend_url}/api/v1/whatsapp-webhook/webhook/whatsapp"
+
+        try:
+            create_result = await evolution_api.create_instance(
+                instance_name=channel.instance_name,
+                webhook_url=webhook_url,
+                webhook_secret=webhook_secret,
+            )
+            hash_data = create_result.get("hash", "")
+            instance_token = (
+                hash_data.get("apikey", "") if isinstance(hash_data, dict) else str(hash_data or "")
+            )
+            channel.instance_token = instance_token
+            channel.webhook_secret = webhook_secret
+            channel.connection_status = "connecting"
+            db.commit()
+            db.refresh(channel)
+            logger.info(f"Instance {channel.instance_name} recreated successfully")
+            await asyncio.sleep(3)
+        except evolution_api.EvolutionAPIError as e:
+            logger.error(f"Failed to recreate instance {channel.instance_name}: {e.message}")
+            raise HTTPException(
+                status_code=e.status_code,
+                detail=f"Error al recrear instancia: {e.message}",
+            )
 
     try:
         result = await evolution_api.connect_instance_with_retry(
@@ -286,6 +327,16 @@ async def get_connection_state(
     try:
         result = await evolution_api.get_connection_state(channel.instance_name)
     except evolution_api.EvolutionAPIError as e:
+        # Si Evolution API dice que la instancia no existe, devolvemos disconnected
+        # en lugar de propagar el error al frontend.
+        if e.status_code in (404, 400):
+            channel.connection_status = "disconnected"
+            db.commit()
+            return {
+                "instance_name": channel.instance_name,
+                "state": "close",
+                "connection_status": "disconnected",
+            }
         raise HTTPException(status_code=e.status_code, detail=e.message)
 
     state = result.get("state", "unknown")
