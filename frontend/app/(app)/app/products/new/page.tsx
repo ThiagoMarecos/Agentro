@@ -26,10 +26,10 @@ const labelClass = "block text-sm font-medium text-gray-700 mb-1.5";
 type Tab = "general" | "pricing" | "inventory" | "images" | "variants" | "seo";
 
 const TABS: { id: Tab; label: string; icon: React.ElementType; subtitle: string }[] = [
-  { id: "general", label: "General", icon: Package, subtitle: "Nombre y descripci\u00f3n" },
+  { id: "general", label: "General", icon: Package, subtitle: "Nombre y descripción" },
   { id: "pricing", label: "Precios", icon: DollarSign, subtitle: "Precio, descuento y costo" },
-  { id: "inventory", label: "Inventario", icon: Archive, subtitle: "Stock y c\u00f3digo SKU" },
-  { id: "images", label: "Im\u00e1genes", icon: ImageIcon, subtitle: "Fotos del producto" },
+  { id: "inventory", label: "Inventario", icon: Archive, subtitle: "Stock y código SKU" },
+  { id: "images", label: "Imágenes", icon: ImageIcon, subtitle: "Fotos del producto" },
   { id: "variants", label: "Variantes", icon: Layers, subtitle: "Tallas, colores, etc." },
   { id: "seo", label: "SEO", icon: Search, subtitle: "Posicionamiento en Google" },
 ];
@@ -216,22 +216,28 @@ export default function NewProductPage() {
             stock_quantity: parseInt(v.stock, 10) || 0,
           }));
         if ((payload.variants as unknown[]).length === 0) {
-          setError("A\u00f1ad\u00ed al menos una variante con nombre.");
+          setError("Añadí al menos una variante con nombre.");
           setLoading(false);
           return;
         }
       }
 
-      const imagePayloads = await Promise.all(
-        images.map(async (img, idx) => {
-          let url = img.url;
-          if (img.file && currentStore) {
+      const imagePayloads: { url: string; alt_text: string | undefined; sort_order: number; is_cover: boolean }[] = [];
+      for (let idx = 0; idx < images.length; idx++) {
+        const img = images[idx];
+        let url = img.url;
+        if (img.file && currentStore) {
+          try {
             const res = await uploadImage(currentStore.id, img.file);
             url = res.url;
+          } catch (uploadErr) {
+            const fileName = img.file.name || `imagen ${idx + 1}`;
+            const detail = uploadErr instanceof Error ? uploadErr.message : "Error desconocido";
+            throw new Error(`No se pudo subir "${fileName}": ${detail}`);
           }
-          return { url, alt_text: img.alt || undefined, sort_order: idx, is_cover: img.isCover };
-        })
-      );
+        }
+        imagePayloads.push({ url, alt_text: img.alt || undefined, sort_order: idx, is_cover: img.isCover });
+      }
       payload.images = imagePayloads.filter((i) => i.url);
 
       await createProduct(currentStore.id, payload as Parameters<typeof createProduct>[1]);
@@ -243,7 +249,7 @@ export default function NewProductPage() {
     }
   };
 
-  if (!currentStore) return <div className="text-gray-400">Seleccion\u00e1 una tienda</div>;
+  if (!currentStore) return <div className="text-gray-400">Seleccioná una tienda</div>;
 
   const discountPct =
     compareAtPrice && price && parseFloat(compareAtPrice) > parseFloat(price)
@@ -266,7 +272,7 @@ export default function NewProductPage() {
         <div>
           <h1 className="text-2xl font-display font-bold text-gray-900">Nuevo producto</h1>
           <p className="text-gray-400 text-sm mt-0.5">
-            Complet\u00e1 los datos del producto. Los campos con <span className="text-red-400">*</span> son obligatorios.
+            Completá los datos del producto. Los campos con <span className="text-red-400">*</span> son obligatorios.
           </p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
@@ -296,7 +302,7 @@ export default function NewProductPage() {
             <p className="font-medium">Contenido generado por IA</p>
             <p className="text-xs text-amber-600 mt-0.5">
               Todo fue generado por inteligencia artificial. Las fotos pueden no ser exactas
-              y los precios son estimados. Revis\u00e1 cada campo antes de guardar.
+              y los precios son estimados. Revisá cada campo antes de guardar.
             </p>
           </div>
           <button
@@ -354,9 +360,9 @@ export default function NewProductPage() {
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1 px-1">Categor\u00eda</label>
+                <label className="block text-xs font-medium text-gray-500 mb-1 px-1">Categoría</label>
                 <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)} className={inputClass}>
-                  <option value="">Sin categor\u00eda</option>
+                  <option value="">Sin categoría</option>
                   {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
               </div>
@@ -411,7 +417,7 @@ export default function NewProductPage() {
 
             {/* General */}
             {tab === "general" && (
-              <Section title="Informaci\u00f3n general" desc="Nombre y descripci\u00f3n del producto">
+              <Section title="Información general" desc="Nombre y descripción del producto">
                 <div>
                   <label className={labelClass}>Nombre <span className="text-red-400">*</span></label>
                   <input
@@ -427,7 +433,7 @@ export default function NewProductPage() {
                 <div>
                   <label className={labelClass}>
                     Slug (URL)
-                    <span className="ml-2 text-xs text-gray-400 font-normal">— se genera autom\u00e1ticamente</span>
+                    <span className="ml-2 text-xs text-gray-400 font-normal">— se genera automáticamente</span>
                   </label>
                   <div className="flex">
                     <span className="px-3 py-2.5 text-xs text-gray-400 bg-gray-50 border border-r-0 border-gray-200 rounded-l-lg shrink-0 flex items-center">
@@ -445,7 +451,7 @@ export default function NewProductPage() {
 
                 <div>
                   <label className={labelClass}>
-                    Descripci\u00f3n corta
+                    Descripción corta
                     <span className="ml-2 text-xs text-gray-400 font-normal">— aparece en listados</span>
                   </label>
                   <input
@@ -453,18 +459,18 @@ export default function NewProductPage() {
                     value={shortDescription}
                     onChange={(e) => setShortDescription(e.target.value)}
                     className={inputClass}
-                    placeholder="Una l\u00ednea que resume el producto"
+                    placeholder="Una línea que resume el producto"
                   />
                 </div>
 
                 <div>
-                  <label className={labelClass}>Descripci\u00f3n completa</label>
+                  <label className={labelClass}>Descripción completa</label>
                   <textarea
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                     rows={5}
                     className={inputClass}
-                    placeholder="Materiales, talles disponibles, instrucciones de uso\u2026"
+                    placeholder="Materiales, talles disponibles, instrucciones de uso…"
                   />
                   {description && (
                     <p className="mt-1 text-xs text-gray-400">{description.length} caracteres</p>
@@ -532,7 +538,7 @@ export default function NewProductPage() {
                 </div>
                 {discountPct !== null && (
                   <div className="p-3 rounded-lg bg-green-50 border border-green-100 text-xs text-green-700">
-                    Se mostrar\u00e1 un <strong>{discountPct}% de descuento</strong> en la tienda.
+                    Se mostrará un <strong>{discountPct}% de descuento</strong> en la tienda.
                   </div>
                 )}
               </Section>
@@ -540,11 +546,12 @@ export default function NewProductPage() {
 
             {/* Inventory */}
             {tab === "inventory" && (
-              <Section title="Inventario" desc="Control de stock y c\u00f3digo interno">
+              <Section title="Inventario" desc="Control de stock y código interno">
+                {/* SKU */}
                 <div>
                   <label className={labelClass}>
                     SKU
-                    <span className="ml-2 text-xs text-gray-400 font-normal">— c\u00f3digo \u00fanico interno</span>
+                    <span className="ml-2 text-xs text-gray-400 font-normal">— código único interno</span>
                   </label>
                   <input
                     type="text"
@@ -554,60 +561,100 @@ export default function NewProductPage() {
                     placeholder="Ej: REM-OVS-NEG-M"
                   />
                 </div>
-                <div className="p-4 rounded-lg bg-gray-50 border border-gray-100 space-y-3">
-                  <label className="flex items-start gap-3 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={trackInventory}
-                      onChange={(e) => setTrackInventory(e.target.checked)}
-                      className="mt-0.5 w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                    />
-                    <div>
-                      <span className="text-sm font-medium text-gray-700">Rastrear inventario</span>
-                      <p className="text-xs text-gray-400 mt-0.5">Agentro llevar\u00e1 la cuenta del stock autom\u00e1ticamente</p>
-                    </div>
-                  </label>
-                  {trackInventory && productType === "simple" && (
-                    <div className="pl-7">
-                      <label className={labelClass}>Cantidad en stock</label>
+
+                {/* Stock quantity — always visible for simple products */}
+                {productType === "simple" && (
+                  <div>
+                    <label className={labelClass}>Cantidad en stock</label>
+                    <div className="flex items-center gap-3">
                       <input
                         type="number"
                         min="0"
                         value={stockQuantity}
                         onChange={(e) => setStockQuantity(e.target.value)}
-                        className={`${inputClass} max-w-[140px]`}
+                        className={`${inputClass} max-w-[160px]`}
+                        placeholder="0"
                       />
+                      <span className="text-sm text-gray-400">unidades disponibles</span>
                     </div>
-                  )}
-                  {trackInventory && productType === "variant" && (
-                    <p className="pl-7 text-xs text-gray-400">El stock se define por variante en la pesta\u00f1a Variantes.</p>
-                  )}
-                  <label className="flex items-start gap-3 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={allowBackorder}
-                      onChange={(e) => setAllowBackorder(e.target.checked)}
-                      className="mt-0.5 w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                    />
-                    <div>
-                      <span className="text-sm font-medium text-gray-700">Permitir pedidos sin stock</span>
-                      <p className="text-xs text-gray-400 mt-0.5">Los clientes podr\u00e1n comprar aunque no haya unidades</p>
+                  </div>
+                )}
+                {productType === "variant" && (
+                  <div className="p-3 rounded-lg bg-indigo-50 border border-indigo-100 text-xs text-indigo-600 flex items-center gap-2">
+                    <Layers className="w-3.5 h-3.5 shrink-0" />
+                    El stock de cada variante se define en la pestaña <strong>Variantes</strong>.
+                  </div>
+                )}
+
+                {/* Toggle options */}
+                <div className="space-y-3 pt-1">
+                  {/* Track inventory toggle */}
+                  <div
+                    onClick={() => setTrackInventory((v) => !v)}
+                    className={`flex items-center justify-between gap-4 p-4 rounded-xl border cursor-pointer transition select-none ${
+                      trackInventory
+                        ? "bg-indigo-50 border-indigo-200"
+                        : "bg-white border-gray-200 hover:border-gray-300 hover:bg-gray-50"
+                    }`}
+                  >
+                    <div className="min-w-0">
+                      <p className={`text-sm font-medium ${trackInventory ? "text-indigo-800" : "text-gray-700"}`}>
+                        Rastrear inventario
+                      </p>
+                      <p className="text-xs text-gray-400 mt-0.5">
+                        Agentro descuenta unidades automáticamente con cada venta
+                      </p>
                     </div>
-                  </label>
+                    {/* Toggle switch */}
+                    <div className={`relative flex-shrink-0 w-11 h-6 rounded-full transition-colors duration-200 ${
+                      trackInventory ? "bg-indigo-600" : "bg-gray-300"
+                    }`}>
+                      <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 ${
+                        trackInventory ? "translate-x-5" : "translate-x-0"
+                      }`} />
+                    </div>
+                  </div>
+
+                  {/* Allow backorder toggle */}
+                  <div
+                    onClick={() => setAllowBackorder((v) => !v)}
+                    className={`flex items-center justify-between gap-4 p-4 rounded-xl border cursor-pointer transition select-none ${
+                      allowBackorder
+                        ? "bg-amber-50 border-amber-200"
+                        : "bg-white border-gray-200 hover:border-gray-300 hover:bg-gray-50"
+                    }`}
+                  >
+                    <div className="min-w-0">
+                      <p className={`text-sm font-medium ${allowBackorder ? "text-amber-800" : "text-gray-700"}`}>
+                        Permitir pedidos sin stock
+                      </p>
+                      <p className="text-xs text-gray-400 mt-0.5">
+                        Los clientes pueden comprar aunque no haya unidades disponibles
+                      </p>
+                    </div>
+                    {/* Toggle switch */}
+                    <div className={`relative flex-shrink-0 w-11 h-6 rounded-full transition-colors duration-200 ${
+                      allowBackorder ? "bg-amber-500" : "bg-gray-300"
+                    }`}>
+                      <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 ${
+                        allowBackorder ? "translate-x-5" : "translate-x-0"
+                      }`} />
+                    </div>
+                  </div>
                 </div>
               </Section>
             )}
 
             {/* Images */}
             {tab === "images" && (
-              <Section title="Im\u00e1genes del producto" desc="Fotos que ver\u00e1n tus clientes en la tienda">
+              <Section title="Imágenes del producto" desc="Fotos que verán tus clientes en la tienda">
                 {/* AI images warning */}
                 {hasAiImages && (
                   <div className="p-3 rounded-lg bg-amber-50 border border-amber-100 text-xs text-amber-700 flex items-start gap-2">
                     <AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0 text-amber-500" />
                     <span>
                       Las fotos fueron elegidas por IA buscando algo similar a tu producto.
-                      Puede que no sean exactas — reemplaz\u00e1 las que no te sirvan.
+                      Puede que no sean exactas — reemplazá las que no te sirvan.
                     </span>
                   </div>
                 )}
@@ -678,12 +725,12 @@ export default function NewProductPage() {
                   className="w-full py-6 rounded-xl border-2 border-dashed border-gray-200 text-gray-400 text-sm hover:border-indigo-300 hover:text-indigo-500 hover:bg-indigo-50/40 transition flex flex-col items-center gap-1.5"
                 >
                   <Upload className="w-5 h-5" />
-                  <span className="font-medium">Subir im\u00e1genes</span>
-                  <span className="text-xs">jpg, png, gif, webp \u00b7 m\u00e1x 5MB c/u</span>
+                  <span className="font-medium">Subir imágenes</span>
+                  <span className="text-xs">jpg, png, gif, webp · máx 5MB c/u</span>
                 </button>
                 {images.length > 0 && (
                   <p className="text-xs text-gray-400 text-center">
-                    Pas\u00e1 el cursor sobre una imagen para establecer la portada o eliminarla.
+                    Pasá el cursor sobre una imagen para establecer la portada o eliminarla.
                   </p>
                 )}
               </Section>
@@ -695,9 +742,9 @@ export default function NewProductPage() {
                 {productType !== "variant" ? (
                   <div className="text-center py-8">
                     <Layers className="w-8 h-8 text-gray-300 mx-auto mb-3" />
-                    <p className="text-sm text-gray-500 mb-1">Las variantes est\u00e1n desactivadas</p>
+                    <p className="text-sm text-gray-500 mb-1">Las variantes están desactivadas</p>
                     <p className="text-xs text-gray-400 mb-4">
-                      Cambi\u00e1 el tipo de producto a &quot;Con variantes&quot; en la barra lateral para activarlas.
+                      Cambiá el tipo de producto a &quot;Con variantes&quot; en la barra lateral para activarlas.
                     </p>
                     <button
                       type="button"
@@ -770,7 +817,7 @@ export default function NewProductPage() {
                       onClick={() => setVariants((v) => [...v, { name: "", sku: "", price: "", stock: "0" }])}
                       className="flex items-center gap-2 px-4 py-2.5 rounded-lg border border-dashed border-gray-300 text-gray-500 text-sm hover:bg-gray-50 hover:border-indigo-300 hover:text-indigo-600 transition w-full justify-center"
                     >
-                      <Plus className="w-4 h-4" /> A\u00f1adir variante
+                      <Plus className="w-4 h-4" /> Añadir variante
                     </button>
                   </>
                 )}
@@ -779,18 +826,18 @@ export default function NewProductPage() {
 
             {/* SEO */}
             {tab === "seo" && (
-              <Section title="SEO" desc="C\u00f3mo aparece este producto en Google (opcional)">
+              <Section title="SEO" desc="Cómo aparece este producto en Google (opcional)">
                 <div>
                   <label className={labelClass}>
-                    T\u00edtulo para Google
-                    <span className="ml-2 text-xs text-gray-400 font-normal">— m\u00e1x. 60 caracteres</span>
+                    Título para Google
+                    <span className="ml-2 text-xs text-gray-400 font-normal">— máx. 60 caracteres</span>
                   </label>
                   <input
                     type="text"
                     value={seoTitle}
                     onChange={(e) => setSeoTitle(e.target.value)}
                     className={inputClass}
-                    placeholder="Si lo dej\u00e1s vac\u00edo se usa el nombre del producto"
+                    placeholder="Si lo dejás vacío se usa el nombre del producto"
                     maxLength={60}
                   />
                   {seoTitle && (
@@ -801,15 +848,15 @@ export default function NewProductPage() {
                 </div>
                 <div>
                   <label className={labelClass}>
-                    Descripci\u00f3n para Google
-                    <span className="ml-2 text-xs text-gray-400 font-normal">— m\u00e1x. 160 caracteres</span>
+                    Descripción para Google
+                    <span className="ml-2 text-xs text-gray-400 font-normal">— máx. 160 caracteres</span>
                   </label>
                   <textarea
                     value={seoDescription}
                     onChange={(e) => setSeoDescription(e.target.value)}
                     rows={3}
                     className={inputClass}
-                    placeholder="Descripci\u00f3n bajo el t\u00edtulo en resultados de b\u00fasqueda"
+                    placeholder="Descripción bajo el título en resultados de búsqueda"
                     maxLength={160}
                   />
                   {seoDescription && (
@@ -826,7 +873,7 @@ export default function NewProductPage() {
                     <p className="text-blue-700 text-sm font-medium truncate">{seoTitle || name}</p>
                     <p className="text-green-700 text-xs truncate">tutienda.com/producto/{slug || "..."}</p>
                     <p className="text-gray-500 text-xs mt-0.5 line-clamp-2">
-                      {seoDescription || shortDescription || description?.slice(0, 160) || "Descripci\u00f3n del producto..."}
+                      {seoDescription || shortDescription || description?.slice(0, 160) || "Descripción del producto..."}
                     </p>
                   </div>
                 )}
@@ -836,7 +883,7 @@ export default function NewProductPage() {
             {/* Mobile-only: quick settings + submit */}
             <div className="sm:hidden space-y-4">
               <div className="bg-white rounded-xl border border-gray-200/60 p-5 space-y-3">
-                <h3 className="text-sm font-semibold text-gray-900">Configuraci\u00f3n</h3>
+                <h3 className="text-sm font-semibold text-gray-900">Configuración</h3>
                 <div>
                   <label className="block text-xs font-medium text-gray-500 mb-1">Estado</label>
                   <select value={status} onChange={(e) => setStatus(e.target.value)} className={inputClass}>
@@ -845,9 +892,9 @@ export default function NewProductPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-500 mb-1">Categor\u00eda</label>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">Categoría</label>
                   <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)} className={inputClass}>
-                    <option value="">Sin categor\u00eda</option>
+                    <option value="">Sin categoría</option>
                     {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
                 </div>
@@ -889,7 +936,7 @@ export default function NewProductPage() {
               </div>
               <div>
                 <h2 className="font-display font-bold text-gray-900">Rellenar con IA</h2>
-                <p className="text-xs text-gray-400">GPT-4o + Pexels \u00b7 ~10 segundos</p>
+                <p className="text-xs text-gray-400">GPT-4o + Pexels · ~10 segundos</p>
               </div>
               {!aiLoading && (
                 <button
@@ -904,14 +951,14 @@ export default function NewProductPage() {
 
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                Describ\u00ed el producto en pocas palabras
+                Describí el producto en pocas palabras
               </label>
               <textarea
                 value={aiPrompt}
                 onChange={(e) => setAiPrompt(e.target.value)}
                 disabled={aiLoading}
                 rows={3}
-                placeholder="Ej: remera oversize negra para streetwear, unisex, algod\u00f3n"
+                placeholder="Ej: remera oversize negra para streetwear, unisex, algodón"
                 className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 text-sm text-gray-900 placeholder:text-gray-400 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none transition resize-none disabled:opacity-50"
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && !e.shiftKey && !aiLoading && aiPrompt.trim()) {
@@ -921,14 +968,14 @@ export default function NewProductPage() {
                 }}
               />
               <p className="mt-1.5 text-xs text-gray-400">
-                Cuanto m\u00e1s espec\u00edfico, mejor resultado. Pod\u00e9s editar todo despu\u00e9s.
+                Cuanto más específico, mejor resultado. Podés editar todo después.
               </p>
             </div>
 
             {/* Disclaimer */}
             <div className="mb-4 p-3 rounded-lg bg-gray-50 border border-gray-100 text-xs text-gray-500 flex items-start gap-2">
               <AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0 text-gray-400" />
-              <span>La IA puede equivocarse. Revis\u00e1 que las fotos y los datos sean correctos antes de guardar.</span>
+              <span>La IA puede equivocarse. Revisá que las fotos y los datos sean correctos antes de guardar.</span>
             </div>
 
             {aiLoading && (
@@ -937,8 +984,8 @@ export default function NewProductPage() {
                   <Loader2 className="w-5 h-5 text-indigo-600 animate-spin shrink-0" />
                   <div>
                     <p className="text-sm font-medium text-indigo-800">
-                      {aiStep === "thinking" && "GPT-4o generando informaci\u00f3n del producto..."}
-                      {aiStep === "images" && "Buscando y descargando im\u00e1genes de Pexels..."}
+                      {aiStep === "thinking" && "GPT-4o generando información del producto..."}
+                      {aiStep === "images" && "Buscando y descargando imágenes de Pexels..."}
                     </p>
                     <p className="text-xs text-indigo-500 mt-0.5">Esto puede tardar unos segundos</p>
                   </div>
