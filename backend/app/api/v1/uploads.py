@@ -73,10 +73,12 @@ async def upload_file(
     """Sube una imagen o video y devuelve la URL pública."""
     filename = file.filename or ""
 
-    # Bloquear filenames con múltiples extensiones (ej: shell.php.jpg)
-    parts = Path(filename).name.split(".")
-    if len(parts) > 2:
-        raise HTTPException(400, "Nombre de archivo inválido.")
+    # El archivo se renombra a {uuid}{ext} más abajo, así que el nombre original
+    # se descarta. La protección contra shell.php.jpg viene de:
+    #   1) magic bytes deben coincidir con la extensión final
+    #   2) renombrado a UUID (el .php intermedio nunca llega al disco)
+    # Por eso NO rechazamos archivos con múltiples puntos en el nombre
+    # (ej: "WhatsApp Image 2024-09-15 at 4.39.21 PM.jpeg" debe ser válido).
 
     ext = Path(filename).suffix.lower()
     if ext not in ALLOWED_EXTENSIONS:

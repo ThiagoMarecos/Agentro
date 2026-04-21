@@ -57,10 +57,20 @@ def list_products(
     return items, total
 
 
+def _unique_slug(db: Session, base_slug: str, store_id: str) -> str:
+    """Retorna el slug tal cual si está libre, o agrega -2, -3… hasta encontrar uno libre."""
+    if not get_by_slug(db, base_slug, store_id):
+        return base_slug
+    counter = 2
+    while True:
+        candidate = f"{base_slug}-{counter}"
+        if not get_by_slug(db, candidate, store_id):
+            return candidate
+        counter += 1
+
+
 def create_product(db: Session, store_id: str, data: ProductCreate) -> Product:
-    existing = get_by_slug(db, data.slug, store_id)
-    if existing:
-        raise HTTPException(status_code=409, detail="El slug ya está en uso en esta tienda")
+    data.slug = _unique_slug(db, data.slug, store_id)
     if data.category_id:
         cat = get_category_by_id(db, data.category_id, store_id)
         if not cat:

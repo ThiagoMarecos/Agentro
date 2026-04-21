@@ -10,11 +10,19 @@ from pydantic import BaseModel, field_validator
 
 
 def slug_validator(v: str) -> str:
-    if len(v) < 3 or len(v) > 100:
-        raise ValueError("Slug debe tener entre 3 y 100 caracteres")
-    if not re.match(r"^[a-z0-9-]+$", v.lower()):
-        raise ValueError("Slug solo permite letras minúsculas, números y guiones")
-    return v.lower().strip()
+    import unicodedata
+    # Normalizar: convertir acentos (á→a, ñ→n, etc.) y bajar a minúsculas
+    normalized = unicodedata.normalize("NFKD", v).encode("ascii", "ignore").decode("ascii")
+    # Reemplazar espacios y caracteres inválidos por guión
+    cleaned = re.sub(r"[^a-z0-9-]+", "-", normalized.lower().strip())
+    # Eliminar guiones múltiples y bordes
+    cleaned = re.sub(r"-+", "-", cleaned).strip("-")
+    # Si quedó muy corto, usar fallback
+    if len(cleaned) < 3:
+        cleaned = (cleaned + "-producto").strip("-")
+    # Truncar a 100 caracteres
+    cleaned = cleaned[:100].rstrip("-")
+    return cleaned
 
 
 def price_non_negative(v: Decimal | None) -> Decimal | None:

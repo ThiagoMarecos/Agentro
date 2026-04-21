@@ -245,15 +245,16 @@ async def get_qr_code(
     except evolution_api.EvolutionAPIError:
         pass
 
-    # Si la instancia no existe en Evolution API (ej: tras reinicio del contenedor),
-    # la recreamos automáticamente antes de intentar generar el QR.
+    # Try to get QR — if Evolution API returns 404 the instance was lost
+    # (e.g. after a container restart). Recreate it automatically.
     instance_exists = await evolution_api.fetch_instance(channel.instance_name) is not None
 
     if not instance_exists:
         logger.info(
-            f"Instance {channel.instance_name} not found in Evolution API — recreating automatically"
+            f"Instance {channel.instance_name} not found in Evolution API — recreating it automatically"
         )
         settings = get_settings()
+        # Reuse existing webhook_secret or generate a fresh one
         webhook_secret = channel.webhook_secret or _secrets.token_urlsafe(32)
         webhook_url = f"{settings.backend_url}/api/v1/whatsapp-webhook/webhook/whatsapp"
 
@@ -273,13 +274,11 @@ async def get_qr_code(
             db.commit()
             db.refresh(channel)
             logger.info(f"Instance {channel.instance_name} recreated successfully")
+            # Give Baileys a moment to initialise
             await asyncio.sleep(3)
         except evolution_api.EvolutionAPIError as e:
             logger.error(f"Failed to recreate instance {channel.instance_name}: {e.message}")
-            raise HTTPException(
-                status_code=e.status_code,
-                detail=f"Error al recrear instancia: {e.message}",
-            )
+            raise HTTPException(status_code=e.status_code, detail=f"Error al recrear instancia: {e.message}")
 
     try:
         result = await evolution_api.connect_instance_with_retry(
@@ -327,8 +326,8 @@ async def get_connection_state(
     try:
         result = await evolution_api.get_connection_state(channel.instance_name)
     except evolution_api.EvolutionAPIError as e:
-        # Si Evolution API dice que la instancia no existe, devolvemos disconnected
-        # en lugar de propagar el error al frontend.
+        # If Evolution API says the instance doesn't exist (404 / 400) treat it as
+        # disconnected instead of propagating the error to the frontend.
         if e.status_code in (404, 400):
             channel.connection_status = "disconnected"
             db.commit()
