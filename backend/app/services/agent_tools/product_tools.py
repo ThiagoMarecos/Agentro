@@ -178,6 +178,53 @@ def tool_recommend_product(db: Session, session: SalesSession, **params) -> str:
     return json.dumps({"recommendations": results}, ensure_ascii=False)
 
 
+def tool_send_product_image(db: Session, session: SalesSession, **params) -> str:
+    """
+    Programa el envío de la foto de un producto al cliente por WhatsApp.
+    Las imágenes se envían después del mensaje de texto.
+    """
+    product_id = params.get("product_id", "")
+    caption = params.get("caption", "")
+    pending_media: list | None = params.get("_pending_media")
+
+    product = db.query(Product).filter(
+        Product.id == product_id,
+        Product.store_id == session.store_id,
+        Product.is_active == True,
+    ).first()
+
+    if not product:
+        return json.dumps({"sent": False, "reason": "Producto no encontrado"})
+
+    images = product.images or []
+    if not images:
+        return json.dumps({"sent": False, "reason": "El producto no tiene imágenes cargadas"})
+
+    # Tomar la imagen de portada o la primera
+    cover = next((i for i in images if i.is_cover), images[0])
+    url = cover.url
+
+    # Convertir URL relativa en absoluta
+    if url.startswith("/"):
+        from app.config import get_settings
+        settings = get_settings()
+        url = f"{settings.backend_url}{url}"
+
+    if pending_media is not None:
+        pending_media.append({
+            "type": "image",
+            "url": url,
+            "caption": caption or product.name,
+        })
+
+    return json.dumps({
+        "sent": True,
+        "product": product.name,
+        "image_url": url,
+        "caption": caption or product.name,
+    }, ensure_ascii=False)
+
+
 PRODUCT_TOOL_DEFINITIONS = [
     {
         "type": "function",
@@ -238,6 +285,25 @@ PRODUCT_TOOL_DEFINITIONS = [
                     "reasoning": {"type": "string", "description": "Razón de la recomendación"},
                 },
                 "required": [],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "send_product_image",
+            "description": (
+                "Enviar la foto de un producto al cliente por WhatsApp. "
+                "Usá esta tool cuando el cliente pida ver una foto, o cuando presentes un producto por primera vez. "
+                "La imagen se envía justo después de tu mensaje de texto."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "product_id": {"type": "string", "description": "ID del producto cuya imagen enviar"},
+                    "caption": {"type": "string", "description": "Texto que acompaña la imagen (opcional, por defecto el nombre del producto)"},
+                },
+                "required": ["product_id"],
             },
         },
     },

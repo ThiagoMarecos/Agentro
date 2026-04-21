@@ -13,26 +13,30 @@ from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.models.ai import AIChannel
 from app.services.agent_runtime import process_message
-from app.services.evolution_api import send_text_message
+from app.services.evolution_api import send_text_message, send_image_message, get_media_base64
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
+# Tipos de mensaje de texto soportados
+_TEXT_MESSAGE_TYPES = {"conversation", "extendedtextmessage"}
+# Tipos de imagen soportados
+_IMAGE_MESSAGE_TYPES = {"imagemessage"}
+
 
 def _extract_message_data(body: dict) -> dict | None:
     """
     Extrae los datos relevantes de un evento MESSAGES_UPSERT de Evolution API.
-    Retorna None si no es un mensaje de texto entrante válido.
+    Soporta mensajes de texto e imágenes (con o sin caption).
+    Retorna None si el evento no es procesable.
     """
     event = (body.get("event") or "").lower().replace(".", "_")
     if event != "messages_upsert":
         return None
 
     data = body.get("data", {})
-
-    if data.get("messageType") != "conversation" and data.get("messageType") != "extendedTextMessage":
-        return None
+    message_type = (data.get("messageType") or "").lower().replace(" ", "")
 
     key = data.get("key", {})
     if key.get("fromMe"):
@@ -43,25 +47,46 @@ def _extract_message_data(body: dict) -> dict | None:
         return None
 
     phone_number = remote_jid.split("@")[0]
-
-    message_obj = data.get("message", {})
-    text = (
-        message_obj.get("conversation")
-        or message_obj.get("extendedTextMessage", {}).get("text")
-        or ""
-    )
-
-    if not text.strip():
-        return None
-
     instance_name = body.get("instance")
+    message_obj = data.get("message", {})
 
-    return {
-        "phone_number": phone_number,
-        "text": text.strip(),
-        "instance_name": instance_name,
-        "message_id": key.get("id"),
-    }
+    # ── Mensajes de texto ──
+    if message_type in _TEXT_MESSAGE_TYPES:
+        text = (
+            message_obj.get("conversation")
+            or message_obj.get("extendedTextMessage", {}).get("text")
+            or ""
+        )
+        if not text.strip():
+            return None
+        return {
+            "phone_number": phone_number,
+            "text": text.strip(),
+            "instance_name": instance_name,
+            "message_id": key.get("id"),
+            "message_type": "text",
+            "image_b64": None,
+            "message_key": None,
+        }
+
+    # ── Mensajes de imagen ──
+    if message_type in _IMAGE_MESSAGE_TYPES:
+        image_msg = message_obj.get("imageMessage", {})
+        caption = (image_msg.get("caption") or "").strip()
+        # Thumbnail en base64 incluido directamente por Evolution API
+        thumbnail_b64 = image_msg.get("jpegThumbnail") or ""
+
+        return {
+            "phone_number": phone_number,
+            "text": caption or "El cliente envió una imagen",
+            "instance_name": instance_name,
+            "message_id": key.get("id"),
+            "message_type": "image",
+            "image_b64": thumbnail_b64 or None,
+            "message_key": key,
+        }
+
+    return None
 
 
 def _process_whatsapp_message(
@@ -70,29 +95,55 @@ def _process_whatsapp_message(
     text: str,
     store_id: str,
     instance_token: str | None,
+    message_type: str = "text",
+    image_b64: str | None = None,
+    message_key: dict | None = None,
 ):
     """
     Procesa un mensaje de WhatsApp en background:
-    1. Ejecuta AgentRuntime con el mensaje
-    2. Envía la respuesta por WhatsApp
+    1. Si es imagen sin base64, intenta descargarla de Evolution API
+    2. Ejecuta AgentRuntime (con soporte de visión si hay imagen)
+    3. Envía la respuesta de texto por WhatsApp
+    4. Envía imágenes de productos si el agente las incluyó
     """
     from app.db.session import SessionLocal
 
     db = SessionLocal()
     try:
+        # Si recibimos una imagen pero no tenemos el base64 del thumbnail,
+        # intentamos descargarlo via Evolution API
+        resolved_b64 = image_b64
+        if message_type == "image" and not resolved_b64 and message_key and instance_name:
+            try:
+                loop_dl = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop_dl)
+                try:
+                    media_data = loop_dl.run_until_complete(
+                        get_media_base64(instance_name, message_key)
+                    )
+                    resolved_b64 = media_data.get("base64") or None
+                finally:
+                    loop_dl.close()
+            except Exception as e:
+                logger.warning(f"Could not download image media: {e}")
+
         result = process_message(
             db=db,
             store_id=store_id,
             channel="whatsapp",
             customer_identifier=phone_number,
             message=text,
+            image_b64=resolved_b64,
         )
 
         response_text = result.get("response", "")
-        if response_text:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            try:
+        pending_media = result.get("pending_media", [])
+
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        try:
+            # 1. Enviar respuesta de texto
+            if response_text:
                 loop.run_until_complete(
                     send_text_message(
                         instance_name=instance_name,
@@ -101,8 +152,24 @@ def _process_whatsapp_message(
                         instance_token=instance_token,
                     )
                 )
-            finally:
-                loop.close()
+
+            # 2. Enviar imágenes de productos que el agente haya solicitado
+            for media in pending_media:
+                if media.get("type") == "image":
+                    try:
+                        loop.run_until_complete(
+                            send_image_message(
+                                instance_name=instance_name,
+                                to_number=phone_number,
+                                image_url=media["url"],
+                                caption=media.get("caption", ""),
+                                instance_token=instance_token,
+                            )
+                        )
+                    except Exception as img_err:
+                        logger.warning(f"Failed to send product image: {img_err}")
+        finally:
+            loop.close()
 
     except Exception as e:
         logger.error(f"Error processing WhatsApp message: {e}", exc_info=True)
@@ -118,7 +185,7 @@ async def whatsapp_webhook(
 ):
     """
     Recibe eventos de Evolution API.
-    Solo procesa MESSAGES_UPSERT (mensajes entrantes de texto).
+    Procesa MESSAGES_UPSERT de texto e imagen.
     Busca el AIChannel por instance_name para identificar la tienda.
     """
     try:
@@ -143,8 +210,7 @@ async def whatsapp_webhook(
         logger.warning(f"No channel found for instance: {instance_name}")
         raise HTTPException(status_code=404, detail="Canal no encontrado")
 
-    # SECURITY: validar secret ANTES de procesar cualquier evento, incluido CONNECTION_UPDATE
-    # Canal sin secret configurado rechaza todas las llamadas
+    # SECURITY: validar secret ANTES de procesar cualquier evento
     webhook_secret = request.headers.get("x-webhook-secret")
     if not channel.webhook_secret:
         logger.warning(f"Channel {instance_name} has no webhook_secret — rejecting request")
@@ -179,6 +245,7 @@ async def whatsapp_webhook(
     if channel.channel_type != "whatsapp":
         return {"status": "ignored"}
 
+    # Añadir IMAGE_MESSAGE a los eventos del webhook si no estaba
     background_tasks.add_task(
         _process_whatsapp_message,
         instance_name=msg_data["instance_name"],
@@ -186,6 +253,9 @@ async def whatsapp_webhook(
         text=msg_data["text"],
         store_id=channel.store_id,
         instance_token=channel.instance_token,
+        message_type=msg_data.get("message_type", "text"),
+        image_b64=msg_data.get("image_b64"),
+        message_key=msg_data.get("message_key"),
     )
 
     return {"status": "processing"}

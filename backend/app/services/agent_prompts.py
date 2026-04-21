@@ -102,7 +102,8 @@ Tu objetivo: confirmar que el producto existe, tiene stock, y presentar la info 
 
 1. Usa `product_detail` para obtener toda la info del producto.
 2. Usa `check_availability` para verificar stock.
-3. Presenta al cliente:
+3. Usa `send_product_image` para enviar la foto del producto (hazlo SIEMPRE al presentar un producto).
+4. Presenta al cliente:
    - Nombre del producto
    - Precio (en {currency})
    - Variantes disponibles (colores, tallas, etc.)
@@ -205,6 +206,7 @@ Usa las herramientas ACTIVAMENTE. No respondas de memoria — consulta la base d
 - `product_detail`: Ver detalle completo de un producto.
 - `check_availability`: Verificar stock. OBLIGATORIO antes de confirmar disponibilidad.
 - `recommend_product`: Recomendar productos según preferencias.
+- `send_product_image`: Enviar la foto de un producto al cliente. Usala cuando presentes un producto por primera vez o cuando el cliente pida ver una foto. Se envía justo después de tu texto.
 - `get_store_discounts`: Consultar descuentos disponibles.
 - `update_notebook`: Guardar información del cliente y progreso. Úsala frecuentemente.
 - `move_stage`: Cambiar de etapa. Úsala según el flujo.

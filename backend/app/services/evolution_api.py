@@ -17,6 +17,7 @@ WEBHOOK_EVENTS = [
     "MESSAGES_UPSERT",
     "CONNECTION_UPDATE",
     "QRCODE_UPDATED",
+    "MESSAGES_MEDIA_UPDATE",
 ]
 
 
@@ -261,6 +262,72 @@ async def delete_instance(instance_name: str) -> dict[str, Any]:
 
     raise EvolutionAPIError(
         f"Error al eliminar instancia: {resp.text}",
+        resp.status_code,
+    )
+
+
+async def send_image_message(
+    instance_name: str,
+    to_number: str,
+    image_url: str,
+    caption: str = "",
+    instance_token: str | None = None,
+) -> dict[str, Any]:
+    """
+    Envía una imagen por WhatsApp con caption opcional.
+    image_url debe ser una URL pública accesible (https://...).
+    """
+    payload = {
+        "number": to_number,
+        "mediatype": "image",
+        "mimetype": "image/jpeg",
+        "caption": caption,
+        "media": image_url,
+        "fileName": "producto.jpg",
+    }
+
+    async with httpx.AsyncClient(timeout=30) as client:
+        resp = await client.post(
+            f"{_base_url()}/message/sendMedia/{instance_name}",
+            json=payload,
+            headers=_instance_headers(instance_token),
+        )
+
+    if resp.status_code in (200, 201):
+        return resp.json()
+
+    logger.error(f"Evolution sendMedia error: {resp.status_code} - {resp.text}")
+    raise EvolutionAPIError(
+        f"Error al enviar imagen: {resp.text}",
+        resp.status_code,
+    )
+
+
+async def get_media_base64(
+    instance_name: str,
+    message_key: dict,
+) -> dict[str, Any]:
+    """
+    Descarga la media de un mensaje recibido y retorna en base64.
+    Usado para procesar imágenes que envían los clientes por WhatsApp.
+    """
+    payload = {
+        "message": {"key": message_key},
+        "convertToMp4": False,
+    }
+
+    async with httpx.AsyncClient(timeout=30) as client:
+        resp = await client.post(
+            f"{_base_url()}/chat/getBase64FromMediaMessage/{instance_name}",
+            json=payload,
+            headers=_headers(),
+        )
+
+    if resp.status_code == 200:
+        return resp.json()
+
+    raise EvolutionAPIError(
+        f"Error al descargar media: {resp.text}",
         resp.status_code,
     )
 

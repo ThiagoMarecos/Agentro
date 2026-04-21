@@ -210,6 +210,7 @@ def process_message(
     channel: str,
     customer_identifier: str,
     message: str,
+    image_b64: str | None = None,
 ) -> dict:
     """
     Flujo principal:
@@ -267,19 +268,38 @@ def process_message(
     history = _get_message_history(db, conversation.id)
     openai_messages = [{"role": "system", "content": system_prompt}]
     openai_messages.extend(history)
-    openai_messages.append({"role": "user", "content": message})
 
-    # Persistir mensaje del usuario
+    # Soporte de visión: si se recibió una imagen del cliente, armar mensaje multimodal
+    if image_b64:
+        user_content = [
+            {"type": "text", "text": message},
+            {
+                "type": "image_url",
+                "image_url": {
+                    "url": f"data:image/jpeg;base64,{image_b64}",
+                    "detail": "low",  # "low" para ahorrar tokens; suficiente para productos
+                },
+            },
+        ]
+    else:
+        user_content = message
+
+    openai_messages.append({"role": "user", "content": user_content})
+
+    # Persistir mensaje del usuario (solo texto para la BD)
     user_msg = Message(
         conversation_id=conversation.id,
         role="user",
-        content=message,
+        content=message if not image_b64 else f"[Imagen] {message}",
     )
     db.add(user_msg)
     db.commit()
 
     # ── 6. Llamar OpenAI con tool loop ──
     client = _get_openai_client()
+
+    # Lista compartida donde las tools depositan imágenes a enviar al cliente
+    pending_media: list[dict] = []
 
     call_params = {
         "model": agent_config.get("model", "gpt-4o"),
@@ -311,7 +331,9 @@ def process_message(
                 executor = TOOL_EXECUTORS.get(fn_name)
                 if executor:
                     db.refresh(session)
-                    tool_result = executor(db, session, **fn_args)
+                    # Inyectamos _pending_media para que tools como send_product_image
+                    # puedan añadir imágenes a la cola de envío
+                    tool_result = executor(db, session, _pending_media=pending_media, **fn_args)
                 else:
                     tool_result = json.dumps({"error": f"Tool no encontrada: {fn_name}"})
 
@@ -348,6 +370,7 @@ def process_message(
 
     return {
         "response": assistant_content,
+        "pending_media": pending_media,
         "conversation_id": conversation.id,
         "session_id": session.id,
         "stage": session.current_stage,
