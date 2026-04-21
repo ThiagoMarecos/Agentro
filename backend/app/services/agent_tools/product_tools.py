@@ -3,36 +3,103 @@ Tools de productos: búsqueda, detalle, disponibilidad, recomendación.
 """
 
 import json
+import re
 from sqlalchemy.orm import Session
-from sqlalchemy import or_
+from sqlalchemy import or_, and_, func
 
-from app.models.product import Product, ProductVariant
+from app.models.product import Product, ProductVariant, Category
 from app.models.sales_session import SalesSession
 
 
+# Palabras vacías a ignorar en la búsqueda
+_STOPWORDS = {
+    "de", "del", "la", "el", "los", "las", "un", "una", "unos", "unas",
+    "para", "con", "sin", "y", "o", "u", "en", "que", "es", "son",
+    "tienen", "tiene", "tienes", "hay", "algun", "alguna", "algún",
+    "alguno", "algunos", "algunas", "me", "te", "se", "mi", "mis",
+    "tu", "tus", "su", "sus", "lo", "le", "les", "ver", "quiero",
+    "necesito", "busco", "busca", "ropa", "producto", "productos",
+    "articulo", "articulos", "artículo", "artículos",
+}
+
+
+def _tokenize(text: str) -> list[str]:
+    """Extrae palabras significativas para búsqueda."""
+    if not text:
+        return []
+    # Bajar a minúsculas y quitar tildes
+    import unicodedata
+    norm = unicodedata.normalize("NFKD", text.lower()).encode("ascii", "ignore").decode("ascii")
+    # Solo letras y números
+    words = re.findall(r"[a-z0-9]+", norm)
+    # Filtrar stopwords y palabras muy cortas
+    return [w for w in words if len(w) >= 3 and w not in _STOPWORDS]
+
+
 def tool_product_search(db: Session, session: SalesSession, **params) -> str:
-    """Busca productos por nombre o categoría en el catálogo de la tienda."""
-    query = params.get("query", "")
+    """
+    Busca productos en el catálogo. Tokeniza la query y busca cada palabra
+    en nombre, descripción y nombre de categoría. Retorna productos que
+    matchean al menos una palabra, ordenados por relevancia.
+    """
+    query = (params.get("query") or "").strip()
     limit = params.get("limit", 5)
 
-    products = db.query(Product).filter(
+    if not query:
+        return json.dumps({"products": [], "count": 0, "query": ""}, ensure_ascii=False)
+
+    tokens = _tokenize(query)
+    # Si no quedan tokens útiles, usar la query completa
+    if not tokens:
+        tokens = [query.lower()]
+
+    # Construir condición OR para cualquier match
+    base_filters = [
         Product.store_id == session.store_id,
         Product.is_active == True,
         Product.status == "active",
-        or_(
-            Product.name.ilike(f"%{query}%"),
-            Product.description.ilike(f"%{query}%"),
-            Product.short_description.ilike(f"%{query}%"),
-        ),
-    ).limit(limit).all()
+    ]
+
+    # Para cada token, buscar en name, description, short_description o category name
+    token_conditions = []
+    for token in tokens:
+        like = f"%{token}%"
+        token_conditions.append(or_(
+            Product.name.ilike(like),
+            Product.description.ilike(like),
+            Product.short_description.ilike(like),
+            Category.name.ilike(like),
+        ))
+
+    products = db.query(Product).outerjoin(
+        Category, Product.category_id == Category.id
+    ).filter(
+        and_(*base_filters, or_(*token_conditions))
+    ).limit(limit * 3).all()  # traemos más para rankear y filtrar
+
+    # Rankear: contar cuántos tokens matchean
+    def score(p: Product) -> int:
+        text = " ".join([
+            p.name or "",
+            p.short_description or "",
+            (p.description or "")[:300],
+            (p.category.name if p.category else ""),
+        ]).lower()
+        # quitar tildes para comparar
+        import unicodedata
+        text = unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode("ascii")
+        return sum(1 for t in tokens if t in text)
+
+    ranked = sorted(products, key=score, reverse=True)[:limit]
 
     results = []
-    for p in products:
+    for p in ranked:
         results.append({
             "id": p.id,
             "name": p.name,
             "price": str(p.price),
             "description": p.short_description or (p.description or "")[:150],
+            "category": p.category.name if p.category else None,
             "stock": p.stock_quantity,
             "has_variants": p.has_variants,
             "cover_image": getattr(p, "cover_image_url", None) or (p.images[0].url if p.images else None),
@@ -46,7 +113,60 @@ def tool_product_search(db: Session, session: SalesSession, **params) -> str:
         nb["interest"]["categories"] = existing
     session.set_notebook(nb)
 
-    return json.dumps({"products": results, "count": len(results)}, ensure_ascii=False)
+    return json.dumps({
+        "products": results,
+        "count": len(results),
+        "query": query,
+        "matched_tokens": tokens,
+    }, ensure_ascii=False)
+
+
+def tool_list_categories(db: Session, session: SalesSession, **params) -> str:
+    """
+    Lista todas las categorías y tipos de productos disponibles en la tienda.
+    Útil cuando el cliente pregunta qué hay disponible o el agente necesita
+    orientarse antes de buscar.
+    """
+    categories = db.query(Category).filter(
+        Category.store_id == session.store_id,
+        Category.is_active == True,
+    ).order_by(Category.sort_order.asc(), Category.name.asc()).all()
+
+    # Contar productos activos por categoría
+    cat_data = []
+    for c in categories:
+        count = db.query(func.count(Product.id)).filter(
+            Product.category_id == c.id,
+            Product.is_active == True,
+            Product.status == "active",
+        ).scalar() or 0
+        if count > 0:
+            cat_data.append({
+                "id": c.id,
+                "name": c.name,
+                "description": c.description or "",
+                "product_count": count,
+            })
+
+    # También incluir productos sin categoría
+    uncategorized = db.query(func.count(Product.id)).filter(
+        Product.store_id == session.store_id,
+        Product.category_id.is_(None),
+        Product.is_active == True,
+        Product.status == "active",
+    ).scalar() or 0
+
+    total_products = db.query(func.count(Product.id)).filter(
+        Product.store_id == session.store_id,
+        Product.is_active == True,
+        Product.status == "active",
+    ).scalar() or 0
+
+    return json.dumps({
+        "categories": cat_data,
+        "uncategorized_count": uncategorized,
+        "total_products": total_products,
+    }, ensure_ascii=False)
 
 
 def tool_product_detail(db: Session, session: SalesSession, **params) -> str:
@@ -284,6 +404,22 @@ PRODUCT_TOOL_DEFINITIONS = [
                     "limit": {"type": "integer", "description": "Máximo de recomendaciones", "default": 3},
                     "reasoning": {"type": "string", "description": "Razón de la recomendación"},
                 },
+                "required": [],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "list_categories",
+            "description": (
+                "Listar todas las categorías de productos disponibles en la tienda con la cantidad de productos en cada una. "
+                "USALA al inicio de la conversación para conocer el catálogo, antes de buscar nada. "
+                "También úsala cuando el cliente pregunte 'qué venden' o 'qué tienen'."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {},
                 "required": [],
             },
         },
