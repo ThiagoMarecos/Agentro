@@ -241,16 +241,8 @@ def process_message(
     agent_config = _get_agent_config(agent)
     custom_instructions = _get_custom_instructions(agent)
 
-    # ── 3. Prompt maestro de ventas ──
-    # El prompt está definido en agent_prompts.py (fuente de verdad).
-    # Las instrucciones del dueño se inyectan como custom_instructions (AIAgent.system_prompt).
-    # NO usamos master_prompt_override porque reemplazaba el prompt entero y rompía el flujo.
-    system_prompt = build_sales_prompt(
-        store_name=store_name,
-        store_config=store_config,
-        session=session,
-        custom_instructions=custom_instructions,
-    )
+    # ── 3. Prompt maestro (versión inicial, se reconstruye después del historial) ──
+    system_prompt = ""  # Se construye abajo con message_count
 
     # Modelo configurable desde platform settings
     model_override = get_setting_value(db, "agent_model")
@@ -266,6 +258,30 @@ def process_message(
 
     # ── 5. Historial + mensaje actual ──
     history = _get_message_history(db, conversation.id)
+    message_count = len(history)
+
+    # ── Auto-avanzar etapa si ya hubo saludo previo ──
+    # Si la etapa sigue en "incoming" pero ya hay mensajes en el historial,
+    # el saludo ya ocurrió. Avanzamos programáticamente para que el agente
+    # no vuelva a saludar en cada mensaje.
+    if session.current_stage == "incoming" and message_count > 0:
+        try:
+            from app.services.stage_engine import move_to_stage
+            move_to_stage(db, session, "discovery", reason="auto: saludo previo detectado en historial")
+            db.refresh(session)
+            logger.info(f"Session {session.id[:8]} auto-advanced: incoming → discovery")
+        except Exception as e:
+            logger.warning(f"Could not auto-advance stage: {e}")
+
+    # Reconstruir prompt con la etapa actualizada
+    system_prompt = build_sales_prompt(
+        store_name=store_name,
+        store_config=store_config,
+        session=session,
+        custom_instructions=custom_instructions,
+        message_count=message_count,
+    )
+
     openai_messages = [{"role": "system", "content": system_prompt}]
     openai_messages.extend(history)
 

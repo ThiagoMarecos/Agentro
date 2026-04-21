@@ -12,12 +12,125 @@ import json
 from app.models.sales_session import SalesSession
 
 
+def _build_next_action(stage: str, nb: dict, message_count: int, currency: str) -> str:
+    """
+    Genera el bloque 'QUÉ HACER AHORA' basado en la etapa y el estado del notebook.
+    Es lo primero que ve el agente → determina su próxima acción exacta.
+    """
+    customer = nb.get("customer", {})
+    intent = nb.get("intent", {})
+    interest = nb.get("interest", {})
+    payment = nb.get("payment", {})
+    order = nb.get("order", {})
+    shipping = nb.get("shipping", {})
+
+    has_name = bool(customer.get("name") or customer.get("first_name"))
+    has_intent = bool(intent.get("product_type") or intent.get("query") or interest.get("product_id"))
+    has_product = bool(interest.get("product_id") or interest.get("product_name"))
+    has_shipping = bool(shipping.get("address") or shipping.get("city"))
+    is_first_message = message_count == 0
+
+    if stage == "incoming":
+        if is_first_message:
+            return (
+                "▶ ACCIÓN: Es el PRIMER mensaje. Seguí este orden exacto:\n"
+                "  1. Llamá `list_categories` (silenciosamente, no lo mostrés al cliente)\n"
+                "  2. Respondé saludando con el nombre de la tienda\n"
+                "  3. Preguntá qué busca. NADA MÁS."
+            )
+        else:
+            return (
+                "▶ ACCIÓN: La etapa está avanzando a 'discovery'. No saludés de nuevo.\n"
+                "  Continuá la conversación desde donde quedaron."
+            )
+
+    elif stage == "discovery":
+        if not has_name:
+            return (
+                "▶ ACCIÓN: Estás en DESCUBRIMIENTO. No tenés el nombre del cliente aún.\n"
+                "  - Si el cliente nombró un producto/categoría → buscalo primero con `product_search`\n"
+                "  - Aprovechá para preguntarle su nombre de forma natural en tu respuesta\n"
+                "  - Guardá el nombre con `update_notebook` (sección 'customer', campo 'name')\n"
+                "  - NO saludes de nuevo. Continuá la conversación."
+            )
+        elif not has_intent:
+            return (
+                "▶ ACCIÓN: Tenés el nombre del cliente pero no sabés qué busca.\n"
+                "  - Preguntá qué está buscando (1 sola pregunta, concreta)\n"
+                "  - Cuando lo diga → buscá con `product_search`\n"
+                "  - Guardá la intención con `update_notebook` (sección 'intent')"
+            )
+        else:
+            return (
+                "▶ ACCIÓN: Tenés intención del cliente. Buscá en la DB:\n"
+                "  1. `product_search` con lo que dijo (en español E inglés si no encontrás)\n"
+                "  2. Si encontrás productos → presentá 1-2 opciones relevantes → `move_stage` a 'recommendation'\n"
+                "  3. Si no encontrás → probá sinónimos o `list_categories` para ver qué hay\n"
+                "  4. Guardá el interés con `update_notebook` (sección 'interest')"
+            )
+
+    elif stage == "recommendation":
+        if not has_product:
+            return (
+                "▶ ACCIÓN: Estás en RECOMENDACIÓN pero no tenés producto específico.\n"
+                "  - Preguntá al cliente cuál de las opciones le interesa más\n"
+                "  - Cuando elija → `product_detail` + `check_availability` + `send_product_image`\n"
+                "  - Guardá con `update_notebook` (sección 'interest', campo 'product_id')"
+            )
+        else:
+            return (
+                "▶ ACCIÓN: Tenés el producto. Presentalo completo:\n"
+                "  1. `product_detail` → obtenés toda la info\n"
+                "  2. `check_availability` → verificás stock\n"
+                "  3. `send_product_image` → mandás la foto\n"
+                "  4. Mostrás: nombre, precio ({currency}), variantes, stock\n"
+                "  5. Preguntás si es lo que busca → `move_stage` a 'validation'"
+            )
+
+    elif stage == "validation":
+        return (
+            "▶ ACCIÓN: El cliente está evaluando el producto.\n"
+            "  - Si tiene dudas → respondelas con info real de la DB\n"
+            "  - Si pide descuento → `get_store_discounts`\n"
+            "  - Si quiere otro producto → `product_search` y volvé a recommendation\n"
+            "  - Si acepta → pedí confirmación explícita → `move_stage` a 'closing'"
+        )
+
+    elif stage == "closing":
+        return (
+            "▶ ACCIÓN: El cliente aceptó. Cerrá el pedido:\n"
+            "  1. Mostrá resumen final (producto, precio, total)\n"
+            "  2. '¿Confirmás el pedido?'\n"
+            + ("  3. Pedí datos de envío (nombre, teléfono, dirección, ciudad)\n" if not has_shipping else "  3. Ya tenés dirección ✓\n") +
+            "  4. `estimate_shipping` → calculás el envío\n"
+            "  5. `create_payment_link` → generás y enviás el link\n"
+            "  6. `move_stage` a 'payment'"
+        )
+
+    elif stage == "payment":
+        return (
+            "▶ ACCIÓN: Esperando confirmación de pago.\n"
+            "  - Si el cliente dice que pagó → `create_order` + `move_stage` a 'order_created'\n"
+            "  - Si no responde → máximo 3 follow-ups, luego pausás"
+        )
+
+    elif stage in ("order_created", "shipping"):
+        return (
+            "▶ ACCIÓN: Pedido en proceso/en camino.\n"
+            "  - Informá el estado al cliente\n"
+            "  - Cuando confirme recepción → `move_stage` a 'completed'"
+        )
+
+    return f"▶ Etapa actual: {stage}. Continuá según el flujo."
+
+
 def build_sales_prompt(
     store_name: str,
     store_config: dict,
     session: SalesSession,
     custom_instructions: str | None = None,
     master_prompt_override: str | None = None,  # ignorado — mantenido por compatibilidad
+    message_count: int = 0,
 ) -> str:
     """Construye el system prompt completo del agente de ventas."""
 
@@ -38,14 +151,24 @@ def build_sales_prompt(
         "casual": "Sé muy casual y relajado, como si hablaras con un amigo. Usa emojis libremente.",
     }
 
+    next_action = _build_next_action(stage, nb, message_count, currency)
+
     prompt = f"""Sos el asesor de ventas de **{store_name}**. Trabajás para {store_name}, no sos un bot genérico.
 
 ## ══════════════════════════════════════
-## ⚡ INSTRUCCIONES OBLIGATORIAS (LEER PRIMERO)
+## 🎯 QUÉ HACER EN ESTE MENSAJE
 ## ══════════════════════════════════════
 
-### SALUDO (cuando la etapa es "incoming" o es el primer mensaje)
-PASO 1 — Llamá a `list_categories` para conocer el catálogo (uso INTERNO TUYO, no se lo mostrás al cliente).
+{next_action}
+
+{"⚠️ YA HAY " + str(message_count) + " MENSAJES PREVIOS — NO SALUDÉS DE NUEVO. Continuá la conversación." if message_count > 0 else ""}
+
+## ══════════════════════════════════════
+## ⚡ REGLAS DE COMPORTAMIENTO
+## ══════════════════════════════════════
+
+### SALUDO (solo cuando es el primer mensaje)
+PASO 1 — Llamá a `list_categories` (uso INTERNO TUYO, no se lo mostrás al cliente).
 PASO 2 — Tu primer mensaje SIEMPRE tiene el nombre de la tienda. Sin excepción.
 PASO 3 — Preguntá qué busca. NADA MÁS. No listés productos, no mostrés categorías.
 
@@ -187,23 +310,25 @@ Script:
 ## CONTEXTO ACTUAL DE LA VENTA
 ## ════════════════════════════════════════════════
 
-Etapa actual: **{stage}**
-Follow-ups realizados: {session.follow_up_count}
-{f"Bloqueado por: {session.blocker_reason}" if session.blocker_reason else ""}
+Etapa: **{stage}** | Mensajes previos: {message_count} | Moneda: {currency}
 {f"Valor estimado: {session.estimated_value} {currency}" if session.estimated_value else ""}
 
-### Notebook (tu memoria de esta venta):
-- Cliente: {json.dumps(nb.get("customer", {}), ensure_ascii=False)}
-- Intención: {json.dumps(nb.get("intent", {}), ensure_ascii=False)}
-- Interés: {json.dumps(nb.get("interest", {}), ensure_ascii=False)}
-- Recomendación: {json.dumps(nb.get("recommendation", {}), ensure_ascii=False)}
-- Pricing: {json.dumps(nb.get("pricing", {}), ensure_ascii=False)}
-- Disponibilidad: {json.dumps(nb.get("availability", {}), ensure_ascii=False)}
-- Envío: {json.dumps(nb.get("shipping", {}), ensure_ascii=False)}
-- Pago: {json.dumps(nb.get("payment", {}), ensure_ascii=False)}
-- Orden: {json.dumps(nb.get("order", {}), ensure_ascii=False)}
+### Lo que ya sabés del cliente (no lo preguntes de nuevo):
+- Nombre: {nb.get("customer", {}).get("name") or nb.get("customer", {}).get("first_name") or "❌ DESCONOCIDO — preguntalo naturalmente"}
+- Teléfono: {nb.get("customer", {}).get("phone") or "❌ no registrado"}
+- Dirección: {nb.get("shipping", {}).get("address") or "❌ no registrada"}
 
-Usa esta información para NO repetir preguntas y mantener continuidad en la conversación.
+### Lo que buscó/busca:
+- Intención: {json.dumps(nb.get("intent", {}), ensure_ascii=False) if nb.get("intent") else "❌ no registrada — averigualo"}
+- Producto de interés: {nb.get("interest", {}).get("product_name") or "❌ ninguno seleccionado aún"}
+- Disponibilidad verificada: {json.dumps(nb.get("availability", {}), ensure_ascii=False) if nb.get("availability") else "❌ no verificada"}
+
+### Estado del pedido:
+- Envío: {json.dumps(nb.get("shipping", {}), ensure_ascii=False) if nb.get("shipping") else "pendiente"}
+- Pago: {json.dumps(nb.get("payment", {}), ensure_ascii=False) if nb.get("payment") else "pendiente"}
+- Orden: {json.dumps(nb.get("order", {}), ensure_ascii=False) if nb.get("order") else "no creada"}
+
+Usá esta información para NO repetir preguntas y mantener continuidad total en la conversación.
 """
 
     return prompt
