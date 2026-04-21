@@ -242,14 +242,14 @@ def process_message(
     custom_instructions = _get_custom_instructions(agent)
 
     # ── 3. Prompt maestro de ventas ──
-    # Lee prompt maestro desde platform settings (configurable desde admin)
-    master_prompt_override = get_setting_value(db, "agent_master_prompt")
+    # El prompt está definido en agent_prompts.py (fuente de verdad).
+    # Las instrucciones del dueño se inyectan como custom_instructions (AIAgent.system_prompt).
+    # NO usamos master_prompt_override porque reemplazaba el prompt entero y rompía el flujo.
     system_prompt = build_sales_prompt(
         store_name=store_name,
         store_config=store_config,
         session=session,
         custom_instructions=custom_instructions,
-        master_prompt_override=master_prompt_override,
     )
 
     # Modelo configurable desde platform settings
