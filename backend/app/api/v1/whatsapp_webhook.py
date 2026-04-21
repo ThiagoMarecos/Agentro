@@ -161,7 +161,8 @@ def _process_whatsapp_message(
                             send_image_message(
                                 instance_name=instance_name,
                                 to_number=phone_number,
-                                image_url=media["url"],
+                                image_url=media.get("url", ""),
+                                image_b64=media.get("b64", ""),
                                 caption=media.get("caption", ""),
                                 instance_token=instance_token,
                             )

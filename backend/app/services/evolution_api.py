@@ -269,20 +269,25 @@ async def delete_instance(instance_name: str) -> dict[str, Any]:
 async def send_image_message(
     instance_name: str,
     to_number: str,
-    image_url: str,
+    image_url: str = "",
+    image_b64: str = "",
     caption: str = "",
     instance_token: str | None = None,
 ) -> dict[str, Any]:
     """
     Envía una imagen por WhatsApp con caption opcional.
-    image_url debe ser una URL pública accesible (https://...).
+    Prioriza base64 (no requiere URL pública). Si no hay base64, usa image_url.
     """
+    media_value = image_b64 if image_b64 else image_url
+    if not media_value:
+        raise EvolutionAPIError("No se proporcionó imagen (ni URL ni base64)", 400)
+
     payload = {
         "number": to_number,
         "mediatype": "image",
         "mimetype": "image/jpeg",
         "caption": caption,
-        "media": image_url,
+        "media": media_value,
         "fileName": "producto.jpg",
     }
 

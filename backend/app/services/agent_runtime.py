@@ -164,7 +164,7 @@ def _get_agent_config(agent: AIAgent | None) -> dict:
     settings = get_settings()
     defaults = {
         "model": settings.openai_default_model,
-        "temperature": 0.6,  # Más determinístico para ventas
+        "temperature": 0.75,  # Balance entre naturalidad y consistencia
     }
 
     if agent and agent.config:

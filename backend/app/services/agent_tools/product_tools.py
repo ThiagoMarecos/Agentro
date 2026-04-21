@@ -2,13 +2,22 @@
 Tools de productos: búsqueda, detalle, disponibilidad, recomendación.
 """
 
+import base64
 import json
+import logging
 import re
+from pathlib import Path
 from sqlalchemy.orm import Session
 from sqlalchemy import or_, and_, func
 
 from app.models.product import Product, ProductVariant, Category
 from app.models.sales_session import SalesSession
+
+logger = logging.getLogger(__name__)
+
+# Directorio de uploads: backend/uploads/ → /app/uploads/ en Docker
+# product_tools.py está en backend/app/services/agent_tools/
+_UPLOADS_DIR = Path(__file__).resolve().parent.parent.parent.parent / "uploads"
 
 
 # Palabras vacías a ignorar en la búsqueda
@@ -324,24 +333,42 @@ def tool_send_product_image(db: Session, session: SalesSession, **params) -> str
     cover = next((i for i in images if i.is_cover), images[0])
     url = cover.url
 
-    # Convertir URL relativa en absoluta
-    if url.startswith("/"):
+    # Leer el archivo del disco y codificar en base64.
+    # Evolution API acepta base64 directamente → no depende de URLs públicas.
+    b64_data: str | None = None
+    if url.startswith("/uploads/"):
+        try:
+            rel_path = url[len("/uploads/"):]  # quitar el prefijo "/uploads/"
+            file_path = _UPLOADS_DIR / rel_path
+            if file_path.exists() and file_path.is_file():
+                b64_data = base64.b64encode(file_path.read_bytes()).decode()
+                logger.info(f"Image encoded as base64: {file_path} ({len(b64_data)} chars)")
+            else:
+                logger.warning(f"Image file not found on disk: {file_path}")
+        except Exception as e:
+            logger.warning(f"Could not encode image to base64: {e}")
+
+    # Fallback: si no se pudo leer del disco, intentar con URL pública
+    public_url = url
+    if url.startswith("/") and not b64_data:
         from app.config import get_settings
         settings = get_settings()
-        url = f"{settings.backend_url}{url}"
+        public_url = f"{settings.backend_url}{url}"
 
     if pending_media is not None:
         pending_media.append({
             "type": "image",
-            "url": url,
+            "url": public_url,
+            "b64": b64_data,
             "caption": caption or product.name,
         })
 
     return json.dumps({
         "sent": True,
         "product": product.name,
-        "image_url": url,
+        "image_url": public_url,
         "caption": caption or product.name,
+        "base64_available": b64_data is not None,
     }, ensure_ascii=False)
 
 
