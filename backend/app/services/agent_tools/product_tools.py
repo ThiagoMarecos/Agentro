@@ -32,17 +32,36 @@ _STOPWORDS = {
 }
 
 
+def _normalize(text: str) -> str:
+    """Baja a minúsculas y quita tildes/diacríticos."""
+    import unicodedata
+    return unicodedata.normalize("NFKD", text.lower()).encode("ascii", "ignore").decode("ascii")
+
+
 def _tokenize(text: str) -> list[str]:
     """Extrae palabras significativas para búsqueda."""
     if not text:
         return []
-    # Bajar a minúsculas y quitar tildes
-    import unicodedata
-    norm = unicodedata.normalize("NFKD", text.lower()).encode("ascii", "ignore").decode("ascii")
-    # Solo letras y números
+    norm = _normalize(text)
     words = re.findall(r"[a-z0-9]+", norm)
-    # Filtrar stopwords y palabras muy cortas
     return [w for w in words if len(w) >= 3 and w not in _STOPWORDS]
+
+
+def _search_patterns(tokens: list[str]) -> list[str]:
+    """
+    Genera patrones de búsqueda para cada token.
+    Incluye el token completo + un prefijo de 6 chars para cross-language matching.
+    Ejemplo: "compresion" → ["compresion", "compres"]
+             "compres" hace ILIKE '%compres%' que matchea "compression" en inglés.
+    """
+    seen: set[str] = set()
+    patterns: list[str] = []
+    for token in tokens:
+        for p in [token, token[:6] if len(token) > 7 else None]:
+            if p and p not in seen and len(p) >= 3:
+                seen.add(p)
+                patterns.append(p)
+    return patterns
 
 
 def tool_product_search(db: Session, session: SalesSession, **params) -> str:
@@ -58,22 +77,23 @@ def tool_product_search(db: Session, session: SalesSession, **params) -> str:
         return json.dumps({"products": [], "count": 0, "query": ""}, ensure_ascii=False)
 
     tokens = _tokenize(query)
-    # Si no quedan tokens útiles, usar la query completa
     if not tokens:
-        tokens = [query.lower()]
+        tokens = [_normalize(query)]
 
-    # Construir condición OR para cualquier match
+    # Patrones de búsqueda: token completo + prefijo corto para matching cross-idioma
+    # Ej: "compresion" → busca también "compres" que matchea "compression" en inglés
+    patterns = _search_patterns(tokens)
+
     base_filters = [
         Product.store_id == session.store_id,
         Product.is_active == True,
         Product.status == "active",
     ]
 
-    # Para cada token, buscar en name, description, short_description o category name
-    token_conditions = []
-    for token in tokens:
-        like = f"%{token}%"
-        token_conditions.append(or_(
+    pattern_conditions = []
+    for pat in patterns:
+        like = f"%{pat}%"
+        pattern_conditions.append(or_(
             Product.name.ilike(like),
             Product.description.ilike(like),
             Product.short_description.ilike(like),
@@ -83,21 +103,19 @@ def tool_product_search(db: Session, session: SalesSession, **params) -> str:
     products = db.query(Product).outerjoin(
         Category, Product.category_id == Category.id
     ).filter(
-        and_(*base_filters, or_(*token_conditions))
-    ).limit(limit * 3).all()  # traemos más para rankear y filtrar
+        and_(*base_filters, or_(*pattern_conditions))
+    ).limit(limit * 3).all()
 
-    # Rankear: contar cuántos tokens matchean
+    # Rankear: cuántos tokens originales matchean el texto del producto
     def score(p: Product) -> int:
-        text = " ".join([
+        combined = _normalize(" ".join([
             p.name or "",
             p.short_description or "",
             (p.description or "")[:300],
             (p.category.name if p.category else ""),
-        ]).lower()
-        # quitar tildes para comparar
-        import unicodedata
-        text = unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode("ascii")
-        return sum(1 for t in tokens if t in text)
+        ]))
+        # contar tokens originales + prefijos
+        return sum(1 for pat in patterns if pat in combined)
 
     ranked = sorted(products, key=score, reverse=True)[:limit]
 
@@ -109,9 +127,9 @@ def tool_product_search(db: Session, session: SalesSession, **params) -> str:
             "price": str(p.price),
             "description": p.short_description or (p.description or "")[:150],
             "category": p.category.name if p.category else None,
-            "stock": p.stock_quantity,
             "has_variants": p.has_variants,
             "cover_image": getattr(p, "cover_image_url", None) or (p.images[0].url if p.images else None),
+            # stock NO incluido aquí — usar check_availability para disponibilidad real
         })
 
     nb = session.get_notebook()
