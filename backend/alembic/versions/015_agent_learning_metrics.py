@@ -29,7 +29,7 @@ def upgrade() -> None:
     # ── AIAgent: learning mode ──
     with op.batch_alter_table("ai_agents") as batch_op:
         batch_op.add_column(
-            sa.Column("learning_mode_enabled", sa.Boolean, nullable=True, server_default=sa.text("0"))
+            sa.Column("learning_mode_enabled", sa.Boolean, nullable=True, server_default=sa.text("false"))
         )
 
     # ── New table: agent_lessons ──
@@ -44,7 +44,7 @@ def upgrade() -> None:
         sa.Column("bad_response_example", sa.Text, nullable=True),
         sa.Column("correct_response", sa.Text, nullable=True),
         sa.Column("category", sa.String(50), nullable=True),
-        sa.Column("is_active", sa.Boolean, nullable=False, server_default=sa.text("1")),
+        sa.Column("is_active", sa.Boolean, nullable=False, server_default=sa.text("true")),
         sa.Column("priority", sa.Integer, nullable=True, server_default="5"),
         sa.Column("created_at", sa.DateTime, server_default=sa.func.now()),
         sa.Column("updated_at", sa.DateTime, server_default=sa.func.now(), onupdate=sa.func.now()),
