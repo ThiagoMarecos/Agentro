@@ -60,6 +60,13 @@ class Product(Base, UUIDMixin, TimestampMixin):
     seo_title = Column(String(255), nullable=True)
     seo_description = Column(String(512), nullable=True)
 
+    # ── Origen y proveedor (visibilidad interna para el agente) ──
+    # external_supplier | own_manufacturing | dropshipping | imported
+    origin_type = Column(String(50), nullable=True, default="external_supplier")
+    lead_time_days = Column(Integer, nullable=True)
+    # Notas internas que SOLO ve el agente IA (no el cliente final)
+    internal_notes = Column(Text, nullable=True)
+
     # Relaciones
     variants = relationship("ProductVariant", back_populates="product", cascade="all, delete-orphan")
     images = relationship("ProductImage", back_populates="product", cascade="all, delete-orphan")

@@ -88,6 +88,7 @@ def create(db: Session, store_id: str, data: ProductCreate) -> Product:
     product = Product(
         store_id=store_id,
         category_id=data.category_id,
+        supplier_id=getattr(data, "supplier_id", None),
         name=data.name,
         slug=data.slug,
         short_description=data.short_description,
@@ -108,6 +109,9 @@ def create(db: Session, store_id: str, data: ProductCreate) -> Product:
         allow_backorder=data.allow_backorder,
         seo_title=data.seo_title,
         seo_description=data.seo_description,
+        origin_type=getattr(data, "origin_type", None) or "external_supplier",
+        lead_time_days=getattr(data, "lead_time_days", None),
+        internal_notes=getattr(data, "internal_notes", None),
     )
     db.add(product)
     db.flush()
@@ -161,6 +165,7 @@ def duplicate(db: Session, product: Product, new_slug: str) -> Product:
     new_product = Product(
         store_id=product.store_id,
         category_id=product.category_id,
+        supplier_id=getattr(product, "supplier_id", None),
         name=f"{product.name} (copia)",
         slug=new_slug,
         short_description=product.short_description,
@@ -181,6 +186,9 @@ def duplicate(db: Session, product: Product, new_slug: str) -> Product:
         allow_backorder=product.allow_backorder,
         seo_title=product.seo_title,
         seo_description=product.seo_description,
+        origin_type=getattr(product, "origin_type", None),
+        lead_time_days=getattr(product, "lead_time_days", None),
+        internal_notes=getattr(product, "internal_notes", None),
     )
     db.add(new_product)
     db.flush()

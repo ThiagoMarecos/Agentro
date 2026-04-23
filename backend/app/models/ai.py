@@ -3,7 +3,7 @@ Modelos de IA: conversaciones, canales, agentes.
 Estructura preparada para WhatsApp, chat web, Instagram (futuro).
 """
 
-from sqlalchemy import Column, String, ForeignKey, Text, Boolean, Enum
+from sqlalchemy import Column, String, ForeignKey, Text, Boolean, Enum, Integer, Numeric
 from sqlalchemy.orm import relationship
 import enum
 
@@ -31,6 +31,17 @@ class Conversation(Base, UUIDMixin, TimestampMixin):
     external_id = Column(String(255), nullable=True)  # ID en WhatsApp, etc.
     channel_type = Column(String(50), nullable=True)
     status = Column(String(50), default="active")
+
+    # ── Métricas para dashboard de rendimiento ──
+    tool_calls_count = Column(Integer, default=0, nullable=True)
+    total_tokens = Column(Integer, default=0, nullable=True)
+    # outcome: sale_completed | dropped_off | escalated | abandoned | ongoing
+    outcome = Column(String(50), nullable=True, default="ongoing")
+    outcome_reason = Column(String(255), nullable=True)
+    # Última etapa alcanzada (snapshot al cerrarse / abandonarse)
+    last_stage_reached = Column(String(50), nullable=True)
+    # Valor monetario estimado de la oportunidad
+    estimated_value = Column(Numeric(12, 2), nullable=True)
 
     # Relaciones
     channel = relationship("AIChannel", back_populates="conversations")
@@ -99,5 +110,38 @@ class AIAgent(Base, UUIDMixin, TimestampMixin):
     sales_style = Column(String(50), nullable=True)  # consultative, aggressive, soft
     enabled_tools = Column(Text, nullable=True)  # JSON list: ["product_search", ...]
 
+    # ── Modo aprendizaje ──
+    # Cuando está activado, se inyectan al prompt las "lecciones" creadas por el dueño.
+    learning_mode_enabled = Column(Boolean, default=False, nullable=True)
+
     # Relaciones
     channels = relationship("AIChannel", back_populates="agent")
+    lessons = relationship("AgentLesson", back_populates="agent", cascade="all, delete-orphan")
+
+
+class AgentLesson(Base, UUIDMixin, TimestampMixin):
+    """
+    Lecciones del modo aprendizaje.
+    El dueño marca conversaciones con respuestas malas y crea lecciones.
+    Cuando el agente está en modo aprendizaje, estas lecciones se inyectan al prompt.
+    """
+
+    __tablename__ = "agent_lessons"
+
+    store_id = Column(String(36), ForeignKey("stores.id", ondelete="CASCADE"), nullable=False)
+    agent_id = Column(String(36), ForeignKey("ai_agents.id", ondelete="CASCADE"), nullable=False)
+    # Origen opcional: la conversación que disparó esta lección
+    source_conversation_id = Column(String(36), ForeignKey("conversations.id", ondelete="SET NULL"), nullable=True)
+
+    title = Column(String(255), nullable=False)
+    lesson_text = Column(Text, nullable=False)
+    bad_response_example = Column(Text, nullable=True)
+    correct_response = Column(Text, nullable=True)
+
+    # Categorización para el dueño
+    category = Column(String(50), nullable=True)  # tone, accuracy, flow, product_info, escalation
+    is_active = Column(Boolean, default=True, nullable=False)
+    priority = Column(Integer, default=5, nullable=True)  # 1=máxima, 10=baja
+
+    # Relaciones
+    agent = relationship("AIAgent", back_populates="lessons")

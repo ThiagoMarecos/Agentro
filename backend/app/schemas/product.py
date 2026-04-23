@@ -106,6 +106,10 @@ class ProductCreate(BaseModel):
     stock_quantity: int = 0
     allow_backorder: bool = False
     category_id: str | None = None
+    supplier_id: str | None = None
+    origin_type: str | None = "external_supplier"
+    lead_time_days: int | None = None
+    internal_notes: str | None = None
     seo_title: str | None = None
     seo_description: str | None = None
     variants: list[ProductVariantCreate] = []
@@ -137,6 +141,10 @@ class ProductUpdate(BaseModel):
     stock_quantity: int | None = None
     allow_backorder: bool | None = None
     category_id: str | None = None
+    supplier_id: str | None = None
+    origin_type: str | None = None
+    lead_time_days: int | None = None
+    internal_notes: str | None = None
     seo_title: str | None = None
     seo_description: str | None = None
 
@@ -172,10 +180,19 @@ class ProductListResponse(BaseModel):
         from_attributes = True
 
 
+class SupplierSummary(BaseModel):
+    id: str
+    name: str
+
+    class Config:
+        from_attributes = True
+
+
 class ProductResponse(BaseModel):
     id: str
     store_id: str
     category_id: str | None
+    supplier_id: str | None = None
     name: str
     slug: str
     short_description: str | None
@@ -196,9 +213,13 @@ class ProductResponse(BaseModel):
     cover_image_url: str | None
     seo_title: str | None
     seo_description: str | None
+    origin_type: str | None = None
+    lead_time_days: int | None = None
+    internal_notes: str | None = None
     variants: list[ProductVariantResponse] = []
     images: list[ProductImageResponse] = []
     category: CategorySummary | None = None
+    supplier: SupplierSummary | None = None
     total_stock: int = 0
 
     class Config:

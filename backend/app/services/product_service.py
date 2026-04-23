@@ -69,12 +69,30 @@ def _unique_slug(db: Session, base_slug: str, store_id: str) -> str:
         counter += 1
 
 
+_VALID_ORIGIN_TYPES = {"external_supplier", "own_manufacturing", "dropshipping", "imported"}
+
+
+def _validate_supplier(db: Session, supplier_id: str | None, store_id: str) -> None:
+    if not supplier_id:
+        return
+    from app.models.supplier import Supplier
+    sup = db.query(Supplier).filter(
+        Supplier.id == supplier_id,
+        Supplier.store_id == store_id,
+    ).first()
+    if not sup:
+        raise HTTPException(status_code=400, detail="Proveedor no encontrado o no pertenece a esta tienda")
+
+
 def create_product(db: Session, store_id: str, data: ProductCreate) -> Product:
     data.slug = _unique_slug(db, data.slug, store_id)
     if data.category_id:
         cat = get_category_by_id(db, data.category_id, store_id)
         if not cat:
             raise HTTPException(status_code=400, detail="Categoría no encontrada o no pertenece a esta tienda")
+    if data.origin_type and data.origin_type not in _VALID_ORIGIN_TYPES:
+        raise HTTPException(status_code=400, detail=f"origin_type inválido. Valores: {', '.join(_VALID_ORIGIN_TYPES)}")
+    _validate_supplier(db, data.supplier_id, store_id)
     if data.has_variants and not data.variants:
         raise HTTPException(status_code=400, detail="Producto con variantes debe tener al menos una variante")
     if data.has_variants and data.variants:
@@ -95,6 +113,10 @@ def update_product(db: Session, product_id: str, store_id: str, data: ProductUpd
             cat = get_category_by_id(db, data.category_id, store_id)
             if not cat:
                 raise HTTPException(status_code=400, detail="Categoría no encontrada o no pertenece a esta tienda")
+    if data.origin_type and data.origin_type not in _VALID_ORIGIN_TYPES:
+        raise HTTPException(status_code=400, detail=f"origin_type inválido. Valores: {', '.join(_VALID_ORIGIN_TYPES)}")
+    if data.supplier_id is not None:
+        _validate_supplier(db, data.supplier_id, store_id)
     return repo_update(db, product, data)
 
 

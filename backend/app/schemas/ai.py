@@ -56,6 +56,7 @@ class AIAgentCreate(BaseModel):
     language: str | None = "es"
     sales_style: str | None = None
     enabled_tools: str | None = None
+    learning_mode_enabled: bool | None = False
 
 
 class AIAgentUpdate(BaseModel):
@@ -71,6 +72,7 @@ class AIAgentUpdate(BaseModel):
     language: str | None = None
     sales_style: str | None = None
     enabled_tools: str | None = None
+    learning_mode_enabled: bool | None = None
 
 
 class AIAgentResponse(BaseModel):
@@ -88,6 +90,49 @@ class AIAgentResponse(BaseModel):
     sales_style: str | None = None
     enabled_tools: str | None = None
     config: str | None = None
+    learning_mode_enabled: bool | None = False
+
+    class Config:
+        from_attributes = True
+
+
+# ── Lessons (modo aprendizaje) ──
+
+class AgentLessonCreate(BaseModel):
+    agent_id: str
+    title: str
+    lesson_text: str
+    bad_response_example: str | None = None
+    correct_response: str | None = None
+    category: str | None = None
+    is_active: bool = True
+    priority: int | None = 5
+    source_conversation_id: str | None = None
+
+
+class AgentLessonUpdate(BaseModel):
+    title: str | None = None
+    lesson_text: str | None = None
+    bad_response_example: str | None = None
+    correct_response: str | None = None
+    category: str | None = None
+    is_active: bool | None = None
+    priority: int | None = None
+
+
+class AgentLessonResponse(BaseModel):
+    id: str
+    agent_id: str
+    store_id: str
+    title: str
+    lesson_text: str
+    bad_response_example: str | None = None
+    correct_response: str | None = None
+    category: str | None = None
+    is_active: bool
+    priority: int | None = 5
+    source_conversation_id: str | None = None
+    created_at: str | None = None
 
     class Config:
         from_attributes = True

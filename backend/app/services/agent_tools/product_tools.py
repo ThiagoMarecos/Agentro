@@ -220,6 +220,25 @@ def tool_product_detail(db: Session, session: SalesSession, **params) -> str:
                 "sku": v.sku,
             })
 
+    # ── Información de origen / proveedor ──
+    # Visible solo para el agente. NO repetirla literalmente al cliente
+    # salvo que pregunte expresamente por origen, garantía o tiempos.
+    origin_label_map = {
+        "external_supplier": "Proveedor externo",
+        "own_manufacturing": "Fabricación propia",
+        "dropshipping": "Dropshipping",
+        "imported": "Importado",
+    }
+    origin_type = getattr(product, "origin_type", None) or "external_supplier"
+    supplier_obj = getattr(product, "supplier", None)
+    supplier_info = None
+    if supplier_obj:
+        supplier_info = {
+            "id": supplier_obj.id,
+            "name": supplier_obj.name,
+            "country": getattr(supplier_obj, "country", None),
+        }
+
     result = {
         "id": product.id,
         "name": product.name,
@@ -231,6 +250,15 @@ def tool_product_detail(db: Session, session: SalesSession, **params) -> str:
         "has_variants": product.has_variants,
         "variants": variants,
         "images": [{"url": i.url, "alt": i.alt_text} for i in (product.images or [])],
+        # Contexto interno
+        "_internal": {
+            "origin_type": origin_type,
+            "origin_label": origin_label_map.get(origin_type, origin_type),
+            "lead_time_days": getattr(product, "lead_time_days", None),
+            "supplier": supplier_info,
+            "internal_notes": getattr(product, "internal_notes", None),
+            "cost": str(product.cost) if product.cost else None,
+        },
     }
 
     nb = session.get_notebook()

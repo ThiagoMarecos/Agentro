@@ -8,7 +8,7 @@ from app.models.store import Store, StoreMember, StoreTheme
 from app.models.product import Product, ProductVariant, ProductImage, Category
 from app.models.order import Order, OrderItem
 from app.models.customer import Customer, Address
-from app.models.ai import Conversation, Message, AIChannel, AIAgent
+from app.models.ai import Conversation, Message, AIChannel, AIAgent, AgentLesson
 from app.models.sales_session import SalesSession
 from app.models.wishlist import Wishlist
 from app.models.next_drop import NextDropItem
@@ -34,6 +34,7 @@ __all__ = [
     "Message",
     "AIChannel",
     "AIAgent",
+    "AgentLesson",
     "SalesSession",
     "Wishlist",
     "NextDropItem",

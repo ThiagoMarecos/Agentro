@@ -20,6 +20,8 @@ import {
   Smartphone,
   ShieldBan,
   Globe,
+  BarChart3,
+  GraduationCap,
 } from "lucide-react";
 import { useAuth } from "@/app/providers/AuthProvider";
 import { useStore } from "@/lib/context/StoreContext";
@@ -31,6 +33,8 @@ const navItems = [
   { href: "/app/orders", label: "Pedidos", icon: ShoppingCart },
   { href: "/app/customers", label: "Clientes", icon: Users },
   { href: "/app/pipeline", label: "Pipeline IA", icon: Kanban },
+  { href: "/app/agent-performance", label: "Rendimiento IA", icon: BarChart3 },
+  { href: "/app/agent-learning", label: "Modo Aprendizaje", icon: GraduationCap },
   { href: "/app/whatsapp", label: "WhatsApp", icon: Smartphone },
   { href: "/app/suppliers", label: "Proveedores", icon: Truck },
   { href: "/app/channels", label: "Canales", icon: Globe },

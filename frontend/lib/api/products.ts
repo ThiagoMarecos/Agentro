@@ -16,6 +16,7 @@ export interface Product {
   id: string;
   store_id: string;
   category_id: string | null;
+  supplier_id?: string | null;
   name: string;
   slug: string;
   short_description?: string | null;
@@ -36,9 +37,13 @@ export interface Product {
   variants?: ProductVariant[];
   images?: ProductImage[];
   category?: { id: string; name: string; slug: string } | null;
+  supplier?: { id: string; name: string } | null;
   total_stock?: number;
   seo_title?: string | null;
   seo_description?: string | null;
+  origin_type?: string | null;
+  lead_time_days?: number | null;
+  internal_notes?: string | null;
 }
 
 export interface ProductVariant {

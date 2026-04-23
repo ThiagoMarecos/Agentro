@@ -124,6 +124,42 @@ def _build_next_action(stage: str, nb: dict, message_count: int, currency: str) 
     return f"▶ Etapa actual: {stage}. Continuá según el flujo."
 
 
+def _build_lessons_block(lessons: list | None) -> str:
+    """
+    Renderiza las 'lecciones' del modo aprendizaje como un bloque de instrucciones
+    de máxima prioridad. Cada lección es un objeto AgentLesson activo.
+    """
+    if not lessons:
+        return ""
+
+    # Ordenar por prioridad ascendente (1 = más urgente)
+    sorted_lessons = sorted(lessons, key=lambda l: (l.priority or 5))
+
+    items = []
+    for i, l in enumerate(sorted_lessons, 1):
+        bits = [f"{i}. **{l.title}**", f"   → {l.lesson_text}"]
+        if l.bad_response_example:
+            bits.append(f"   ❌ MAL: {l.bad_response_example}")
+        if l.correct_response:
+            bits.append(f"   ✅ BIEN: {l.correct_response}")
+        if l.category:
+            bits.append(f"   _categoría: {l.category}_")
+        items.append("\n".join(bits))
+
+    body = "\n\n".join(items)
+    return f"""
+## ══════════════════════════════════════
+## 🎓 INSTRUCCIONES APRENDIDAS (MÁXIMA PRIORIDAD)
+## ══════════════════════════════════════
+El dueño de la tienda corrigió comportamientos previos del agente.
+Aplicá estas instrucciones SIEMPRE — anulan cualquier otra regla del prompt.
+
+{body}
+
+## ══════════════════════════════════════
+"""
+
+
 def build_sales_prompt(
     store_name: str,
     store_config: dict,
@@ -131,6 +167,7 @@ def build_sales_prompt(
     custom_instructions: str | None = None,
     master_prompt_override: str | None = None,  # ignorado — mantenido por compatibilidad
     message_count: int = 0,
+    lessons: list | None = None,
 ) -> str:
     """Construye el system prompt completo del agente de ventas."""
 
@@ -152,8 +189,10 @@ def build_sales_prompt(
     }
 
     next_action = _build_next_action(stage, nb, message_count, currency)
+    lessons_block = _build_lessons_block(lessons)
 
     prompt = f"""Sos el asesor de ventas de **{store_name}**. Trabajás para {store_name}, no sos un bot genérico.
+{lessons_block}
 
 ## ══════════════════════════════════════
 ## 🎯 QUÉ HACER EN ESTE MENSAJE
@@ -213,6 +252,20 @@ OBLIGATORIO: entendé qué quiere el cliente PRIMERO.
 - NO inventes productos, precios ni descuentos. Solo lo que está en la DB.
 - Si algo no existe en el catálogo, decilo y ofrecé alternativas REALES.
 - Cuando menciones un producto, siempre incluí el precio en {currency}.
+
+### CONTEXTO INTERNO (campo `_internal` en `product_detail`)
+Cuando llamás `product_detail` recibís un campo `_internal` con info que SOLO ves vos:
+- `origin_type` (external_supplier|own_manufacturing|dropshipping|imported)
+- `lead_time_days` (días estimados de reposición)
+- `supplier` (nombre y país del proveedor)
+- `internal_notes` (notas privadas del dueño sobre el producto)
+- `cost` (costo, NO compartir nunca con el cliente)
+
+REGLAS:
+- ⛔ NUNCA reveles `cost`, `supplier.name` ni `internal_notes` literalmente al cliente.
+- ✅ Si el cliente pregunta "¿es importado?", "¿de dónde viene?", "¿garantía?", "¿cuándo llega si lo encargan?" → usá `origin_type` y `lead_time_days` para responder con honestidad pero sin revelar el proveedor exacto.
+- ✅ Si el `internal_notes` te da contexto útil (ej: "se vende mucho con clientes mayores"), usalo para personalizar tu respuesta — pero NUNCA cites la nota textual.
+- ✅ Para `dropshipping` / `imported`: si hay `lead_time_days`, mencioná el tiempo estimado de entrega cuando el cliente pregunte por demoras.
 
 {f"## INSTRUCCIONES DEL DUEÑO (MÁXIMA PRIORIDAD — seguí estas por encima de todo){chr(10)}{custom_instructions}{chr(10)}" if custom_instructions else ""}
 

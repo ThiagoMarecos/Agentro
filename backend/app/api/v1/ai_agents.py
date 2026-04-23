@@ -51,6 +51,7 @@ def create_agent(
         language=data.language,
         sales_style=data.sales_style,
         enabled_tools=data.enabled_tools,
+        learning_mode_enabled=bool(data.learning_mode_enabled or False),
     )
     db.add(agent)
     db.commit()

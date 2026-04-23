@@ -36,7 +36,7 @@ from app.services.product_service import (
     remove_product_image,
 )
 from app.services.audit_service import log_action, get_client_info
-from app.schemas.product import CategorySummary, ProductVariantResponse, ProductImageResponse
+from app.schemas.product import CategorySummary, ProductVariantResponse, ProductImageResponse, SupplierSummary
 from app.services.ai_prefill_service import ai_prefill_product
 from app.services.import_service import import_products
 from pydantic import BaseModel
@@ -197,6 +197,7 @@ def _to_detail_response(p) -> ProductResponse:
         id=p.id,
         store_id=p.store_id,
         category_id=p.category_id,
+        supplier_id=getattr(p, "supplier_id", None),
         name=p.name,
         slug=p.slug,
         short_description=getattr(p, "short_description", None),
@@ -217,9 +218,13 @@ def _to_detail_response(p) -> ProductResponse:
         cover_image_url=getattr(p, "cover_image_url", None),
         seo_title=getattr(p, "seo_title", None),
         seo_description=getattr(p, "seo_description", None),
+        origin_type=getattr(p, "origin_type", None),
+        lead_time_days=getattr(p, "lead_time_days", None),
+        internal_notes=getattr(p, "internal_notes", None),
         variants=[ProductVariantResponse.model_validate(v) for v in (p.variants or [])],
         images=[ProductImageResponse(id=i.id, url=i.url, alt_text=i.alt_text, sort_order=i.sort_order, is_cover=getattr(i, "is_cover", False)) for i in (p.images or [])],
         category=CategorySummary(id=c.id, name=c.name, slug=c.slug) if (c := p.category) else None,
+        supplier=SupplierSummary(id=s.id, name=s.name) if (s := getattr(p, "supplier", None)) else None,
         total_stock=total_stock,
     )
 

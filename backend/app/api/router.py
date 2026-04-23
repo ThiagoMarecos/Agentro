@@ -21,6 +21,8 @@ from app.api.v1 import (
     conversations,
     ai_agents,
     ai_channels,
+    agent_performance,
+    agent_lessons,
     next_drop,
     settings,
     storefront,
@@ -59,6 +61,8 @@ api_router.include_router(customers.router, prefix="/customers", tags=["customer
 api_router.include_router(conversations.router, prefix="/conversations", tags=["conversations"])
 api_router.include_router(ai_agents.router, prefix="/ai-agents", tags=["ai-agents"])
 api_router.include_router(ai_channels.router, prefix="/ai-channels", tags=["ai-channels"])
+api_router.include_router(agent_performance.router, prefix="/agent-performance", tags=["agent-performance"])
+api_router.include_router(agent_lessons.router, prefix="/agent-lessons", tags=["agent-lessons"])
 api_router.include_router(next_drop.router, prefix="/next-drop", tags=["next-drop"])
 api_router.include_router(settings.router, prefix="/settings", tags=["settings"])
 api_router.include_router(uploads.router, prefix="/upload", tags=["upload"])

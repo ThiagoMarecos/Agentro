@@ -16,7 +16,7 @@ from openai import OpenAI
 from sqlalchemy.orm import Session
 
 from app.config import get_settings, get_dynamic_setting
-from app.models.ai import Conversation, Message, AIAgent
+from app.models.ai import Conversation, Message, AIAgent, AgentLesson
 from app.models.customer import Customer
 from app.models.store import Store
 from app.models.sales_session import SalesSession, EMPTY_NOTEBOOK
@@ -195,6 +195,22 @@ def _get_custom_instructions(agent: AIAgent | None) -> str | None:
     return None
 
 
+def _get_active_lessons(db: Session, agent: AIAgent | None) -> list[AgentLesson]:
+    """
+    Si el agente tiene `learning_mode_enabled=True`, devuelve sus lecciones activas
+    ordenadas por prioridad. Caso contrario, lista vacía.
+    """
+    if not agent or not agent.learning_mode_enabled:
+        return []
+    return db.query(AgentLesson).filter(
+        AgentLesson.agent_id == agent.id,
+        AgentLesson.is_active == True,
+    ).order_by(
+        AgentLesson.priority.asc().nullslast(),
+        AgentLesson.created_at.desc(),
+    ).all()
+
+
 def _get_message_history(db: Session, conversation_id: str, limit: int = 30) -> list[dict]:
     """Carga los últimos mensajes de la conversación."""
     messages = db.query(Message).filter(
@@ -273,13 +289,17 @@ def process_message(
         except Exception as e:
             logger.warning(f"Could not auto-advance stage: {e}")
 
-    # Reconstruir prompt con la etapa actualizada
+    # Cargar lecciones del modo aprendizaje (si está activo)
+    active_lessons = _get_active_lessons(db, agent)
+
+    # Reconstruir prompt con la etapa actualizada + lecciones
     system_prompt = build_sales_prompt(
         store_name=store_name,
         store_config=store_config,
         session=session,
         custom_instructions=custom_instructions,
         message_count=message_count,
+        lessons=active_lessons,
     )
 
     openai_messages = [{"role": "system", "content": system_prompt}]
@@ -317,6 +337,11 @@ def process_message(
     # Lista compartida donde las tools depositan imágenes a enviar al cliente
     pending_media: list[dict] = []
 
+    # Métricas del turno (se acumulan a la conversación al cerrar)
+    turn_tool_calls = 0
+    turn_total_tokens = 0
+    escalated_in_turn = False
+
     call_params = {
         "model": agent_config.get("model", "gpt-4o"),
         "messages": openai_messages,
@@ -329,6 +354,10 @@ def process_message(
     try:
         response = client.chat.completions.create(**call_params)
         response_message = response.choices[0].message
+
+        # Tokens del primer call
+        if getattr(response, "usage", None):
+            turn_total_tokens += int(response.usage.total_tokens or 0)
 
         iterations = 0
         while response_message.tool_calls and iterations < MAX_TOOL_ITERATIONS:
@@ -343,6 +372,10 @@ def process_message(
                     fn_args = {}
 
                 logger.info(f"Tool call: {fn_name}({json.dumps(fn_args, ensure_ascii=False)[:200]})")
+
+                turn_tool_calls += 1
+                if fn_name == "escalate_to_human":
+                    escalated_in_turn = True
 
                 executor = TOOL_EXECUTORS.get(fn_name)
                 if executor:
@@ -361,6 +394,8 @@ def process_message(
 
             response = client.chat.completions.create(**call_params | {"messages": openai_messages})
             response_message = response.choices[0].message
+            if getattr(response, "usage", None):
+                turn_total_tokens += int(response.usage.total_tokens or 0)
 
         assistant_content = response_message.content or "Lo siento, no pude procesar tu solicitud."
 
@@ -382,6 +417,37 @@ def process_message(
     if agent:
         session.agent_id = agent.id
     db.add(session)
+
+    # ── 8. Métricas en la Conversation ──
+    db.refresh(conversation)
+    conversation.tool_calls_count = (conversation.tool_calls_count or 0) + turn_tool_calls
+    conversation.total_tokens = (conversation.total_tokens or 0) + turn_total_tokens
+    conversation.last_stage_reached = session.current_stage
+
+    # Outcome derivado: stage actual + flags del turno
+    current_stage = session.current_stage
+    if escalated_in_turn:
+        conversation.outcome = "escalated"
+        conversation.outcome_reason = "tool escalate_to_human invocada"
+    elif current_stage == "completed":
+        conversation.outcome = "sale_completed"
+        conversation.outcome_reason = "venta finalizada"
+    elif current_stage in ("lost", "abandoned"):
+        conversation.outcome = "dropped_off"
+        conversation.outcome_reason = f"stage={current_stage}"
+    else:
+        # Si todavía no estaba marcada como cerrada, es 'ongoing'
+        if conversation.outcome in (None, "ongoing"):
+            conversation.outcome = "ongoing"
+
+    # Valor estimado: usar el de la session si existe
+    if getattr(session, "estimated_value", None) is not None:
+        try:
+            conversation.estimated_value = session.estimated_value
+        except Exception:
+            pass
+
+    db.add(conversation)
     db.commit()
 
     return {

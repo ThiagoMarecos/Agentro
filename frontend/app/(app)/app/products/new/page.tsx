@@ -7,11 +7,12 @@ import { useStore } from "@/lib/context/StoreContext";
 import { getCategories } from "@/lib/api/categories";
 import { createProduct, uploadImage } from "@/lib/api/products";
 import type { Category } from "@/lib/api/categories";
+import { getSuppliers, type Supplier } from "@/lib/api/suppliers";
 import {
   Plus, Trash2, ArrowLeft, Package, DollarSign,
   Archive, Layers, Globe, Upload, Star, X, ImageIcon,
   Sparkles, Loader2, ExternalLink, Save, AlertTriangle,
-  Search,
+  Search, Truck, Lock,
 } from "lucide-react";
 import { aiPrefillProduct } from "@/lib/api/products";
 
@@ -23,15 +24,23 @@ const inputClass =
   "w-full px-4 py-2.5 rounded-lg bg-white border border-gray-200 text-gray-900 placeholder:text-gray-400 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none transition text-sm";
 const labelClass = "block text-sm font-medium text-gray-700 mb-1.5";
 
-type Tab = "general" | "pricing" | "inventory" | "images" | "variants" | "seo";
+type Tab = "general" | "pricing" | "inventory" | "origin" | "images" | "variants" | "seo";
 
 const TABS: { id: Tab; label: string; icon: React.ElementType; subtitle: string }[] = [
   { id: "general", label: "General", icon: Package, subtitle: "Nombre y descripción" },
   { id: "pricing", label: "Precios", icon: DollarSign, subtitle: "Precio, descuento y costo" },
   { id: "inventory", label: "Inventario", icon: Archive, subtitle: "Stock y código SKU" },
+  { id: "origin", label: "Origen", icon: Truck, subtitle: "Proveedor y tipo" },
   { id: "images", label: "Imágenes", icon: ImageIcon, subtitle: "Fotos del producto" },
   { id: "variants", label: "Variantes", icon: Layers, subtitle: "Tallas, colores, etc." },
   { id: "seo", label: "SEO", icon: Search, subtitle: "Posicionamiento en Google" },
+];
+
+const ORIGIN_TYPES: { value: string; label: string; description: string }[] = [
+  { value: "external_supplier", label: "Proveedor externo", description: "Lo compras a un tercero y lo vendés desde tu stock" },
+  { value: "own_manufacturing", label: "Fabricación propia", description: "Lo fabricás vos mismo o tu marca" },
+  { value: "dropshipping", label: "Dropshipping", description: "El proveedor envía directo al cliente" },
+  { value: "imported", label: "Importado", description: "Producto importado del exterior" },
 ];
 
 function Section({ title, desc, children }: { title: string; desc: string; children: React.ReactNode }) {
@@ -49,6 +58,7 @@ export default function NewProductPage() {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [tab, setTab] = useState<Tab>("general");
@@ -72,6 +82,11 @@ export default function NewProductPage() {
   const [allowBackorder, setAllowBackorder] = useState(false);
   const [seoTitle, setSeoTitle] = useState("");
   const [seoDescription, setSeoDescription] = useState("");
+  // Origen y proveedor
+  const [supplierId, setSupplierId] = useState<string>("");
+  const [originType, setOriginType] = useState<string>("external_supplier");
+  const [leadTimeDays, setLeadTimeDays] = useState<string>("");
+  const [internalNotes, setInternalNotes] = useState<string>("");
   const [images, setImages] = useState<{ url: string; alt: string; isCover: boolean; file?: File; fromAi?: boolean }[]>([]);
   const [variants, setVariants] = useState<{ name: string; sku: string; price: string; stock: string }[]>([
     { name: "", sku: "", price: "", stock: "0" },
@@ -88,6 +103,7 @@ export default function NewProductPage() {
   useEffect(() => {
     if (!currentStore) return;
     getCategories(currentStore.id).then(setCategories).catch(() => setCategories([]));
+    getSuppliers(currentStore.id).then(setSuppliers).catch(() => setSuppliers([]));
   }, [currentStore]);
 
   // Check sessionStorage for data imported from external URL
@@ -188,6 +204,10 @@ export default function NewProductPage() {
         short_description: shortDescription || undefined,
         description: description || undefined,
         category_id: categoryId || null,
+        supplier_id: supplierId || null,
+        origin_type: originType || "external_supplier",
+        lead_time_days: leadTimeDays ? parseInt(leadTimeDays, 10) : null,
+        internal_notes: internalNotes || undefined,
         product_type: productType,
         status,
         has_variants: productType === "variant",
@@ -641,6 +661,107 @@ export default function NewProductPage() {
                       }`} />
                     </div>
                   </div>
+                </div>
+              </Section>
+            )}
+
+            {/* Origen y proveedor */}
+            {tab === "origin" && (
+              <Section
+                title="Origen y proveedor"
+                desc="De dónde viene el producto. Esta info la usa el agente IA para responder preguntas — el cliente nunca la ve directa."
+              >
+                <div>
+                  <label className={labelClass}>Tipo de origen</label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {ORIGIN_TYPES.map((opt) => (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => setOriginType(opt.value)}
+                        className={`text-left p-3 rounded-lg border transition ${
+                          originType === opt.value
+                            ? "bg-indigo-50 border-indigo-300"
+                            : "bg-white border-gray-200 hover:border-gray-300"
+                        }`}
+                      >
+                        <p className={`text-sm font-medium ${originType === opt.value ? "text-indigo-800" : "text-gray-700"}`}>
+                          {opt.label}
+                        </p>
+                        <p className="text-xs text-gray-400 mt-0.5">{opt.description}</p>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className={labelClass}>
+                    Proveedor
+                    <span className="ml-2 text-xs text-gray-400 font-normal">— opcional</span>
+                  </label>
+                  <select
+                    value={supplierId}
+                    onChange={(e) => setSupplierId(e.target.value)}
+                    className={inputClass}
+                  >
+                    <option value="">Sin proveedor asignado</option>
+                    {suppliers.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.name}{s.country ? ` — ${s.country}` : ""}
+                      </option>
+                    ))}
+                  </select>
+                  {suppliers.length === 0 && (
+                    <p className="mt-1 text-xs text-gray-400">
+                      Aún no tenés proveedores cargados. Podés crearlos en{" "}
+                      <Link href="/app/suppliers" className="text-indigo-600 hover:underline">
+                        Proveedores
+                      </Link>.
+                    </p>
+                  )}
+                </div>
+
+                {(originType === "dropshipping" || originType === "imported" || originType === "external_supplier") && (
+                  <div>
+                    <label className={labelClass}>
+                      Tiempo de reposición / entrega
+                      <span className="ml-2 text-xs text-gray-400 font-normal">— días estimados</span>
+                    </label>
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="number"
+                        min="0"
+                        value={leadTimeDays}
+                        onChange={(e) => setLeadTimeDays(e.target.value)}
+                        className={`${inputClass} max-w-[160px]`}
+                        placeholder="Ej: 7"
+                      />
+                      <span className="text-sm text-gray-400">días desde el pedido</span>
+                    </div>
+                    <p className="mt-1 text-xs text-gray-400">
+                      El agente lo menciona cuando el cliente pregunta &ldquo;¿cuándo llega?&rdquo; o &ldquo;¿cuánto tarda?&rdquo;.
+                    </p>
+                  </div>
+                )}
+
+                <div>
+                  <label className={labelClass}>
+                    Notas internas para el agente
+                    <Lock className="inline-block w-3 h-3 ml-1 text-gray-400" />
+                    <span className="ml-2 text-xs text-gray-400 font-normal">— solo el agente IA las ve</span>
+                  </label>
+                  <textarea
+                    value={internalNotes}
+                    onChange={(e) => setInternalNotes(e.target.value)}
+                    rows={4}
+                    className={inputClass}
+                    placeholder={
+                      "Ej: \n- Vende mejor con público joven (18-25)\n- Si preguntan por garantía: 6 meses, cubrimos defectos de fábrica\n- No ofrecer descuento mayor al 10%"
+                    }
+                  />
+                  <p className="mt-1 text-xs text-gray-400">
+                    Información privada del producto que ayuda al agente a responder mejor. <strong>Nunca se cita literalmente al cliente.</strong>
+                  </p>
                 </div>
               </Section>
             )}

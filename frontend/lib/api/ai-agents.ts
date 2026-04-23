@@ -17,6 +17,7 @@ export interface AIAgent {
   sales_style?: string | null;
   enabled_tools?: string | null;
   config?: string | null;
+  learning_mode_enabled?: boolean | null;
   created_at?: string;
   updated_at?: string;
 }
@@ -34,6 +35,7 @@ export interface AIAgentCreate {
   language?: string;
   sales_style?: string;
   enabled_tools?: string;
+  learning_mode_enabled?: boolean;
 }
 
 async function authFetch(path: string, storeId: string, options: RequestInit = {}) {
