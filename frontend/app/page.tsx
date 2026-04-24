@@ -24,17 +24,17 @@ const FEATURES: { icon: IconName; title: string; desc: string }[] = [
   {
     icon: "chat",
     title: "Agente IA que vende 24/7",
-    desc: "Responde preguntas, recomienda productos y cierra ventas por vos. En WhatsApp, Instagram y tu tienda web.",
+    desc: "Responde preguntas, recomienda productos y cierra ventas por vos. En WhatsApp y tu tienda web.",
   },
   {
     icon: "sparkle",
     title: "Catálogo inteligente",
-    desc: "Subís tus productos una sola vez. La IA genera descripciones, precios sugeridos y los publica en todos tus canales.",
+    desc: "Subís tus productos una sola vez. La IA genera descripciones y los deja listos para vender en WhatsApp y tu tienda web.",
   },
   {
     icon: "bolt",
-    title: "Checkout en un click",
-    desc: "Tus clientes pagan sin salir del chat. Integrado con Mercado Pago, transferencia y tarjetas.",
+    title: "Pedidos sin fricción",
+    desc: "Tus clientes confirman el pedido sin salir del chat. Coordinás el pago como prefieras: transferencia, efectivo o el método que ya uses.",
   },
   {
     icon: "chart",
@@ -43,8 +43,8 @@ const FEATURES: { icon: IconName; title: string; desc: string }[] = [
   },
   {
     icon: "layers",
-    title: "Multi-canal unificado",
-    desc: "WhatsApp, Instagram DM, Mercado Libre y tu tienda web. Un solo inbox, un solo stock, un solo cliente.",
+    title: "Inbox unificado",
+    desc: "WhatsApp y tu tienda web en un solo lugar. Un solo stock, un solo cliente, una sola conversación.",
   },
   {
     icon: "shield",
@@ -56,19 +56,19 @@ const FEATURES: { icon: IconName; title: string; desc: string }[] = [
 const STEPS = [
   {
     title: "Subí tus productos",
-    desc: "Importá desde Excel, Shopify o cargá manualmente. La IA completa fotos, descripciones y categorías automáticamente.",
+    desc: "Importá desde Excel o cargá manualmente. La IA completa descripciones y categorías automáticamente.",
   },
   {
     title: "Entrená a tu agente",
-    desc: "Definí tono, políticas de envío, métodos de pago y horarios. En 5 minutos tu agente está listo para vender.",
+    desc: "Definí tono, políticas de envío, métodos de pago y horarios. En minutos tu agente está listo para vender.",
   },
   {
     title: "Conectá tus canales",
-    desc: "WhatsApp Business, Instagram, Mercado Libre y tu tienda web. Un clic y todo queda sincronizado.",
+    desc: "WhatsApp Business y tu tienda web. Un clic y queda todo sincronizado con tu catálogo y tu stock.",
   },
   {
     title: "Vendé mientras dormís",
-    desc: "El agente responde, recomienda y cobra. Vos recibís el dinero y te dedicás a crecer tu negocio.",
+    desc: "El agente responde, recomienda y cierra pedidos. Vos confirmás el pago y te dedicás a crecer tu negocio.",
   },
 ];
 
@@ -95,7 +95,7 @@ const PLANS: Plan[] = [
     name: "Starter",
     price: 0,
     desc: "Para probar Agentro sin compromiso.",
-    features: ["Hasta 50 pedidos/mes", "1 canal de venta", "Agente IA básico", "Soporte por email"],
+    features: ["Hasta 50 pedidos/mes", "WhatsApp + tienda web", "Agente IA básico", "Soporte por email"],
     cta: "Empezar gratis",
     href: "__signup__",
     featured: false,
@@ -104,7 +104,7 @@ const PLANS: Plan[] = [
     name: "Growth",
     price: 29,
     desc: "Para negocios que quieren crecer en serio.",
-    features: ["Pedidos ilimitados", "Todos los canales", "Agente IA personalizable", "Analytics avanzado", "Soporte prioritario"],
+    features: ["Pedidos ilimitados", "WhatsApp + tienda web", "Agente IA personalizable", "Analytics avanzado", "Soporte prioritario"],
     cta: "Probar 14 días gratis",
     href: "__signup__",
     featured: true,
@@ -114,7 +114,7 @@ const PLANS: Plan[] = [
     name: "Scale",
     price: 79,
     desc: "Para marcas con volumen y equipo.",
-    features: ["Todo de Growth", "Multi-usuario", "API y webhooks", "Integraciones custom", "Account manager dedicado"],
+    features: ["Todo de Growth", "Onboarding personalizado", "Soporte prioritario por WhatsApp", "Account manager dedicado"],
     cta: "Hablar con ventas",
     href: "mailto:hola@getagentro.com",
     featured: false,
@@ -408,7 +408,7 @@ export default function LandingPage() {
           </span>
           <AnimatedHeadline />
           <p className="hero-sub">
-            Asistente de ventas con IA para pequeños negocios. Responde, recomienda y cobra por vos — en todos tus canales.
+            Asistente de ventas con IA para pequeños negocios. Responde, recomienda y cierra ventas por vos en WhatsApp y tu tienda web.
           </p>
           <div className="hero-cta">
             <a href={signupHref} className="btn btn-primary btn-lg">

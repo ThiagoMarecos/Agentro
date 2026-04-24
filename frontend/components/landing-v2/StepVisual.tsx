@@ -64,15 +64,13 @@ export default function StepVisual({ step }: Props) {
       {step === 2 && (
         <div style={{ width: "100%", padding: 20 }}>
           <div style={{ fontFamily: "var(--mono)", fontSize: 11, color: "var(--fg-3)", marginBottom: 16, textTransform: "uppercase", letterSpacing: "0.08em" }}>Canales conectados</div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 10 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 10 }}>
             {[
-              { n: "WhatsApp", s: "+54 11 5678-9012" },
-              { n: "Instagram", s: "@tutienda" },
-              { n: "Tienda web", s: "tutienda.agentro.app" },
-              { n: "Mercado Libre", s: "12 publicaciones" },
+              { n: "WhatsApp Business", s: "Conectado vía QR · respuestas automáticas activas" },
+              { n: "Tienda web", s: "tutienda.agentro.app · catálogo y chat con IA" },
             ].map((c, i) => (
               <div key={i} style={{
-                padding: 14, border: "1px solid var(--border)", borderRadius: 10,
+                padding: 16, border: "1px solid var(--border)", borderRadius: 10,
                 background: "var(--bg-3)",
                 animation: `lp-rise .5s ${i * 0.1}s cubic-bezier(.2,.8,.2,1) both`,
               }}>
