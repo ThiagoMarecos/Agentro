@@ -73,21 +73,10 @@ const STEPS = [
 ];
 
 const CASES: { icon: IconName; title: string; desc: string; stat: string }[] = [
-  { icon: "store", title: "Retail & moda", desc: "Gestioná talles, stock y recomendaciones personalizadas por cliente.", stat: "+34% conversión" },
-  { icon: "coffee", title: "Gastronomía", desc: "Recibí pedidos por WhatsApp, organizá la cocina y coordiná el delivery.", stat: "-60% tiempo" },
-  { icon: "scissors", title: "Servicios", desc: "Reservas, consultas y pagos automáticos sin mover un dedo.", stat: "24/7 activo" },
-  { icon: "tag", title: "E-commerce", desc: "Convertí visitantes en compradores con asistencia inteligente en cada paso.", stat: "3x ventas" },
-];
-
-const TESTIMONIALS = [
-  { name: "Lucía Fernández", role: "Fundadora, Sastra", quote: "Agentro me devolvió las noches. El agente atiende mientras duermo y las ventas se duplicaron en 2 meses.", avatar: "LF" },
-  { name: "Martín Rojas", role: "Café Cordillera", quote: "Pasamos de perder pedidos por WhatsApp a tener la cocina organizada. Ahora procesamos 3x más sin sumar gente.", avatar: "MR" },
-  { name: "Camila Prieto", role: "Tienda Lumen", quote: "Pensé que iba a ser frío, pero los clientes no notan la diferencia. Responde mejor que yo a la madrugada.", avatar: "CP" },
-  { name: "Diego Arriaga", role: "Mundo Fit", quote: "Probamos 4 chatbots antes. Agentro es el primero que realmente vende, no solo contesta preguntas.", avatar: "DA" },
-  { name: "Sofía Mendez", role: "Flores Nativas", quote: "La IA recomienda productos que ni yo sabía que combinaban. Ticket promedio arriba 28%.", avatar: "SM" },
-  { name: "Tomás Benítez", role: "ElectroHogar", quote: "Lo configuré un domingo a la tarde. El lunes ya estaba cerrando ventas por Instagram automáticamente.", avatar: "TB" },
-  { name: "Valentina Ortiz", role: "Kiosco Norte", quote: "Creí que era para empresas grandes. Soy un kiosco y me cambió el día a día completamente.", avatar: "VO" },
-  { name: "Nicolás Vargas", role: "Óptica Visión+", quote: "El analytics me mostró qué productos empujar. Nunca había tomado decisiones con datos así.", avatar: "NV" },
+  { icon: "store", title: "Retail & moda", desc: "Gestioná talles, stock y recomendaciones personalizadas por cliente.", stat: "Catálogo & stock" },
+  { icon: "coffee", title: "Gastronomía", desc: "Recibí pedidos por WhatsApp, organizá la cocina y coordiná el delivery.", stat: "Pedidos & cocina" },
+  { icon: "scissors", title: "Servicios", desc: "Reservas, consultas y pagos automáticos sin mover un dedo.", stat: "Reservas & pagos" },
+  { icon: "tag", title: "E-commerce", desc: "Convertí visitantes en compradores con asistencia inteligente en cada paso.", stat: "Chat & checkout" },
 ];
 
 type Plan = {
@@ -98,6 +87,7 @@ type Plan = {
   cta: string;
   href: string;
   featured: boolean;
+  tag?: string;
 };
 
 const PLANS: Plan[] = [
@@ -118,6 +108,7 @@ const PLANS: Plan[] = [
     cta: "Probar 14 días gratis",
     href: "__signup__",
     featured: true,
+    tag: "Recomendado",
   },
   {
     name: "Scale",
@@ -149,24 +140,6 @@ function useReveal() {
     els.forEach((el) => io.observe(el));
     return () => io.disconnect();
   }, []);
-}
-
-function useCountUp(target: number, duration: number, startOn: boolean) {
-  const [val, setVal] = useState(0);
-  useEffect(() => {
-    if (!startOn) return;
-    let raf = 0;
-    const start = performance.now();
-    const tick = (now: number) => {
-      const p = Math.min(1, (now - start) / duration);
-      const eased = 1 - Math.pow(1 - p, 3);
-      setVal(Math.floor(target * eased));
-      if (p < 1) raf = requestAnimationFrame(tick);
-    };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
-  }, [startOn, target, duration]);
-  return val;
 }
 
 /* ─────────── Animated headline ─────────── */
@@ -284,90 +257,6 @@ function HowItWorks() {
           <div className="step-visual">
             <StepVisual step={active} />
           </div>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-/* ─────────── Stats banner ─────────── */
-
-function StatsBanner() {
-  const ref = useRef<HTMLElement>(null);
-  const [visible, setVisible] = useState(false);
-  useEffect(() => {
-    if (!ref.current) return;
-    const io = new IntersectionObserver(
-      (es) => es.forEach((e) => e.isIntersecting && setVisible(true)),
-      { threshold: 0.4 }
-    );
-    io.observe(ref.current);
-    return () => io.disconnect();
-  }, []);
-  const n1 = useCountUp(2400, 2000, visible);
-  const n2 = useCountUp(94, 2000, visible);
-  const n3 = useCountUp(37, 2000, visible);
-
-  const items = [
-    { v: n1, suf: "+", label: "Negocios usando Agentro" },
-    { v: n2, suf: "%", label: "Respuestas automatizadas" },
-    { v: n3, suf: "%", label: "Aumento promedio en ventas" },
-  ];
-
-  return (
-    <section ref={ref} className="stats-banner">
-      <div className="container">
-        <div className="stats-banner-grid">
-          {items.map((s, i) => (
-            <div key={i} className="stats-banner-item">
-              <div className="stats-banner-num">
-                {s.v.toLocaleString("es-AR")}
-                <span className="suf">{s.suf}</span>
-              </div>
-              <div className="stats-banner-label">{s.label}</div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-/* ─────────── Testimonials marquee ─────────── */
-
-function TestimonialCard({ t }: { t: (typeof TESTIMONIALS)[number] }) {
-  return (
-    <div className="testimonial-card">
-      <p className="testimonial-quote">&ldquo;{t.quote}&rdquo;</p>
-      <div className="testimonial-author">
-        <div className="testimonial-avatar">{t.avatar}</div>
-        <div>
-          <div className="testimonial-name">{t.name}</div>
-          <div className="testimonial-role">{t.role}</div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function Testimonials() {
-  const row1 = [...TESTIMONIALS.slice(0, 4), ...TESTIMONIALS.slice(0, 4)];
-  const row2 = [...TESTIMONIALS.slice(4), ...TESTIMONIALS.slice(4)];
-  return (
-    <section className="section testimonials-section">
-      <div className="container">
-        <div className="section-head reveal">
-          <span className="kicker"><span className="dot" /> Testimonios</span>
-          <h2>Negocios reales.<br />Resultados reales.</h2>
-          <p>Más de 2.400 emprendedores ya venden con Agentro. Estas son algunas de sus historias.</p>
-        </div>
-      </div>
-      <div className="marquee-wrap reveal">
-        <div className="marquee marquee-left">
-          {row1.map((t, i) => <TestimonialCard key={`r1-${i}`} t={t} />)}
-        </div>
-        <div className="marquee marquee-right">
-          {row2.map((t, i) => <TestimonialCard key={`r2-${i}`} t={t} />)}
         </div>
       </div>
     </section>
@@ -515,11 +404,11 @@ export default function LandingPage() {
             <img src="/agentro-white.png" alt="Agentro" />
           </a>
           <span className="kicker" style={kickerStyle}>
-            <span className="dot" /> Nuevo · Agente IA v2.0
+            <span className="dot" /> Nuevo · IA para tu negocio
           </span>
           <AnimatedHeadline />
           <p className="hero-sub">
-            El primer asistente de ventas con IA para pequeños negocios. Responde, recomienda y cobra por vos — en todos tus canales.
+            Asistente de ventas con IA para pequeños negocios. Responde, recomienda y cobra por vos — en todos tus canales.
           </p>
           <div className="hero-cta">
             <a href={signupHref} className="btn btn-primary btn-lg">
@@ -538,8 +427,6 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
-
-      <StatsBanner />
 
       {/* FEATURES */}
       <section id="features" className="section">
@@ -595,7 +482,7 @@ export default function LandingPage() {
                 className={`plan reveal ${p.featured ? "featured" : ""}`}
                 style={{ transitionDelay: `${i * 0.08}s` }}
               >
-                {p.featured && <div className="plan-tag">Más popular</div>}
+                {p.tag && <div className="plan-tag">{p.tag}</div>}
                 <div>
                   <div className="plan-name">{p.name}</div>
                   <div className="plan-price">
@@ -621,8 +508,6 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
-
-      <Testimonials />
 
       {/* CTA FINAL */}
       <section className="cta-final">
