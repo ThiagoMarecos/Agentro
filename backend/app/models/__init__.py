@@ -15,6 +15,7 @@ from app.models.next_drop import NextDropItem
 from app.models.audit import AuditLog
 from app.models.settings import Setting
 from app.models.supplier import Supplier
+from app.models.team import TeamInvitation
 
 __all__ = [
     "User",
@@ -41,4 +42,5 @@ __all__ = [
     "AuditLog",
     "Setting",
     "Supplier",
+    "TeamInvitation",
 ]

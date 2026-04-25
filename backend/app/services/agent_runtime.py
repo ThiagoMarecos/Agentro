@@ -337,6 +337,31 @@ def process_message(
     customer, is_new_customer = _find_or_create_customer(db, store_id, customer_identifier)
     conversation = _find_or_create_conversation(db, store_id, customer.id, channel)
     session = _find_or_create_session(db, store_id, conversation.id, customer.id)
+
+    # ── Si un vendedor humano tomó control, el agente no responde ──
+    # El mensaje del cliente igual se persiste, pero no generamos respuesta IA.
+    # El vendedor lo verá en su inbox y responderá manualmente.
+    if conversation.agent_paused:
+        try:
+            user_msg = Message(
+                conversation_id=conversation.id,
+                role="user",
+                content=message if not image_b64 else f"[Imagen] {message}",
+            )
+            db.add(user_msg)
+            db.commit()
+        except Exception as exc:
+            logger.warning(f"[agent] could not persist user msg while paused: {exc}")
+        logger.info(f"[agent] conversation {conversation.id[:8]} is paused (human control); skipping LLM call")
+        return {
+            "response": None,  # no enviamos nada al cliente automáticamente
+            "pending_media": [],
+            "conversation_id": conversation.id,
+            "session_id": session.id,
+            "stage": session.current_stage,
+            "agent_paused": True,
+        }
+
     customer_context = _build_customer_context(db, customer, is_new_customer)
     customer_context["time_of_day"] = _greeting_time_window()
 
