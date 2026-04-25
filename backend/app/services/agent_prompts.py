@@ -12,7 +12,14 @@ import json
 from app.models.sales_session import SalesSession
 
 
-def _build_next_action(stage: str, nb: dict, message_count: int, currency: str) -> str:
+def _build_next_action(
+    stage: str,
+    nb: dict,
+    message_count: int,
+    currency: str,
+    customer_context: dict | None = None,
+    store_name: str = "",
+) -> str:
     """
     Genera el bloque 'QUÉ HACER AHORA' basado en la etapa y el estado del notebook.
     Es lo primero que ve el agente → determina su próxima acción exacta.
@@ -23,8 +30,9 @@ def _build_next_action(stage: str, nb: dict, message_count: int, currency: str) 
     payment = nb.get("payment", {})
     order = nb.get("order", {})
     shipping = nb.get("shipping", {})
+    cc = customer_context or {}
 
-    has_name = bool(customer.get("name") or customer.get("first_name"))
+    has_name = bool(customer.get("name") or customer.get("first_name") or cc.get("display_name"))
     has_intent = bool(intent.get("product_type") or intent.get("query") or interest.get("product_id"))
     has_product = bool(interest.get("product_id") or interest.get("product_name"))
     has_shipping = bool(shipping.get("address") or shipping.get("city"))
@@ -32,16 +40,44 @@ def _build_next_action(stage: str, nb: dict, message_count: int, currency: str) 
 
     if stage == "incoming":
         if is_first_message:
-            return (
-                "▶ ACCIÓN: Es el PRIMER mensaje. Seguí este orden exacto:\n"
-                "  1. Llamá `list_categories` (silenciosamente, no lo mostrés al cliente)\n"
-                "  2. Respondé saludando con el nombre de la tienda\n"
-                "  3. Preguntá qué busca. NADA MÁS."
-            )
+            # Tres ramas según el contexto del cliente
+            display_name = (cc.get("display_name") or customer.get("name") or "").strip()
+            time_of_day = cc.get("time_of_day", "")
+            saludo_inicial = {
+                "mañana": "¡Buen día!",
+                "tarde": "¡Buenas tardes!",
+                "noche": "¡Buenas noches!",
+            }.get(time_of_day, "¡Hola!")
+
+            if cc.get("has_prior_orders") and display_name:
+                # Cliente recurrente con compras previas y nombre conocido
+                return (
+                    f"▶ ACCIÓN: PRIMER mensaje de un CLIENTE RECURRENTE ({display_name}, "
+                    f"{cc.get('prior_orders_count', 0)} compras previas).\n"
+                    "  1. Llamá `list_categories` silenciosamente\n"
+                    f"  2. Saludá personalmente: '{saludo_inicial} {display_name}! Qué bueno verte de nuevo en {store_name}. ¿En qué te ayudo hoy?'\n"
+                    "  3. NADA MÁS. Esperá su respuesta."
+                )
+            elif display_name:
+                # Tenemos nombre pero es nuevo o sin compras
+                return (
+                    f"▶ ACCIÓN: PRIMER mensaje. Tenés el nombre del cliente ({display_name}).\n"
+                    "  1. Llamá `list_categories` silenciosamente\n"
+                    f"  2. Saludá: '{saludo_inicial} {display_name}! Te estás comunicando con {store_name}. ¿Qué estás buscando?'\n"
+                    "  3. NADA MÁS."
+                )
+            else:
+                # Primer mensaje, cliente desconocido
+                return (
+                    "▶ ACCIÓN: PRIMER mensaje de un cliente nuevo (no tenemos su nombre).\n"
+                    "  1. Llamá `list_categories` silenciosamente\n"
+                    f"  2. Saludá con el nombre de la tienda: '{saludo_inicial} Te estás comunicando con {store_name} 🛍️ ¿Qué estás buscando?'\n"
+                    "  3. NADA MÁS. No mostrés productos ni categorías todavía."
+                )
         else:
             return (
-                "▶ ACCIÓN: La etapa está avanzando a 'discovery'. No saludés de nuevo.\n"
-                "  Continuá la conversación desde donde quedaron."
+                "▶ ACCIÓN: La etapa está avanzando a 'discovery'. NO SALUDES DE NUEVO.\n"
+                "  Continuá la conversación desde donde quedaron. Ya hay mensajes previos en el historial."
             )
 
     elif stage == "discovery":
@@ -124,6 +160,39 @@ def _build_next_action(stage: str, nb: dict, message_count: int, currency: str) 
     return f"▶ Etapa actual: {stage}. Continuá según el flujo."
 
 
+def _build_customer_block(customer_context: dict | None, store_name: str) -> str:
+    """
+    Bloque informativo (no instruccional) sobre quién es el cliente.
+    Aparece arriba en el prompt para que el agente module el tono.
+    """
+    if not customer_context:
+        return ""
+
+    cc = customer_context
+    if cc.get("is_new"):
+        kind = "🆕 Cliente NUEVO (primera vez que escribe)"
+    elif cc.get("has_prior_orders"):
+        n = cc.get("prior_orders_count", 0)
+        last = cc.get("last_order_at") or "?"
+        kind = f"⭐ Cliente RECURRENTE ({n} compras previas, última: {last[:10] if last and last != '?' else '?'})"
+    else:
+        kind = "👤 Cliente conocido sin compras (escribió antes pero no compró)"
+
+    name = (cc.get("display_name") or "").strip() or "—"
+    tod = cc.get("time_of_day", "")
+
+    return f"""
+## ──────────────────────────────────────
+## CONTEXTO DEL CLIENTE
+## ──────────────────────────────────────
+- Tipo: {kind}
+- Nombre conocido: {name}
+- Momento del día: {tod}
+
+Adaptá el tono. Cliente recurrente → personalizá con su nombre y reconocelo.
+Cliente nuevo → presentate como {store_name} y preguntá qué necesita."""
+
+
 def _build_lessons_block(lessons: list | None) -> str:
     """
     Renderiza las 'lecciones' del modo aprendizaje como un bloque de instrucciones
@@ -168,6 +237,7 @@ def build_sales_prompt(
     master_prompt_override: str | None = None,  # ignorado — mantenido por compatibilidad
     message_count: int = 0,
     lessons: list | None = None,
+    customer_context: dict | None = None,
 ) -> str:
     """Construye el system prompt completo del agente de ventas."""
 
@@ -188,11 +258,16 @@ def build_sales_prompt(
         "casual": "Sé muy casual y relajado, como si hablaras con un amigo. Usa emojis libremente.",
     }
 
-    next_action = _build_next_action(stage, nb, message_count, currency)
+    next_action = _build_next_action(
+        stage, nb, message_count, currency,
+        customer_context=customer_context, store_name=store_name,
+    )
     lessons_block = _build_lessons_block(lessons)
+    customer_block = _build_customer_block(customer_context, store_name)
 
     prompt = f"""Sos el asesor de ventas de **{store_name}**. Trabajás para {store_name}, no sos un bot genérico.
 {lessons_block}
+{customer_block}
 
 ## ══════════════════════════════════════
 ## 🎯 QUÉ HACER EN ESTE MENSAJE
@@ -200,7 +275,7 @@ def build_sales_prompt(
 
 {next_action}
 
-{"⚠️ YA HAY " + str(message_count) + " MENSAJES PREVIOS — NO SALUDÉS DE NUEVO. Continuá la conversación." if message_count > 0 else ""}
+{"⚠️ YA HAY " + str(message_count) + " MENSAJES PREVIOS — NO SALUDÉS DE NUEVO. Continuá la conversación natural sin '¡Hola!' ni presentaciones." if message_count > 0 else ""}
 
 ## ══════════════════════════════════════
 ## ⚡ REGLAS DE COMPORTAMIENTO

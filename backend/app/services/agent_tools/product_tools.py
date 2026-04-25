@@ -29,6 +29,33 @@ _STOPWORDS = {
     "tu", "tus", "su", "sus", "lo", "le", "les", "ver", "quiero",
     "necesito", "busco", "busca", "ropa", "producto", "productos",
     "articulo", "articulos", "artículo", "artículos",
+    "tenes", "tenés", "tendrian", "tendrías", "podes", "podés",
+    "comprar", "venden", "vende", "tienen", "queria", "quería",
+}
+
+# Sinónimos: cuando el cliente menciona X, buscamos también Y, Z.
+# Pensado para LATAM + España + inglés. Lista mínima — extensible desde DB futuro.
+_SYNONYMS: dict[str, list[str]] = {
+    "remera": ["playera", "camiseta", "tee", "tshirt", "polera"],
+    "remeras": ["playeras", "camisetas", "tees", "tshirts", "poleras"],
+    "campera": ["chaqueta", "jacket", "abrigo"],
+    "camperas": ["chaquetas", "jackets", "abrigos"],
+    "buzo": ["sudadera", "hoodie", "sweater", "sueter", "canguro"],
+    "buzos": ["sudaderas", "hoodies", "sweaters", "canguros"],
+    "zapatilla": ["zapatillas", "tenis", "sneaker", "sneakers", "championes"],
+    "zapatillas": ["tenis", "sneakers", "championes"],
+    "pantalon": ["pantalón", "pant", "pants", "jean", "jeans"],
+    "pantalones": ["jeans", "pants"],
+    "talle": ["talla", "size", "medida"],
+    "talles": ["tallas", "sizes", "medidas"],
+    "color": ["colour", "tono"],
+    "negro": ["negra", "black", "negros", "negras"],
+    "blanco": ["blanca", "white", "blancos", "blancas"],
+    "rojo": ["roja", "red", "rojos", "rojas"],
+    "azul": ["blue", "azules"],
+    "verde": ["green", "verdes"],
+    "gorra": ["gorras", "cap", "caps", "visera"],
+    "mochila": ["mochilas", "backpack", "bolso"],
 }
 
 
@@ -50,17 +77,27 @@ def _tokenize(text: str) -> list[str]:
 def _search_patterns(tokens: list[str]) -> list[str]:
     """
     Genera patrones de búsqueda para cada token.
-    Incluye el token completo + un prefijo de 6 chars para cross-language matching.
-    Ejemplo: "compresion" → ["compresion", "compres"]
-             "compres" hace ILIKE '%compres%' que matchea "compression" en inglés.
+    Para cada token incluye:
+      - El token completo (matching exacto y como substring)
+      - Un prefijo de 6 chars para cross-language matching
+        (ej. "compresion" → "compres" matchea "compression" en inglés)
+      - Sinónimos del diccionario _SYNONYMS (ej. "remera" → "playera", "camiseta")
     """
     seen: set[str] = set()
     patterns: list[str] = []
+
+    def _add(p: str | None):
+        if p and len(p) >= 3 and p not in seen:
+            seen.add(p)
+            patterns.append(p)
+
     for token in tokens:
-        for p in [token, token[:6] if len(token) > 7 else None]:
-            if p and p not in seen and len(p) >= 3:
-                seen.add(p)
-                patterns.append(p)
+        _add(token)
+        if len(token) > 7:
+            _add(token[:6])
+        for syn in _SYNONYMS.get(token, []):
+            _add(_normalize(syn))
+
     return patterns
 
 
@@ -118,6 +155,10 @@ def tool_product_search(db: Session, session: SalesSession, **params) -> str:
         return sum(1 for pat in patterns if pat in combined)
 
     ranked = sorted(products, key=score, reverse=True)[:limit]
+    logger.info(
+        f"[search] query={query!r} tokens={tokens} patterns={patterns} "
+        f"raw_hits={len(products)} returned={len(ranked)}"
+    )
 
     results = []
     for p in ranked:
@@ -283,8 +324,14 @@ def tool_check_availability(db: Session, session: SalesSession, **params) -> str
             ProductVariant.product_id == product_id,
         ).first()
         if not variant:
+            logger.warning(f"[stock] variant_not_found product_id={product_id} variant_id={variant_id}")
             return json.dumps({"available": False, "reason": "Variante no encontrada"})
         available = variant.stock_quantity >= quantity or not variant.track_inventory
+        logger.info(
+            f"[stock] variant product_id={product_id} variant={variant.name!r} "
+            f"stock={variant.stock_quantity} requested={quantity} "
+            f"track_inventory={variant.track_inventory} available={available}"
+        )
         result = {
             "available": available,
             "product_id": product_id,
@@ -292,6 +339,7 @@ def tool_check_availability(db: Session, session: SalesSession, **params) -> str
             "variant_name": variant.name,
             "stock": variant.stock_quantity,
             "requested": quantity,
+            "track_inventory": variant.track_inventory,
         }
     else:
         product = db.query(Product).filter(
@@ -299,8 +347,15 @@ def tool_check_availability(db: Session, session: SalesSession, **params) -> str
             Product.store_id == session.store_id,
         ).first()
         if not product:
+            logger.warning(f"[stock] product_not_found product_id={product_id} store_id={session.store_id}")
             return json.dumps({"available": False, "reason": "Producto no encontrado"})
         available = product.stock_quantity >= quantity or product.allow_backorder or not product.track_inventory
+        logger.info(
+            f"[stock] product id={product_id} name={product.name!r} "
+            f"stock={product.stock_quantity} requested={quantity} "
+            f"track_inventory={product.track_inventory} backorder={product.allow_backorder} "
+            f"available={available}"
+        )
         result = {
             "available": available,
             "product_id": product_id,
@@ -308,6 +363,7 @@ def tool_check_availability(db: Session, session: SalesSession, **params) -> str
             "stock": product.stock_quantity,
             "requested": quantity,
             "allow_backorder": product.allow_backorder,
+            "track_inventory": product.track_inventory,
         }
 
     nb = session.get_notebook()

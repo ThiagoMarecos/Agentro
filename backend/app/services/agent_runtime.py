@@ -10,14 +10,17 @@ AgentRuntime: orquesta el flujo completo de un mensaje de chat.
 
 import json
 import logging
+import time
 from datetime import datetime, timezone
 
 from openai import OpenAI
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.config import get_settings, get_dynamic_setting
 from app.models.ai import Conversation, Message, AIAgent, AgentLesson
 from app.models.customer import Customer
+from app.models.order import Order
 from app.models.store import Store
 from app.models.sales_session import SalesSession, EMPTY_NOTEBOOK
 from app.services.agent_tools import get_tools_for_agent, TOOL_EXECUTORS
@@ -26,10 +29,16 @@ from app.services.platform_settings_service import get_setting_value
 
 logger = logging.getLogger(__name__)
 
-# SECURITY: limitado a 8 para balancear funcionalidad vs costo.
-# El agente de ventas necesita más iteraciones que antes (buscar, verificar stock,
-# actualizar notebook, mover stage, etc.) en un solo turno.
-MAX_TOOL_ITERATIONS = 8
+# Un turno de venta completo puede usar muchas tools encadenadas:
+# list_categories → product_search → product_detail → check_availability →
+# send_product_image → update_notebook → move_stage → estimate_shipping →
+# create_payment_link → create_order. 16 deja margen para reintentos y búsquedas
+# alternativas sin cortar el flujo a la mitad.
+MAX_TOOL_ITERATIONS = 16
+
+# Si el historial supera este umbral, se compacta usando notebook + últimos N msgs
+HISTORY_COMPACTION_THRESHOLD = 24
+HISTORY_TAIL_KEEP = 10
 
 
 def _get_openai_client() -> OpenAI:
@@ -41,8 +50,8 @@ def _get_openai_client() -> OpenAI:
 
 def _find_or_create_customer(
     db: Session, store_id: str, identifier: str
-) -> Customer:
-    """Busca o crea un customer por email o teléfono."""
+) -> tuple[Customer, bool]:
+    """Busca o crea un customer por email o teléfono. Retorna (customer, is_new)."""
     is_email = "@" in identifier
 
     if is_email:
@@ -56,18 +65,64 @@ def _find_or_create_customer(
             Customer.phone == identifier,
         ).first()
 
-    if not customer:
-        customer = Customer(
-            store_id=store_id,
-            email=identifier if is_email else f"{identifier}@chat.agentro.app",
-            phone=identifier if not is_email else None,
-            first_name="",
-        )
-        db.add(customer)
-        db.commit()
-        db.refresh(customer)
+    if customer:
+        return customer, False
 
-    return customer
+    customer = Customer(
+        store_id=store_id,
+        email=identifier if is_email else f"{identifier}@chat.agentro.app",
+        phone=identifier if not is_email else None,
+        first_name="",
+    )
+    db.add(customer)
+    db.commit()
+    db.refresh(customer)
+    return customer, True
+
+
+def _build_customer_context(db: Session, customer: Customer, is_new_customer: bool) -> dict:
+    """
+    Información de contexto del cliente para personalizar el saludo y la conversación.
+    - is_new: nunca antes vio la tienda (acabamos de crearlo en esta llamada)
+    - has_prior_orders: ya compró antes
+    - prior_orders_count: cantidad
+    - last_order_at: timestamp de la última orden (puede usarse para "¡cuánto tiempo!")
+    """
+    if is_new_customer:
+        return {
+            "is_new": True,
+            "has_prior_orders": False,
+            "prior_orders_count": 0,
+            "last_order_at": None,
+            "display_name": "",
+        }
+
+    orders_count = db.query(func.count(Order.id)).filter(
+        Order.customer_id == customer.id,
+        Order.status.in_(["confirmed", "processing", "shipped", "delivered"]),
+    ).scalar() or 0
+
+    last_order = db.query(Order.created_at).filter(
+        Order.customer_id == customer.id,
+    ).order_by(Order.created_at.desc()).first()
+
+    return {
+        "is_new": False,
+        "has_prior_orders": orders_count > 0,
+        "prior_orders_count": orders_count,
+        "last_order_at": last_order[0].isoformat() if last_order and last_order[0] else None,
+        "display_name": (customer.first_name or "").strip(),
+    }
+
+
+def _greeting_time_window(language: str = "es") -> str:
+    """Devuelve 'mañana' / 'tarde' / 'noche' según hora local del servidor."""
+    hour = datetime.now().hour
+    if 5 <= hour < 12:
+        return "mañana"
+    if 12 <= hour < 19:
+        return "tarde"
+    return "noche"
 
 
 def _find_or_create_conversation(
@@ -211,13 +266,53 @@ def _get_active_lessons(db: Session, agent: AIAgent | None) -> list[AgentLesson]
     ).all()
 
 
-def _get_message_history(db: Session, conversation_id: str, limit: int = 30) -> list[dict]:
-    """Carga los últimos mensajes de la conversación."""
+def _get_message_history(db: Session, conversation_id: str, limit: int = 60) -> list[dict]:
+    """
+    Carga los últimos mensajes de la conversación, ordenados cronológicamente.
+    Subimos el límite a 60 — la compactación más abajo se encarga de mantener
+    el prompt manejable cuando hay muchos turnos.
+    """
     messages = db.query(Message).filter(
         Message.conversation_id == conversation_id,
-    ).order_by(Message.created_at.asc()).limit(limit).all()
+    ).order_by(Message.created_at.desc()).limit(limit).all()
+    messages.reverse()  # cronológico
 
     return [{"role": m.role, "content": m.content} for m in messages]
+
+
+def _compact_history_if_needed(
+    history: list[dict],
+    notebook: dict,
+) -> list[dict]:
+    """
+    Si el historial supera HISTORY_COMPACTION_THRESHOLD, comprime los mensajes
+    antiguos en un único system "resumen" y deja los últimos HISTORY_TAIL_KEEP
+    intactos. El notebook ya cubre la mayoría del contexto factual, así que
+    el resumen es solo una guía narrativa muy corta.
+    """
+    if len(history) <= HISTORY_COMPACTION_THRESHOLD:
+        return history
+
+    head = history[:-HISTORY_TAIL_KEEP]
+    tail = history[-HISTORY_TAIL_KEEP:]
+
+    # Resumen narrativo MUY corto basado en cuenta y rol
+    user_count = sum(1 for m in head if m["role"] == "user")
+    assistant_count = sum(1 for m in head if m["role"] == "assistant")
+
+    # Tomamos los primeros 2 mensajes del cliente como pista del tema
+    first_user_msgs = [m["content"] for m in head if m["role"] == "user"][:2]
+    intent_hint = " | ".join(s[:80] for s in first_user_msgs) or "—"
+
+    summary = (
+        f"[RESUMEN DE CONVERSACIÓN PREVIA — {len(head)} mensajes comprimidos]\n"
+        f"- Hubo {user_count} mensajes del cliente y {assistant_count} respuestas tuyas.\n"
+        f"- Temas iniciales del cliente: {intent_hint}\n"
+        f"- Toda la información factual relevante ya está en el NOTEBOOK al final del prompt.\n"
+        "- Continuá la conversación normalmente, sin re-preguntar lo que ya está en el notebook."
+    )
+
+    return [{"role": "system", "content": summary}, *tail]
 
 
 def process_message(
@@ -237,9 +332,11 @@ def process_message(
     5. Return response
     """
     # ── 1. Entidades base ──
-    customer = _find_or_create_customer(db, store_id, customer_identifier)
+    customer, is_new_customer = _find_or_create_customer(db, store_id, customer_identifier)
     conversation = _find_or_create_conversation(db, store_id, customer.id, channel)
     session = _find_or_create_session(db, store_id, conversation.id, customer.id)
+    customer_context = _build_customer_context(db, customer, is_new_customer)
+    customer_context["time_of_day"] = _greeting_time_window()
 
     # Sincronizar datos del customer al notebook
     nb = session.get_notebook()
@@ -292,7 +389,7 @@ def process_message(
     # Cargar lecciones del modo aprendizaje (si está activo)
     active_lessons = _get_active_lessons(db, agent)
 
-    # Reconstruir prompt con la etapa actualizada + lecciones
+    # Reconstruir prompt con la etapa actualizada + lecciones + contexto del cliente
     system_prompt = build_sales_prompt(
         store_name=store_name,
         store_config=store_config,
@@ -300,10 +397,17 @@ def process_message(
         custom_instructions=custom_instructions,
         message_count=message_count,
         lessons=active_lessons,
+        customer_context=customer_context,
     )
 
     openai_messages = [{"role": "system", "content": system_prompt}]
-    openai_messages.extend(history)
+    compacted_history = _compact_history_if_needed(history, session.get_notebook())
+    if len(compacted_history) != len(history):
+        logger.info(
+            f"[agent] history compacted: {len(history)} → {len(compacted_history)} messages "
+            f"for conversation {conversation.id[:8]}"
+        )
+    openai_messages.extend(compacted_history)
 
     # Soporte de visión: si se recibió una imagen del cliente, armar mensaje multimodal
     if image_b64:
@@ -341,6 +445,9 @@ def process_message(
     turn_tool_calls = 0
     turn_total_tokens = 0
     escalated_in_turn = False
+    tools_called_in_turn: list[str] = []
+    iterations = 0
+    turn_start_ms = time.perf_counter()
 
     call_params = {
         "model": agent_config.get("model", "gpt-4o"),
@@ -371,20 +478,30 @@ def process_message(
                 except json.JSONDecodeError:
                     fn_args = {}
 
-                logger.info(f"Tool call: {fn_name}({json.dumps(fn_args, ensure_ascii=False)[:200]})")
-
                 turn_tool_calls += 1
                 if fn_name == "escalate_to_human":
                     escalated_in_turn = True
+                tools_called_in_turn.append(fn_name)
 
                 executor = TOOL_EXECUTORS.get(fn_name)
+                t0 = time.perf_counter()
                 if executor:
                     db.refresh(session)
-                    # Inyectamos _pending_media para que tools como send_product_image
-                    # puedan añadir imágenes a la cola de envío
-                    tool_result = executor(db, session, _pending_media=pending_media, **fn_args)
+                    try:
+                        tool_result = executor(db, session, _pending_media=pending_media, **fn_args)
+                    except Exception as exc:
+                        logger.exception(f"[agent] tool {fn_name} crashed: {exc}")
+                        tool_result = json.dumps({"error": f"tool {fn_name} crashed: {exc!s}"})
                 else:
                     tool_result = json.dumps({"error": f"Tool no encontrada: {fn_name}"})
+                dt_ms = int((time.perf_counter() - t0) * 1000)
+
+                # Log estructurado: nombre, args truncados, primer chunk del resultado, timing
+                logger.info(
+                    f"[agent] iter={iterations} tool={fn_name} {dt_ms}ms "
+                    f"args={json.dumps(fn_args, ensure_ascii=False)[:160]} "
+                    f"result={tool_result[:200]}"
+                )
 
                 openai_messages.append({
                     "role": "tool",
@@ -402,6 +519,30 @@ def process_message(
     except Exception as e:
         logger.error(f"Error calling OpenAI: {e}", exc_info=True)
         assistant_content = "Disculpa, tuve un problema procesando tu mensaje. ¿Podrías intentarlo de nuevo?"
+
+    # ── 6.5. Validador anti-alucinación de stock ──
+    # Si el agente afirmó "no hay stock"/"agotado"/"sin stock" sin haber
+    # llamado check_availability en este turno, lo flagueamos y reescribimos
+    # para evitar matar la venta con info inventada.
+    NO_STOCK_PHRASES = (
+        "no hay stock", "no tenemos stock", "sin stock",
+        "está agotado", "esta agotado", "agotado",
+        "no contamos con stock", "no disponemos de stock",
+        "fuera de stock",
+    )
+    lc = (assistant_content or "").lower()
+    mentions_no_stock = any(p in lc for p in NO_STOCK_PHRASES)
+    checked_stock = "check_availability" in tools_called_in_turn
+    if mentions_no_stock and not checked_stock:
+        logger.warning(
+            f"[stock-guard] agent claimed 'no stock' WITHOUT calling check_availability. "
+            f"tools_in_turn={tools_called_in_turn} response_preview={assistant_content[:200]!r}"
+        )
+        # Reemplazo defensivo: pedimos al agente que verifique en su próxima respuesta.
+        # No mostramos al cliente la afirmación de "no stock" no verificada.
+        assistant_content = (
+            "Dejame chequear stock un momento y te confirmo enseguida 🙌"
+        )
 
     # ── 7. Persistir respuesta ──
     assistant_msg = Message(
@@ -449,6 +590,29 @@ def process_message(
 
     db.add(conversation)
     db.commit()
+
+    # ── 9. Auto-actualización del notebook (post-turno) ──
+    # Llamada barata a gpt-4o-mini que extrae info nueva del último intercambio
+    # y la mergea al notebook. Garantiza que el notebook se mantenga al día
+    # incluso si el agente principal no llamó update_notebook explícitamente.
+    try:
+        from app.services.notebook_extractor import extract_and_apply
+        extract_and_apply(
+            db=db,
+            session=session,
+            user_message=message,
+            assistant_message=assistant_content,
+            openai_client=client,
+        )
+    except Exception as exc:
+        logger.warning(f"[agent] notebook auto-extract skipped: {exc}")
+
+    turn_total_ms = int((time.perf_counter() - turn_start_ms) * 1000)
+    logger.info(
+        f"[agent] turn done conv={conversation.id[:8]} stage={session.current_stage} "
+        f"tools={turn_tool_calls} iters={iterations} "
+        f"tokens={turn_total_tokens} {turn_total_ms}ms"
+    )
 
     return {
         "response": assistant_content,
