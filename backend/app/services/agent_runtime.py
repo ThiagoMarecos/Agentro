@@ -25,6 +25,8 @@ from app.models.store import Store
 from app.models.sales_session import SalesSession, EMPTY_NOTEBOOK
 from app.services.agent_tools import get_tools_for_agent, TOOL_EXECUTORS
 from app.services.agent_prompts import build_sales_prompt
+from app.services.context_prefetcher import prefetch as prefetch_context, render_for_prompt
+from app.services.intent_extractor import extract as extract_intent
 from app.services.platform_settings_service import get_setting_value
 
 logger = logging.getLogger(__name__)
@@ -392,7 +394,28 @@ def process_message(
     # Cargar lecciones del modo aprendizaje (si está activo)
     active_lessons = _get_active_lessons(db, agent)
 
-    # Reconstruir prompt con la etapa actualizada + lecciones + contexto del cliente
+    # ── 5.1. CONTEXT-FIRST: extraer intent + pre-fetch de DB ──
+    # En vez de dejar que el LLM decida cuándo llamar tools (probabilístico),
+    # escaneamos el mensaje del cliente DETERMINÍSTICAMENTE y pre-cargamos
+    # todos los datos relevantes (productos, stock, descuentos, datos personales).
+    # El LLM ve esos datos en el system prompt — no tiene cómo inventar.
+    prefetched_block = ""
+    try:
+        intent = extract_intent(
+            user_message=message,
+            conversation_history=history,
+            notebook=session.get_notebook(),
+        )
+        if not intent.is_empty():
+            prefetched_ctx = prefetch_context(db, session, intent)
+            currency = store_config.get("currency", "USD")
+            prefetched_block = render_for_prompt(prefetched_ctx, currency=currency)
+    except Exception as exc:
+        # Si el prefetch falla, seguimos con tools como fallback (no rompemos el turno)
+        logger.warning(f"[agent] context-first prefetch skipped: {exc}", exc_info=True)
+        prefetched_block = ""
+
+    # Reconstruir prompt con la etapa actualizada + lecciones + contexto del cliente + pre-fetch
     system_prompt = build_sales_prompt(
         store_name=store_name,
         store_config=store_config,
@@ -401,6 +424,7 @@ def process_message(
         message_count=message_count,
         lessons=active_lessons,
         customer_context=customer_context,
+        prefetched_block=prefetched_block,
     )
 
     openai_messages = [{"role": "system", "content": system_prompt}]
@@ -523,10 +547,13 @@ def process_message(
         logger.error(f"Error calling OpenAI: {e}", exc_info=True)
         assistant_content = "Disculpa, tuve un problema procesando tu mensaje. ¿Podrías intentarlo de nuevo?"
 
-    # ── 6.5. Validador anti-alucinación de stock ──
-    # Si el agente afirmó "no hay stock"/"agotado"/"sin stock" sin haber
-    # llamado check_availability en este turno, lo flagueamos y reescribimos
-    # para evitar matar la venta con info inventada.
+    # ── 6.5. Stock-guard (red de seguridad — modo solo-log) ──
+    # En la arquitectura Context-First, los datos de stock ya vienen en el
+    # system prompt (bloque DATOS DISPONIBLES), así que el LLM debería
+    # responder con la verdad. Si igual menciona "no hay stock" cuando el
+    # prefetch decía que sí había, queremos detectarlo como bug a investigar.
+    # Solo loggea — ya no reescribe la respuesta porque el prefetch es la
+    # fuente de verdad y el guard ad-hoc agregaba falsos positivos.
     NO_STOCK_PHRASES = (
         "no hay stock", "no tenemos stock", "sin stock",
         "está agotado", "esta agotado", "agotado",
@@ -534,17 +561,13 @@ def process_message(
         "fuera de stock",
     )
     lc = (assistant_content or "").lower()
-    mentions_no_stock = any(p in lc for p in NO_STOCK_PHRASES)
-    checked_stock = "check_availability" in tools_called_in_turn
-    if mentions_no_stock and not checked_stock:
-        logger.warning(
-            f"[stock-guard] agent claimed 'no stock' WITHOUT calling check_availability. "
-            f"tools_in_turn={tools_called_in_turn} response_preview={assistant_content[:200]!r}"
-        )
-        # Reemplazo defensivo: pedimos al agente que verifique en su próxima respuesta.
-        # No mostramos al cliente la afirmación de "no stock" no verificada.
-        assistant_content = (
-            "Dejame chequear stock un momento y te confirmo enseguida 🙌"
+    if any(p in lc for p in NO_STOCK_PHRASES):
+        had_prefetch = bool(prefetched_block)
+        logger.info(
+            f"[stock-guard] agent mentioned 'no stock' "
+            f"prefetch_was_present={had_prefetch} "
+            f"tools_in_turn={tools_called_in_turn} "
+            f"response_preview={assistant_content[:160]!r}"
         )
 
     # ── 7. Persistir respuesta ──
