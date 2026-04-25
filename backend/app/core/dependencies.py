@@ -10,7 +10,15 @@ from app.models.store import Store, StoreMember
 from app.models.user import User, RoleEnum
 from app.api.v1.auth import get_current_user
 
-ROLE_ORDER = {RoleEnum.OWNER: 4, RoleEnum.ADMIN: 3, RoleEnum.MANAGER: 2, RoleEnum.SUPPORT: 1}
+ROLE_ORDER = {
+    RoleEnum.OWNER: 4,
+    RoleEnum.ADMIN: 3,
+    RoleEnum.MANAGER: 2,
+    RoleEnum.SUPPORT: 1,
+    # SELLER comparte nivel jerárquico con SUPPORT (acceso paralelo, no superior).
+    # Endpoints específicos de "mis chats" filtran por user_id cuando role==SELLER.
+    RoleEnum.SELLER: 1,
+}
 
 
 def require_role(store: Store, user: User, min_role: RoleEnum) -> StoreMember:

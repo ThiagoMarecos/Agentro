@@ -85,17 +85,23 @@ NOTEBOOK_TOOL_DEFINITIONS = [
         "type": "function",
         "function": {
             "name": "move_stage",
-            "description": "Mover la sesión de venta a una nueva etapa del pipeline",
+            "description": (
+                "Mover la sesión a la siguiente fase del flujo Agentro v2. "
+                "Las únicas etapas que el agente IA puede setear son: "
+                "discovery (FASE 1), validation (FASE 2), negotiation (FASE 3), "
+                "data_collection (FASE 4), lost (cliente no avanza), abandoned "
+                "(no responde). Para llegar a escalated_to_seller usá "
+                "`handoff_to_seller` (no esta tool)."
+            ),
             "parameters": {
                 "type": "object",
                 "properties": {
                     "stage": {
                         "type": "string",
-                        "description": "Nueva etapa",
+                        "description": "Nueva etapa del flujo de pre-venta",
                         "enum": [
-                            "incoming", "discovery", "recommendation", "validation",
-                            "closing", "payment", "order_created", "shipping",
-                            "completed", "lost", "abandoned",
+                            "discovery", "validation", "negotiation",
+                            "data_collection", "lost", "abandoned",
                         ],
                     },
                     "reason": {"type": "string", "description": "Razón del cambio de etapa"},

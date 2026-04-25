@@ -11,12 +11,22 @@ from app.db.base import UUIDMixin, TimestampMixin
 
 
 class RoleEnum(str, enum.Enum):
-    """Roles del sistema."""
+    """Roles del sistema.
+
+    Jerarquía (de mayor a menor poder):
+      OWNER → ADMIN → MANAGER → SUPPORT / SELLER
+
+    SELLER tiene un acceso PARALELO al de SUPPORT: comparte nivel jerárquico
+    pero su jurisdicción es distinta — solo ve los chats que tiene asignados,
+    no toda la tienda. Los endpoints de chats filtran por seller_id cuando
+    el rol es SELLER.
+    """
 
     OWNER = "owner"
     ADMIN = "admin"
     MANAGER = "manager"
     SUPPORT = "support"
+    SELLER = "seller"
 
 
 class User(Base, UUIDMixin, TimestampMixin):

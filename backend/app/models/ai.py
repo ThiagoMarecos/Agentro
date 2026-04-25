@@ -3,7 +3,7 @@ Modelos de IA: conversaciones, canales, agentes.
 Estructura preparada para WhatsApp, chat web, Instagram (futuro).
 """
 
-from sqlalchemy import Column, String, ForeignKey, Text, Boolean, Enum, Integer, Numeric
+from sqlalchemy import Column, String, ForeignKey, Text, Boolean, Enum, Integer, Numeric, DateTime
 from sqlalchemy.orm import relationship
 import enum
 
@@ -42,6 +42,15 @@ class Conversation(Base, UUIDMixin, TimestampMixin):
     last_stage_reached = Column(String(50), nullable=True)
     # Valor monetario estimado de la oportunidad
     estimated_value = Column(Numeric(12, 2), nullable=True)
+
+    # ── Handoff a vendedor humano (FASE 5 del flujo) ──
+    # Cuando el agente termina su pre-venta y escala. La asignación se hace
+    # desde la UI de "bandeja sin asignar" o automáticamente en el futuro.
+    agent_paused = Column(Boolean, nullable=True, default=False)  # vendedor "tomó control"
+    needs_seller_assignment = Column(Boolean, nullable=True, default=False)  # esperando asignación
+    assigned_user_id = Column(String(36), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    assigned_at = Column(DateTime(timezone=True), nullable=True)
+    handoff_summary = Column(Text, nullable=True)  # JSON con el resumen estructurado del agente
 
     # Relaciones
     channel = relationship("AIChannel", back_populates="conversations")

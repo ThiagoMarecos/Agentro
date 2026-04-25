@@ -13,20 +13,36 @@ from app.models.sales_session import SalesSession
 from app.services.audit_service import log_action
 
 STAGES = [
+    # ── Flujo del agente IA (pre-venta) ──
+    # Sigue el diagrama: Inicio → Validación → Negociación → Recopilación → Escalamiento
     "incoming",
     "discovery",
-    "recommendation",
-    "validation",
-    "closing",
-    "payment",
-    "order_created",
-    "shipping",
-    "completed",
-    "lost",
-    "abandoned",
+    "validation",         # FASE 2: validar producto en DB + proveedor
+    "negotiation",        # FASE 3: presentar propuesta, descuentos, objeciones
+    "data_collection",    # FASE 4: recopilar datos del cliente para el handoff
+    "escalated_to_seller", # FASE 5: handoff completo, esperando que vendedor humano tome
+    # ── Estados terminales ──
+    "lost",       # Conversación finalizada sin escalamiento (cliente no avanza)
+    "abandoned",  # Cliente no respondió luego de N reintentos
+    # ── Stages legacy (manejados por vendedor humano post-handoff, no por agente) ──
+    # Quedan para compatibilidad con conversaciones viejas y para que el vendedor
+    # pueda seguir moviéndolas manualmente si quiere trackear post-venta.
+    "recommendation",   # legacy: ahora cubierto por validation/negotiation
+    "closing",          # legacy: ahora cubierto por data_collection
+    "payment",          # legacy: el agente NO maneja pago — vendedor humano cierra
+    "order_created",    # legacy: idem
+    "shipping",         # legacy: idem
+    "completed",        # legacy: cuando vendedor cerró exitosamente
 ]
 
 TERMINAL_STAGES = {"completed", "lost", "abandoned"}
+
+# Stages que el agente IA puede SETEAR via tool move_stage
+# (los demás solo los puede cambiar el vendedor humano via UI)
+AGENT_REACHABLE_STAGES = {
+    "incoming", "discovery", "validation", "negotiation",
+    "data_collection", "escalated_to_seller", "lost", "abandoned",
+}
 
 
 def _now():

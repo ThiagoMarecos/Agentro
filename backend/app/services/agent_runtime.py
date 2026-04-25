@@ -363,10 +363,13 @@ def process_message(
         agent_config["model"] = model_override
 
     # ── 4. Tools ──
+    # El agente Agentro v2 es de PRE-VENTA: nunca cierra la venta ni cobra.
+    # Las tools de cierre (create_order, create_payment_link) solo están
+    # disponibles si el dueño explícitamente las habilita en la config del agente.
+    # Por defecto: solo tools de descubrimiento, validación, recopilación y escalamiento.
     enabled_tools = _get_enabled_tools(agent)
-    # Si no hay configuración explícita, habilitar TODAS las tools para ventas
     if not enabled_tools:
-        enabled_tools = ["all"]
+        enabled_tools = None  # → get_tools_for_agent retorna _DEFAULT_SAFE_TOOLS
     tool_definitions = get_tools_for_agent(enabled_tools)
 
     # ── 5. Historial + mensaje actual ──
