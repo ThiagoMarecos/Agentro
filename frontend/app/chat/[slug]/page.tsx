@@ -205,6 +205,16 @@ function ChatPageInner() {
         userMessage
       );
       setConversationId(res.conversation_id);
+      // Convertir pending_media (b64 a data URL si vienen, sino URL pública)
+      const media = (res.pending_media || []).map((m) => ({
+        type: m.type,
+        url: m.b64
+          ? `data:image/jpeg;base64,${m.b64}`
+          : m.url.startsWith("/")
+          ? `${m.url}`  // path relativo se sirve desde el mismo origen via proxy
+          : m.url,
+        caption: m.caption,
+      }));
       setMessages((prev) => [
         ...prev,
         {
@@ -212,6 +222,7 @@ function ChatPageInner() {
           role: "assistant",
           content: res.response,
           timestamp: new Date(),
+          media: media.length > 0 ? media : undefined,
         },
       ]);
     } catch {

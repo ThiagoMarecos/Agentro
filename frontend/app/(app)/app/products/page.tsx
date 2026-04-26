@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useStore } from "@/lib/context/StoreContext";
 import { ProductStatusBadge } from "@/components/products/ProductStatusBadge";
 import {
@@ -134,6 +134,7 @@ function ConfirmModal({
 export default function ProductsPage() {
   const { currentStore } = useStore();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [products, setProducts] = useState<ProductListItem[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [total, setTotal] = useState(0);
@@ -142,7 +143,20 @@ export default function ProductsPage() {
   const [search, setSearch] = useState("");
   const [searchDebounced, setSearchDebounced] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("");
-  const [categoryFilter, setCategoryFilter] = useState<string>("");
+  // Acepta ?category=<id> en la URL (ej: viniendo desde /app/categories)
+  const [categoryFilter, setCategoryFilter] = useState<string>(
+    () => searchParams.get("category") || ""
+  );
+
+  // Si cambia el query param (navegación entre links), actualizar el filtro
+  useEffect(() => {
+    const fromUrl = searchParams.get("category") || "";
+    if (fromUrl !== categoryFilter) {
+      setCategoryFilter(fromUrl);
+      setSkip(0);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
   const [skip, setSkip] = useState(0);
   const limit = 20;
 

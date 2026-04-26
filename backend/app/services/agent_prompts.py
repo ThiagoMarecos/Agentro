@@ -265,15 +265,21 @@ def _build_next_action(
     # ── FASE 3: PROPUESTA Y NEGOCIACIÓN ──
     if stage == "negotiation":
         return (
-            "▶ ACCIÓN — FASE 3 (Propuesta y Negociación): Presentá propuesta + manejá descuentos/objeciones.\n\n"
+            "▶ ACCIÓN — FASE 3 (Propuesta y Negociación): Presentá propuesta + variantes + descuentos/objeciones.\n\n"
             "Diagrama: Presentar info (producto, precio, envío, tiempo) → responder dudas → ¿descuento? → propuesta final.\n\n"
             f"  1. Mostrá: nombre del producto, precio en {currency}, tiempo estimado, envío (si tenés ciudad).\n"
-            "  2. Respondé dudas con info real de la DB (no inventes).\n"
-            "  3. Si pide descuento → `get_store_discounts` → si hay, aplicalo; si no, decílo honestamente.\n"
-            "  4. Si cambia de producto/cantidad → `update_notebook` section='interest' y volvé a FASE 2.\n"
-            "  5. Pedí confirmación explícita: '¿Querés que te lo prepare?', '¿Avanzamos con esto?'\n"
-            "  6. Si dice SÍ → `move_stage` a 'data_collection' (FASE 4).\n"
-            "  7. Si dice NO definitivo → `move_stage` a 'lost' con razón."
+            "  2. **PEDIR VARIANTE — OBLIGATORIO si el producto tiene variantes** (mirá DATOS DISPONIBLES):\n"
+            "     • Si dice 'variantes con stock: M, L, XL' → preguntá '¿qué talle querés?'\n"
+            "     • Si dice 'variantes con stock: rojo, azul' → preguntá '¿qué color querés?'\n"
+            "     • Si tiene combinación (ej. 'M-rojo, L-azul') → preguntá ambas cosas.\n"
+            "     • NO pasés a FASE 4 sin variante elegida si el producto la tiene.\n"
+            "  3. Cuando elija → `update_notebook` section='interest' data={variant_name: 'M', variant_id: '...'}\n"
+            "  4. Respondé dudas con info real de la DB (no inventes).\n"
+            "  5. Si pide descuento → `get_store_discounts` → si hay, aplicalo; si no, decílo honestamente.\n"
+            "  6. Si cambia de producto/cantidad → `update_notebook` y volvé a FASE 2.\n"
+            "  7. Pedí confirmación explícita: '¿Querés que te lo prepare?', '¿Avanzamos con esto?'\n"
+            "  8. Si dice SÍ → `move_stage` a 'data_collection' (FASE 4).\n"
+            "  9. Si dice NO definitivo → `move_stage` a 'lost' con razón."
         )
 
     # ── FASE 4: RECOPILACIÓN DE DATOS ──

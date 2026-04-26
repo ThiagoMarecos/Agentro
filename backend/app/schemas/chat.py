@@ -11,8 +11,16 @@ class ChatMessageRequest(BaseModel):
     message: str = Field(..., min_length=1, max_length=4096)
 
 
+class PendingMediaItem(BaseModel):
+    type: str
+    url: str
+    b64: str | None = None
+    caption: str = ""
+
+
 class ChatMessageResponse(BaseModel):
     response: str
     conversation_id: str
     session_id: str
     stage: str
+    pending_media: list[PendingMediaItem] = []

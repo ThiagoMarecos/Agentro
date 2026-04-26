@@ -1,10 +1,18 @@
 const API_URL = "/api/v1";
 
+export interface PendingMediaItem {
+  type: string;
+  url: string;
+  b64: string | null;
+  caption: string;
+}
+
 export interface ChatMessageResponse {
   response: string;
   conversation_id: string;
   session_id: string;
   stage: string;
+  pending_media: PendingMediaItem[];
 }
 
 export async function sendChatMessage(
