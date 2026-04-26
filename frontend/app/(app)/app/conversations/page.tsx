@@ -424,6 +424,30 @@ export default function ConversationsPage() {
     }
   }, [convIdFromUrl, conversations]);
 
+  // Polling: si el agente está pausado (modo manual), refrescar mensajes
+  // cada 5s para ver lo que escribe el cliente en tiempo casi real.
+  useEffect(() => {
+    if (!currentStore || !selected || !selected.agent_paused) return;
+    const interval = setInterval(async () => {
+      try {
+        const fresh = await getConversation(currentStore.id, selected.id);
+        // Solo actualizamos si hay cambios reales (más mensajes o pause flip)
+        setSelected((prev) => {
+          if (!prev) return prev;
+          const prevCount = prev.messages?.length || 0;
+          const newCount = fresh.messages?.length || 0;
+          const pauseChanged = prev.agent_paused !== fresh.agent_paused;
+          if (newCount === prevCount && !pauseChanged) return prev;
+          return { ...prev, messages: fresh.messages, agent_paused: fresh.agent_paused };
+        });
+      } catch {
+        // Silencioso — no spammear errores en polling
+      }
+    }, 5000);
+    return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentStore?.id, selected?.id, selected?.agent_paused]);
+
   const selectConversation = async (conv: ConversationDetail) => {
     if (!currentStore) return;
     setLoadingDetail(true);
@@ -825,22 +849,22 @@ export default function ConversationsPage() {
 
               {/* Composer manual + copiloto (solo cuando agent_paused) */}
               {selected.agent_paused && (
-                <div className="border-t border-gray-100 px-4 py-3 bg-gray-50/50">
-                  <div className="flex items-center gap-2 mb-2">
+                <div className="border-t border-gray-200 px-4 py-3 bg-white">
+                  <div className="flex items-center gap-2 mb-2 flex-wrap">
                     <Sparkles className="w-3.5 h-3.5 text-indigo-500" />
-                    <span className="text-xs font-medium text-gray-600">Modo manual</span>
+                    <span className="text-xs font-semibold text-gray-700">Modo manual</span>
                     <div className="flex-1" />
                     <input
                       type="text"
                       value={copilotHint}
                       onChange={(e) => setCopilotHint(e.target.value)}
                       placeholder="Hint opcional al copiloto…"
-                      className="flex-1 max-w-xs text-xs px-2.5 py-1 bg-white border border-gray-200 rounded"
+                      className="flex-1 min-w-[180px] max-w-xs text-xs px-2.5 py-1.5 bg-white text-gray-900 placeholder:text-gray-400 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                     />
                     <button
                       onClick={onAskCopilot}
                       disabled={copilotBusy}
-                      className="inline-flex items-center gap-1.5 px-3 py-1 bg-indigo-50 border border-indigo-200 text-indigo-700 hover:bg-indigo-100 rounded text-xs font-medium disabled:opacity-50"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-xs font-semibold disabled:opacity-50 transition"
                       title="Pedir sugerencia al agente IA"
                     >
                       {copilotBusy ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
@@ -851,14 +875,20 @@ export default function ConversationsPage() {
                     <textarea
                       value={composerText}
                       onChange={(e) => setComposerText(e.target.value)}
-                      placeholder="Escribí tu respuesta o pedile una sugerencia al agente…"
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+                          e.preventDefault();
+                          if (!composerBusy && composerText.trim()) onSendManual();
+                        }
+                      }}
+                      placeholder="Escribí tu respuesta al cliente…   (Ctrl/⌘ + Enter para enviar)"
                       rows={3}
-                      className="flex-1 px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm resize-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                      className="flex-1 px-3 py-2 bg-white text-gray-900 placeholder:text-gray-400 border border-gray-300 rounded-lg text-sm resize-y min-h-[72px] focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                     />
                     <button
                       onClick={onSendManual}
                       disabled={composerBusy || !composerText.trim()}
-                      className="inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-lg text-sm font-medium"
+                      className="inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-lg text-sm font-semibold transition shrink-0"
                     >
                       {composerBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                       Enviar
