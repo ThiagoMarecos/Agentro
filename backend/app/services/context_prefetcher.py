@@ -365,6 +365,18 @@ def render_for_prompt(ctx: PrefetchedContext, currency: str = "USD") -> str:
         "USALOS LITERALMENTE. No los modifiques. No inventes alternativas.",
         "Si un dato no aparece acá, NO lo afirmes — decí que tenés que chequear.",
         "",
+        "⚠️ **IDs DE PRODUCTO — REGLA CRÍTICA**:",
+        "  Los IDs son UUIDs largos (formato: '8b78bd11-2d8b-4e8e-ad52-aae00f454087').",
+        "  Si vas a llamar tools (`product_detail`, `check_availability`, etc), copiá",
+        "  el UUID EXACTO del campo [id=...] de abajo. NUNCA uses el slug, el SKU o",
+        "  el nombre del producto como id — esos no son IDs válidos y la tool falla.",
+        "",
+        "⚠️ **NO RE-VALIDES lo que ya está acá**:",
+        "  El stock, precio, variantes y disponibilidad de los productos listados",
+        "  ABAJO ya están consultados. NO llames `check_availability` ni `product_detail`",
+        "  sobre estos productos — son redundantes y pueden fallar si copiás mal el ID.",
+        "  Solo usá esas tools si el cliente menciona un producto que NO aparece acá.",
+        "",
     ]
 
     # ── Productos ──
@@ -393,7 +405,8 @@ def render_for_prompt(ctx: PrefetchedContext, currency: str = "USD") -> str:
                 price_line = f"${p.price} (antes ${p.compare_at_price}, -{pct}%)"
 
             cat = f" · {p.category_name}" if p.category_name else ""
-            parts.append(f"  • **{p.name}** [id={p.id}]{cat}")
+            parts.append(f"  • **{p.name}**{cat}")
+            parts.append(f"    — UUID (copiar literal si llamás tools): `{p.id}`")
             parts.append(f"    — precio: {price_line} {currency}")
             parts.append(f"    — {stock_line}")
 

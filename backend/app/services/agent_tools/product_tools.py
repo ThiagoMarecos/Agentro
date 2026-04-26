@@ -325,7 +325,12 @@ def tool_check_availability(db: Session, session: SalesSession, **params) -> str
         ).first()
         if not variant:
             logger.warning(f"[stock] variant_not_found product_id={product_id} variant_id={variant_id}")
-            return json.dumps({"available": False, "reason": "Variante no encontrada"})
+            return json.dumps({
+                "available": None,  # null = "no pude determinar", NO false
+                "reason": "Variante no encontrada — verificá que el variant_id sea un UUID exacto del bloque DATOS DISPONIBLES",
+                "id_provided": variant_id,
+                "hint": "NO le digas al cliente 'no hay stock'. Re-mirá el bloque DATOS DISPONIBLES y copiá el UUID exacto del producto/variante.",
+            })
         available = variant.stock_quantity >= quantity or not variant.track_inventory
         logger.info(
             f"[stock] variant product_id={product_id} variant={variant.name!r} "
@@ -348,7 +353,21 @@ def tool_check_availability(db: Session, session: SalesSession, **params) -> str
         ).first()
         if not product:
             logger.warning(f"[stock] product_not_found product_id={product_id} store_id={session.store_id}")
-            return json.dumps({"available": False, "reason": "Producto no encontrado"})
+            return json.dumps({
+                "available": None,  # null = "no pude determinar", NO false
+                "reason": (
+                    "Producto no encontrado — el ID que pasaste no es un UUID válido en la DB. "
+                    "Probablemente copiaste el slug, el SKU o el nombre del producto en vez del UUID."
+                ),
+                "id_provided": product_id,
+                "hint": (
+                    "NO le digas al cliente 'no hay stock' — ese fue UN ERROR DE TU LADO al copiar el ID. "
+                    "Re-leé el bloque DATOS DISPONIBLES y copiá el UUID exacto que aparece en la línea "
+                    "'UUID (copiar literal si llamás tools): `8b78bd11-...`'. "
+                    "Si el producto YA está en DATOS DISPONIBLES con su stock, ni siquiera necesitás "
+                    "llamar esta tool — usá el stock que ya viene en el contexto."
+                ),
+            })
         available = product.stock_quantity >= quantity or product.allow_backorder or not product.track_inventory
         logger.info(
             f"[stock] product id={product_id} name={product.name!r} "
