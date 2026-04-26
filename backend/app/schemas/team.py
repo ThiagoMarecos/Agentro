@@ -90,3 +90,26 @@ class TakeControlRequest(BaseModel):
 class TakeControlResponse(BaseModel):
     conversation_id: str
     agent_paused: bool
+
+
+# ── Modo copiloto ──
+
+class SuggestReplyRequest(BaseModel):
+    additional_hint: str | None = None  # instrucción opcional del vendedor
+
+
+class SuggestReplyResponse(BaseModel):
+    suggestion: str
+    model: str | None = None
+    tokens: int = 0
+    latency_ms: int = 0
+
+
+class SendManualReplyRequest(BaseModel):
+    text: str
+
+
+class SendManualReplyResponse(BaseModel):
+    sent: bool
+    message_id: str | None = None
+    via_whatsapp: bool = False

@@ -182,3 +182,40 @@ export async function releaseToAgent(
     body: JSON.stringify({}),
   });
 }
+
+// ─── Copiloto (Sesión 3) ───────────────────────────────
+
+export interface SuggestReplyResponse {
+  suggestion: string;
+  model: string | null;
+  tokens: number;
+  latency_ms: number;
+}
+
+export async function suggestReply(
+  storeId: string,
+  conversationId: string,
+  additionalHint?: string
+): Promise<SuggestReplyResponse> {
+  return authFetch(`/conversations/${conversationId}/suggest-reply`, storeId, {
+    method: "POST",
+    body: JSON.stringify({ additional_hint: additionalHint || null }),
+  });
+}
+
+export interface SendManualReplyResponse {
+  sent: boolean;
+  message_id: string | null;
+  via_whatsapp: boolean;
+}
+
+export async function sendManualReply(
+  storeId: string,
+  conversationId: string,
+  text: string
+): Promise<SendManualReplyResponse> {
+  return authFetch(`/conversations/${conversationId}/send-manual-reply`, storeId, {
+    method: "POST",
+    body: JSON.stringify({ text }),
+  });
+}

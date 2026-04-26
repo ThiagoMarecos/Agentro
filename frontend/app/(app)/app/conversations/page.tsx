@@ -18,6 +18,8 @@ import {
   assignConversation,
   takeControl,
   releaseToAgent,
+  suggestReply,
+  sendManualReply,
   type TeamMember,
 } from "@/lib/api/team";
 import {
@@ -43,6 +45,8 @@ import {
   Hand,
   Bot as BotIcon,
   Inbox,
+  Sparkles,
+  Send,
 } from "lucide-react";
 
 /* ── Stage config ────────────────────────────────── */
@@ -367,6 +371,11 @@ export default function ConversationsPage() {
   const [assignmentFilter, setAssignmentFilter] = useState<"all" | "unassigned" | "mine">("all");
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [assignmentBusy, setAssignmentBusy] = useState(false);
+  // Composer manual + copiloto
+  const [composerText, setComposerText] = useState("");
+  const [copilotHint, setCopilotHint] = useState("");
+  const [copilotBusy, setCopilotBusy] = useState(false);
+  const [composerBusy, setComposerBusy] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const autoOpenDone = useRef(false);
 
@@ -511,6 +520,37 @@ export default function ConversationsPage() {
   const assignedMember = selected?.assigned_user_id
     ? teamMembers.find((m) => m.user_id === selected.assigned_user_id)
     : null;
+
+  /* ── Copilot handlers ─────────────────────────── */
+  const onAskCopilot = async () => {
+    if (!currentStore || !selected) return;
+    setCopilotBusy(true);
+    try {
+      const r = await suggestReply(currentStore.id, selected.id, copilotHint || undefined);
+      setComposerText(r.suggestion);
+      setCopilotHint("");
+    } catch (e: any) {
+      alert(e.message || "Error pidiendo sugerencia");
+    } finally {
+      setCopilotBusy(false);
+    }
+  };
+
+  const onSendManual = async () => {
+    if (!currentStore || !selected || !composerText.trim()) return;
+    setComposerBusy(true);
+    try {
+      await sendManualReply(currentStore.id, selected.id, composerText.trim());
+      setComposerText("");
+      // Refrescar el chat para que aparezca el mensaje recién enviado
+      const detail = await getConversation(currentStore.id, selected.id);
+      setSelected(detail);
+    } catch (e: any) {
+      alert(e.message || "Error enviando mensaje");
+    } finally {
+      setComposerBusy(false);
+    }
+  };
 
   if (!currentStore) {
     return (
@@ -782,6 +822,50 @@ export default function ConversationsPage() {
                 ))}
                 <div ref={messagesEndRef} />
               </div>
+
+              {/* Composer manual + copiloto (solo cuando agent_paused) */}
+              {selected.agent_paused && (
+                <div className="border-t border-gray-100 px-4 py-3 bg-gray-50/50">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Sparkles className="w-3.5 h-3.5 text-indigo-500" />
+                    <span className="text-xs font-medium text-gray-600">Modo manual</span>
+                    <div className="flex-1" />
+                    <input
+                      type="text"
+                      value={copilotHint}
+                      onChange={(e) => setCopilotHint(e.target.value)}
+                      placeholder="Hint opcional al copiloto…"
+                      className="flex-1 max-w-xs text-xs px-2.5 py-1 bg-white border border-gray-200 rounded"
+                    />
+                    <button
+                      onClick={onAskCopilot}
+                      disabled={copilotBusy}
+                      className="inline-flex items-center gap-1.5 px-3 py-1 bg-indigo-50 border border-indigo-200 text-indigo-700 hover:bg-indigo-100 rounded text-xs font-medium disabled:opacity-50"
+                      title="Pedir sugerencia al agente IA"
+                    >
+                      {copilotBusy ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
+                      {copilotBusy ? "Pensando…" : "Sugerir respuesta"}
+                    </button>
+                  </div>
+                  <div className="flex items-end gap-2">
+                    <textarea
+                      value={composerText}
+                      onChange={(e) => setComposerText(e.target.value)}
+                      placeholder="Escribí tu respuesta o pedile una sugerencia al agente…"
+                      rows={3}
+                      className="flex-1 px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm resize-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                    />
+                    <button
+                      onClick={onSendManual}
+                      disabled={composerBusy || !composerText.trim()}
+                      className="inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-lg text-sm font-medium"
+                    >
+                      {composerBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                      Enviar
+                    </button>
+                  </div>
+                </div>
+              )}
             </>
           )}
         </div>

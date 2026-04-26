@@ -19,6 +19,10 @@ from app.schemas.ai import ConversationResponse, ConversationDetailResponse, Mes
 from app.schemas.team import (
     AssignConversationRequest,
     AssignConversationResponse,
+    SendManualReplyRequest,
+    SendManualReplyResponse,
+    SuggestReplyRequest,
+    SuggestReplyResponse,
     TakeControlResponse,
 )
 from app.services.audit_service import log_action
@@ -222,6 +226,7 @@ def assign_conversation(
     if not conv:
         raise HTTPException(status_code=404, detail="Conversación no encontrada")
 
+    notification_target_user: User | None = None
     if payload.user_id:
         # Validar que el usuario sea miembro de la tienda
         target_member = (
@@ -237,9 +242,15 @@ def assign_conversation(
                 status_code=400,
                 detail="El usuario no es miembro de esta tienda",
             )
+        previous_assignee = conv.assigned_user_id
         conv.assigned_user_id = payload.user_id
         conv.assigned_at = datetime.now(timezone.utc)
         conv.needs_seller_assignment = False
+        # Notificamos solo si el assignee CAMBIÓ (no en re-asignaciones idempotentes)
+        if previous_assignee != payload.user_id:
+            notification_target_user = (
+                db.query(User).filter(User.id == payload.user_id).first()
+            )
     else:
         conv.assigned_user_id = None
         conv.assigned_at = None
@@ -258,6 +269,37 @@ def assign_conversation(
         resource_id=conv.id,
         details={"to_user_id": payload.user_id},
     )
+
+    # Notificaciones al vendedor (email + WhatsApp interno) — no bloqueantes
+    if notification_target_user and notification_target_user.id != user.id:
+        try:
+            from app.services.seller_notifications import notify_seller_of_assignment
+            result = notify_seller_of_assignment(
+                db=db,
+                store=store,
+                seller=notification_target_user,
+                conversation=conv,
+            )
+            log_action(
+                db,
+                "conversation.assignment_notified",
+                user_id=user.id,
+                store_id=store.id,
+                resource_type="conversation",
+                resource_id=conv.id,
+                details=result,
+            )
+        except Exception as exc:
+            # Nunca bloqueamos la asignación por un fallo de notificación
+            log_action(
+                db,
+                "conversation.assignment_notification_error",
+                user_id=user.id,
+                store_id=store.id,
+                resource_type="conversation",
+                resource_id=conv.id,
+                details={"error": str(exc)},
+            )
 
     return AssignConversationResponse(
         conversation_id=conv.id,
@@ -354,3 +396,173 @@ def release_to_agent(
     )
 
     return TakeControlResponse(conversation_id=conv.id, agent_paused=False)
+
+
+# ════════════════════════════════════════════════════════════════════
+#  Modo copiloto (Sesión 3)
+# ════════════════════════════════════════════════════════════════════
+
+@router.post("/{conversation_id}/suggest-reply", response_model=SuggestReplyResponse)
+def suggest_reply_for_conversation(
+    conversation_id: str,
+    payload: SuggestReplyRequest,
+    store: Store = Depends(get_current_store),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Pide una sugerencia de respuesta al agente IA (modo copiloto).
+    El agente NO envía nada — solo genera el texto que el vendedor puede
+    revisar, editar y enviar manualmente con send-manual-reply.
+    """
+    conv = (
+        db.query(Conversation)
+        .filter(Conversation.id == conversation_id, Conversation.store_id == store.id)
+        .first()
+    )
+    if not conv:
+        raise HTTPException(status_code=404, detail="Conversación no encontrada")
+
+    role = _get_user_role_in_store(db, store, user)
+    # Sellers solo pueden pedir sugerencias en sus chats
+    if role == RoleEnum.SELLER.value and conv.assigned_user_id != user.id:
+        raise HTTPException(
+            status_code=403,
+            detail="Solo podés usar copiloto en chats asignados a vos",
+        )
+
+    from app.services.copilot import suggest_reply
+
+    result = suggest_reply(
+        db=db,
+        store=store,
+        conversation=conv,
+        additional_hint=payload.additional_hint,
+    )
+
+    log_action(
+        db,
+        "conversation.copilot_suggestion",
+        user_id=user.id,
+        store_id=store.id,
+        resource_type="conversation",
+        resource_id=conv.id,
+        details={
+            "model": result.get("model"),
+            "tokens": result.get("tokens"),
+            "latency_ms": result.get("latency_ms"),
+            "had_hint": bool(payload.additional_hint),
+        },
+    )
+
+    return SuggestReplyResponse(
+        suggestion=result.get("suggestion", ""),
+        model=result.get("model"),
+        tokens=result.get("tokens", 0),
+        latency_ms=result.get("latency_ms", 0),
+    )
+
+
+@router.post("/{conversation_id}/send-manual-reply", response_model=SendManualReplyResponse)
+def send_manual_reply(
+    conversation_id: str,
+    payload: SendManualReplyRequest,
+    store: Store = Depends(get_current_store),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Envía un mensaje manual del vendedor al cliente.
+    Persiste el mensaje como 'assistant' (visualmente sale del lado del agente)
+    y, si la conversación es de WhatsApp, lo envía vía Evolution API.
+    """
+    conv = (
+        db.query(Conversation)
+        .filter(Conversation.id == conversation_id, Conversation.store_id == store.id)
+        .first()
+    )
+    if not conv:
+        raise HTTPException(status_code=404, detail="Conversación no encontrada")
+
+    role = _get_user_role_in_store(db, store, user)
+    if role == RoleEnum.SELLER.value and conv.assigned_user_id != user.id:
+        raise HTTPException(
+            status_code=403,
+            detail="Solo podés responder chats asignados a vos",
+        )
+
+    text = (payload.text or "").strip()
+    if not text:
+        raise HTTPException(status_code=400, detail="El mensaje no puede estar vacío")
+
+    # Persistir como mensaje del lado assistant
+    msg = Message(
+        conversation_id=conv.id,
+        role="assistant",
+        content=text,
+    )
+    db.add(msg)
+    db.commit()
+    db.refresh(msg)
+
+    # Si es WhatsApp, intentamos enviarlo via Evolution
+    via_whatsapp = False
+    if conv.channel_type == "whatsapp" and conv.customer_id:
+        try:
+            from app.models.ai import AIChannel
+            customer = db.query(Customer).filter(Customer.id == conv.customer_id).first()
+            channel = (
+                db.query(AIChannel)
+                .filter(
+                    AIChannel.store_id == store.id,
+                    AIChannel.channel_type == "whatsapp",
+                    AIChannel.is_active == True,
+                )
+                .first()
+            )
+            if channel and channel.instance_name and customer and customer.phone:
+                import asyncio
+                from app.services.evolution_api import send_text_message
+
+                phone_clean = "".join(ch for ch in customer.phone if ch.isdigit())
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                try:
+                    loop.run_until_complete(
+                        send_text_message(
+                            instance_name=channel.instance_name,
+                            to_number=phone_clean,
+                            text=text,
+                            instance_token=channel.instance_token,
+                        )
+                    )
+                    via_whatsapp = True
+                finally:
+                    loop.close()
+        except Exception as exc:
+            # No bloqueamos: el mensaje queda guardado en la DB aunque WA falle
+            log_action(
+                db,
+                "conversation.manual_reply_wa_error",
+                user_id=user.id,
+                store_id=store.id,
+                resource_type="conversation",
+                resource_id=conv.id,
+                details={"error": str(exc)},
+            )
+
+    log_action(
+        db,
+        "conversation.manual_reply_sent",
+        user_id=user.id,
+        store_id=store.id,
+        resource_type="conversation",
+        resource_id=conv.id,
+        details={"via_whatsapp": via_whatsapp, "length": len(text)},
+    )
+
+    return SendManualReplyResponse(
+        sent=True,
+        message_id=msg.id,
+        via_whatsapp=via_whatsapp,
+    )

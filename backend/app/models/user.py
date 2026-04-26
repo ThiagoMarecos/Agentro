@@ -37,6 +37,9 @@ class User(Base, UUIDMixin, TimestampMixin):
     email = Column(String(255), unique=True, nullable=False, index=True)
     hashed_password = Column(String(255), nullable=True)  # Null si solo OAuth
     full_name = Column(String(255), nullable=True)
+    # Teléfono (E.164 sin '+', ej. 5491156789012). Opcional. Usado para
+    # notificaciones WhatsApp internas cuando se asigna un chat al vendedor.
+    phone = Column(String(50), nullable=True)
     is_active = Column(Boolean, default=True)
     is_verified = Column(Boolean, default=False)
     is_superadmin = Column(Boolean, default=False)
