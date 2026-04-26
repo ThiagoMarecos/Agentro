@@ -66,6 +66,9 @@ PLATFORM_KEYS = [
     # Agente IA
     {"key": "agent_master_prompt", "label": "Prompt maestro del agente de ventas", "category": "agent", "is_secret": False},
     {"key": "agent_model", "label": "Modelo OpenAI del agente", "category": "agent", "is_secret": False},
+    # Email transaccional (Resend) — invitaciones de equipo + notif al asignar chat
+    {"key": "resend_api_key", "label": "Resend API Key", "category": "email", "is_secret": True},
+    {"key": "email_from_address", "label": "Email remitente (ej: 'Agentro <hola@getagentro.com>')", "category": "email", "is_secret": False},
     # SECURITY: secret_key (JWT signing key) se gestiona SOLO por variable de entorno,
     # nunca por la DB ni por la API. Exponer su valor permitiría forjar tokens JWT.
 ]
