@@ -20,6 +20,16 @@ export interface ConversationDetail {
   customer_email: string | null;
   session_id: string | null;
   current_stage: string | null;
+  // Sesión 2B — sistema de equipo
+  agent_paused?: boolean;
+  needs_seller_assignment?: boolean;
+  assigned_user_id?: string | null;
+  assigned_at?: string | null;
+}
+
+export interface ConversationFilters {
+  needs_assignment?: boolean;
+  assigned_to_me?: boolean;
 }
 
 async function authFetch(path: string, storeId: string, options: RequestInit = {}) {
@@ -41,8 +51,15 @@ async function authFetch(path: string, storeId: string, options: RequestInit = {
   return res.json();
 }
 
-export async function getConversations(storeId: string): Promise<ConversationDetail[]> {
-  return authFetch("/conversations", storeId);
+export async function getConversations(
+  storeId: string,
+  filters?: ConversationFilters
+): Promise<ConversationDetail[]> {
+  const qs = new URLSearchParams();
+  if (filters?.needs_assignment) qs.set("needs_assignment", "true");
+  if (filters?.assigned_to_me) qs.set("assigned_to_me", "true");
+  const query = qs.toString();
+  return authFetch(`/conversations${query ? `?${query}` : ""}`, storeId);
 }
 
 export async function getConversation(storeId: string, id: string): Promise<ConversationDetail> {

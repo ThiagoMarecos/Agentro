@@ -14,6 +14,13 @@ import {
   type NotebookSection,
 } from "@/lib/api/sales-sessions";
 import {
+  listTeamMembers,
+  assignConversation,
+  takeControl,
+  releaseToAgent,
+  type TeamMember,
+} from "@/lib/api/team";
+import {
   Loader2,
   MessageSquare,
   User,
@@ -32,6 +39,10 @@ import {
   Settings2,
   Filter,
   MailOpen,
+  UserPlus,
+  Hand,
+  Bot as BotIcon,
+  Inbox,
 } from "lucide-react";
 
 /* ── Stage config ────────────────────────────────── */
@@ -353,18 +364,46 @@ export default function ConversationsPage() {
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [stageFilter, setStageFilter] = useState<string>("all");
+  const [assignmentFilter, setAssignmentFilter] = useState<"all" | "unassigned" | "mine">("all");
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+  const [assignmentBusy, setAssignmentBusy] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const autoOpenDone = useRef(false);
 
-  useEffect(() => {
+  const reloadConversations = async () => {
     if (!currentStore) return;
     setLoading(true);
+    try {
+      const filters =
+        assignmentFilter === "unassigned"
+          ? { needs_assignment: true }
+          : assignmentFilter === "mine"
+          ? { assigned_to_me: true }
+          : undefined;
+      const data = await getConversations(currentStore.id, filters);
+      setConversations(data);
+    } catch {
+      setConversations([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!currentStore) return;
     autoOpenDone.current = false;
-    getConversations(currentStore.id)
-      .then(setConversations)
-      .catch(() => setConversations([]))
-      .finally(() => setLoading(false));
-  }, [currentStore]);
+    reloadConversations();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentStore?.id, assignmentFilter]);
+
+  // Cargamos los miembros del equipo en paralelo (puede fallar silenciosamente
+  // si el usuario no tiene permisos — los sellers no ven equipo).
+  useEffect(() => {
+    if (!currentStore) return;
+    listTeamMembers(currentStore.id)
+      .then(setTeamMembers)
+      .catch(() => setTeamMembers([]));
+  }, [currentStore?.id]);
 
   // Auto-abrir conversación si viene desde el pipeline con ?conv=
   useEffect(() => {
@@ -421,6 +460,58 @@ export default function ConversationsPage() {
     new Set(conversations.map((c) => c.current_stage).filter(Boolean))
   );
 
+  /* ── Assignment handlers ──────────────────────── */
+  const onAssign = async (userId: string | null) => {
+    if (!currentStore || !selected) return;
+    setAssignmentBusy(true);
+    try {
+      const r = await assignConversation(currentStore.id, selected.id, userId);
+      setSelected({
+        ...selected,
+        assigned_user_id: r.assigned_user_id,
+        assigned_at: r.assigned_at,
+        needs_seller_assignment: r.needs_seller_assignment,
+      });
+      reloadConversations();
+    } catch (e: any) {
+      alert(e.message || "Error asignando conversación");
+    } finally {
+      setAssignmentBusy(false);
+    }
+  };
+
+  const onTakeControl = async () => {
+    if (!currentStore || !selected) return;
+    setAssignmentBusy(true);
+    try {
+      const r = await takeControl(currentStore.id, selected.id);
+      setSelected({ ...selected, agent_paused: r.agent_paused });
+      reloadConversations();
+    } catch (e: any) {
+      alert(e.message || "Error tomando control");
+    } finally {
+      setAssignmentBusy(false);
+    }
+  };
+
+  const onReleaseToAgent = async () => {
+    if (!currentStore || !selected) return;
+    setAssignmentBusy(true);
+    try {
+      const r = await releaseToAgent(currentStore.id, selected.id);
+      setSelected({ ...selected, agent_paused: r.agent_paused });
+      reloadConversations();
+    } catch (e: any) {
+      alert(e.message || "Error liberando al agente");
+    } finally {
+      setAssignmentBusy(false);
+    }
+  };
+
+  const assignedMember = selected?.assigned_user_id
+    ? teamMembers.find((m) => m.user_id === selected.assigned_user_id)
+    : null;
+
   if (!currentStore) {
     return (
       <div className="flex items-center justify-center h-64 text-gray-500">
@@ -443,12 +534,41 @@ export default function ConversationsPage() {
   return (
     <div className="h-[calc(100vh-7rem)]">
       {/* Page header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-6 gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Conversaciones</h1>
           <p className="text-sm text-gray-500 mt-1">
-            {conversations.length} conversaciones en total
+            {conversations.length} {conversations.length === 1 ? "conversación" : "conversaciones"}
+            {assignmentFilter === "unassigned" && " esperando asignación"}
+            {assignmentFilter === "mine" && " asignadas a mí"}
           </p>
+        </div>
+        <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
+          <button
+            onClick={() => setAssignmentFilter("all")}
+            className={`px-3 py-1.5 text-xs font-medium rounded-md transition ${
+              assignmentFilter === "all" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500"
+            }`}
+          >
+            Todas
+          </button>
+          <button
+            onClick={() => setAssignmentFilter("unassigned")}
+            className={`px-3 py-1.5 text-xs font-medium rounded-md transition inline-flex items-center gap-1.5 ${
+              assignmentFilter === "unassigned" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500"
+            }`}
+          >
+            <Inbox className="w-3.5 h-3.5" />
+            Sin asignar
+          </button>
+          <button
+            onClick={() => setAssignmentFilter("mine")}
+            className={`px-3 py-1.5 text-xs font-medium rounded-md transition ${
+              assignmentFilter === "mine" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500"
+            }`}
+          >
+            Mis chats
+          </button>
         </div>
       </div>
 
@@ -556,37 +676,103 @@ export default function ConversationsPage() {
           ) : (
             <>
               {/* Conversation header */}
-              <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center">
-                    <User className="w-5 h-5 text-indigo-600" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold text-gray-900">
-                      {selected.customer_name ||
-                        selected.customer_email ||
-                        "Cliente"}
-                    </p>
-                    {selected.customer_email && (
-                      <p className="text-xs text-gray-400 mt-0.5">
-                        {selected.customer_email}
+              <div className="px-6 py-4 border-b border-gray-100">
+                <div className="flex items-center justify-between gap-4 mb-3">
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center">
+                      <User className="w-5 h-5 text-indigo-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-gray-900">
+                        {selected.customer_name ||
+                          selected.customer_email ||
+                          "Cliente"}
                       </p>
+                      {selected.customer_email && (
+                        <p className="text-xs text-gray-400 mt-0.5">
+                          {selected.customer_email}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    {selected.current_stage && (
+                      <span
+                        className={`text-xs font-semibold px-3 py-1.5 rounded-full ${
+                          STAGE_BADGE_COLORS[selected.current_stage] ||
+                          "bg-gray-100"
+                        }`}
+                      >
+                        {STAGE_LABELS[selected.current_stage] ||
+                          selected.current_stage}
+                      </span>
                     )}
                   </div>
                 </div>
-                <div className="flex items-center gap-3">
-                  {selected.current_stage && (
-                    <span
-                      className={`text-xs font-semibold px-3 py-1.5 rounded-full ${
-                        STAGE_BADGE_COLORS[selected.current_stage] ||
-                        "bg-gray-100"
-                      }`}
-                    >
-                      {STAGE_LABELS[selected.current_stage] ||
-                        selected.current_stage}
+
+                {/* Acciones: asignar + tomar control */}
+                <div className="flex items-center gap-2 flex-wrap text-xs">
+                  {selected.needs_seller_assignment && (
+                    <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-700 font-medium">
+                      <Inbox className="w-3 h-3" />
+                      Sin asignar
                     </span>
                   )}
+
+                  {teamMembers.length > 0 && (
+                    <div className="flex items-center gap-1.5">
+                      <UserPlus className="w-3.5 h-3.5 text-gray-400" />
+                      <select
+                        value={selected.assigned_user_id || ""}
+                        disabled={assignmentBusy}
+                        onChange={(e) => onAssign(e.target.value || null)}
+                        className="text-xs px-2 py-1 border border-gray-200 rounded bg-white text-gray-700 disabled:opacity-50"
+                      >
+                        <option value="">Sin asignar</option>
+                        {teamMembers.map((m) => (
+                          <option key={m.user_id} value={m.user_id}>
+                            {m.full_name || m.email.split("@")[0]} ({m.role})
+                          </option>
+                        ))}
+                      </select>
+                      {assignedMember && (
+                        <span className="text-gray-400">
+                          → {assignedMember.full_name || assignedMember.email}
+                        </span>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="flex-1" />
+
+                  {selected.agent_paused ? (
+                    <button
+                      onClick={onReleaseToAgent}
+                      disabled={assignmentBusy}
+                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md bg-indigo-50 border border-indigo-200 text-indigo-700 hover:bg-indigo-100 transition disabled:opacity-50 font-medium"
+                      title="Devolver el control al agente IA"
+                    >
+                      <BotIcon className="w-3.5 h-3.5" />
+                      Devolver al agente
+                    </button>
+                  ) : (
+                    <button
+                      onClick={onTakeControl}
+                      disabled={assignmentBusy}
+                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md bg-emerald-50 border border-emerald-200 text-emerald-700 hover:bg-emerald-100 transition disabled:opacity-50 font-medium"
+                      title="Pausar al agente IA y tomar control manual"
+                    >
+                      <Hand className="w-3.5 h-3.5" />
+                      Tomar control
+                    </button>
+                  )}
                 </div>
+
+                {selected.agent_paused && (
+                  <div className="mt-2 px-3 py-1.5 bg-emerald-50 border border-emerald-100 rounded-md text-xs text-emerald-700">
+                    🙋 Vos estás manejando esta conversación. El agente IA está pausado.
+                  </div>
+                )}
               </div>
 
               {/* Messages */}

@@ -20,6 +20,7 @@ import {
   Smartphone,
   ShieldBan,
   Globe,
+  UserPlus,
 } from "lucide-react";
 import { useAuth } from "@/app/providers/AuthProvider";
 import { useStore } from "@/lib/context/StoreContext";
@@ -30,6 +31,7 @@ const navItems = [
   { href: "/app/categories", label: "Categorías", icon: FolderTree },
   { href: "/app/orders", label: "Pedidos", icon: ShoppingCart },
   { href: "/app/customers", label: "Clientes", icon: Users },
+  { href: "/app/team", label: "Equipo", icon: UserPlus },
   { href: "/app/pipeline", label: "Pipeline IA", icon: Kanban },
   { href: "/app/whatsapp", label: "WhatsApp", icon: Smartphone },
   { href: "/app/suppliers", label: "Proveedores", icon: Truck },
