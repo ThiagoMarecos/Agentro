@@ -260,39 +260,53 @@ def extract(
     if any(p in norm for p in _PROCEED_PHRASES):
         intent.wants_to_proceed = True
 
-    # ── Product queries: extraemos sustantivos de productos del mensaje ──
-    # Tokenizamos y filtramos solo las palabras que están en _PRODUCT_NOUNS
-    tokens = re.findall(r"[a-z0-9]+", norm)
-    product_tokens = [t for t in tokens if t in _PRODUCT_NOUNS]
+    # ── Product queries: detectamos UNO O MÁS productos en el mensaje ──
+    # Si el cliente dice "tenés remera negra y zapatillas blancas?", queremos
+    # extraer 2 queries: ["remera negra", "zapatillas blancas"].
+    #
+    # Estrategia: dividimos el mensaje por separadores comunes ("y", ",", "+",
+    # "también", "además", etc.) y para cada segmento buscamos un noun de
+    # producto + ventana de contexto alrededor.
+    _SEGMENT_SEPARATORS = re.compile(
+        r"\s+(?:y|e|,|;|\+|tambien|tb|ademas|mas|tampoco|tampoc|ni)\s+",
+        re.IGNORECASE,
+    )
+    segments = _SEGMENT_SEPARATORS.split(norm)
+    seen_queries: set[str] = set()
 
-    # Si encontramos sustantivo de producto, armamos query con el sustantivo +
-    # los modificadores de color/talle del mensaje.
-    if product_tokens:
-        # Color y talle como modificadores
-        modifiers: list[str] = []
-        size_match = _SIZE_PATTERN.search(norm)
-        if size_match:
-            size_val = size_match.group(1) or size_match.group(2)
-            if size_val:
-                modifiers.append(size_val)
+    for segment in segments:
+        seg_tokens = re.findall(r"[a-z0-9]+", segment)
+        if not seg_tokens:
+            continue
+        seg_product_tokens = [t for t in seg_tokens if t in _PRODUCT_NOUNS]
+        if not seg_product_tokens:
+            continue
 
-        # Heurística simple: la query es "<noun> <resto del mensaje>" recortada
-        # No queremos solo el noun ("remera"), queremos "remera negra" si la dijo
-        # entera. Tomamos hasta 6 palabras alrededor del primer noun.
-        first_noun = product_tokens[0]
+        # Tomamos el primer noun del segmento + ventana corta de contexto
+        first_noun = seg_product_tokens[0]
         try:
-            idx = tokens.index(first_noun)
-            window = tokens[max(0, idx - 2): idx + 4]
-            query = " ".join(window)
+            idx = seg_tokens.index(first_noun)
+            window = seg_tokens[max(0, idx - 2): idx + 4]
+            query = " ".join(window).strip()
         except ValueError:
             query = first_noun
 
-        intent.product_queries.append(query.strip())
+        if query and query not in seen_queries:
+            seen_queries.add(query)
+            intent.product_queries.append(query)
 
-        # Si hay stock_phrase Y product_query, marcamos stock check
-        # (el cliente claramente está preguntando por disponibilidad de ese producto)
-        if has_stock_phrase:
-            intent.needs_stock_check = True
+    # Tamaño / talle como modificador global (si solo hay UN producto, lo
+    # asociamos a esa query — útil para "remera negra talle M")
+    if len(intent.product_queries) == 1:
+        size_match = _SIZE_PATTERN.search(norm)
+        if size_match:
+            size_val = size_match.group(1) or size_match.group(2)
+            if size_val and size_val not in intent.product_queries[0]:
+                intent.product_queries[0] = f"{intent.product_queries[0]} {size_val}".strip()
+
+    # Si hay stock_phrase Y al menos un product_query, marcamos stock check
+    if intent.product_queries and has_stock_phrase:
+        intent.needs_stock_check = True
 
     # Si dijo stock_phrase sin nombrar producto pero hay producto en notebook,
     # heredamos el último producto mencionado para el stock check.
