@@ -245,6 +245,48 @@ def tool_handoff_to_seller(db: Session, session: SalesSession, **params) -> str:
         },
     )
 
+    # ── Notificar al dueño + managers del store ──
+    # El agente escaló pero todavía nadie tomó el chat. Le mandamos un ping
+    # (email + WhatsApp interno) a owners/admins/managers para que abran el
+    # inbox y asignen / tomen el chat. Idempotente: notify_seller_of_assignment
+    # tolera fallos así que si falla email o WA, no rompe el handoff.
+    try:
+        from app.models.store import Store, StoreMember
+        from app.models.user import User, RoleEnum
+        from app.services.seller_notifications import notify_seller_of_assignment
+
+        store = db.query(Store).filter(Store.id == session.store_id).first()
+        if store and conv:
+            recipients = (
+                db.query(User)
+                .join(StoreMember, StoreMember.user_id == User.id)
+                .filter(
+                    StoreMember.store_id == session.store_id,
+                    StoreMember.role.in_([
+                        RoleEnum.OWNER.value,
+                        RoleEnum.ADMIN.value,
+                        RoleEnum.MANAGER.value,
+                    ]),
+                    User.is_active == True,
+                )
+                .all()
+            )
+            for user in recipients:
+                try:
+                    notify_seller_of_assignment(
+                        db=db,
+                        store=store,
+                        seller=user,
+                        conversation=conv,
+                        is_new_lead=True,
+                    )
+                except Exception:
+                    # Una falla por destinatario no rompe el flujo
+                    pass
+    except Exception:
+        # Si el sistema de notificaciones cae, el handoff sigue válido
+        pass
+
     return json.dumps({
         "success": True,
         "handoff_complete": True,

@@ -122,9 +122,16 @@ def notify_seller_of_assignment(
     store: Store,
     seller: User,
     conversation: Conversation,
+    is_new_lead: bool = False,
 ) -> dict[str, bool]:
     """
     Envia las notificaciones al vendedor cuando se le asigna un chat.
+
+    Args:
+        is_new_lead: True si es la notificación al owner/manager cuando el
+                     agente acaba de escalar (chat aún no asignado a nadie).
+                     False si es la notificación a un vendedor específico que
+                     fue asignado manualmente.
     Retorna {email_sent, whatsapp_sent} para auditing.
     """
     customer_name = "Cliente"
@@ -178,16 +185,32 @@ def notify_seller_of_assignment(
             "baja": "🟢",
         }.get(priority, "🟡")
 
-        wa_text = (
-            f"🔔 *[Asignación interna]* {priority_emoji}\n"
-            f"\n"
-            f"Hola {seller_name}, te asignaron un chat de *{customer_name}* en {store.name}.\n"
-            f"\n"
-            + (f"📝 {summary_preview}\n\n" if summary_preview else "")
-            + f"Abrir: {chat_url}\n"
-            f"\n"
-            f"_Este es un mensaje interno de Agentro, no del cliente._"
-        )
+        if is_new_lead:
+            # Mensaje para el owner/manager: hay un lead nuevo esperando asignación
+            wa_text = (
+                f"🔔 *[Nuevo lead — Agentro]* {priority_emoji}\n"
+                f"\n"
+                f"Hola {seller_name}, el agente IA acaba de calificar un cliente "
+                f"en *{store.name}* y está listo para que alguien tome el chat.\n"
+                f"\n"
+                f"Cliente: *{customer_name}*\n"
+                + (f"📝 {summary_preview}\n" if summary_preview else "")
+                + f"\n"
+                f"Asignar / tomar: {chat_url}\n"
+                f"\n"
+                f"_Mensaje interno de Agentro._"
+            )
+        else:
+            wa_text = (
+                f"🔔 *[Asignación interna]* {priority_emoji}\n"
+                f"\n"
+                f"Hola {seller_name}, te asignaron un chat de *{customer_name}* en {store.name}.\n"
+                f"\n"
+                + (f"📝 {summary_preview}\n\n" if summary_preview else "")
+                + f"Abrir: {chat_url}\n"
+                f"\n"
+                f"_Este es un mensaje interno de Agentro, no del cliente._"
+            )
         whatsapp_sent = _send_whatsapp_internal(
             store_id=store.id,
             seller_phone=seller_phone,

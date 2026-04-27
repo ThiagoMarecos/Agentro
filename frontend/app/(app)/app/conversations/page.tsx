@@ -6,7 +6,9 @@ import { useStore } from "@/lib/context/StoreContext";
 import {
   getConversations,
   getConversation,
+  parseHandoffSummary,
   type ConversationDetail,
+  type HandoffSummary,
 } from "@/lib/api/conversations";
 import {
   getSalesSession,
@@ -47,7 +49,15 @@ import {
   Inbox,
   Sparkles,
   Send,
+  ClipboardCheck,
+  ShoppingBag as ShoppingBagIcon,
+  Phone,
+  MapPin,
+  AlertTriangle,
+  Flame,
+  ExternalLink,
 } from "lucide-react";
+import Link from "next/link";
 
 /* ── Stage config ────────────────────────────────── */
 
@@ -351,6 +361,147 @@ function ConversationMessage({
     </div>
   );
 }
+
+/* ── Handoff Summary Banner ──────────────────────── */
+
+const PRIORITY_COLORS: Record<string, { bg: string; text: string; icon: string }> = {
+  vip: { bg: "bg-rose-50 border-rose-200", text: "text-rose-700", icon: "🔥" },
+  alta: { bg: "bg-orange-50 border-orange-200", text: "text-orange-700", icon: "🟠" },
+  media: { bg: "bg-amber-50 border-amber-200", text: "text-amber-700", icon: "🟡" },
+  baja: { bg: "bg-emerald-50 border-emerald-200", text: "text-emerald-700", icon: "🟢" },
+};
+
+function HandoffSummaryBanner({
+  summary,
+  conversationId,
+  storeSlug,
+}: {
+  summary: HandoffSummary;
+  conversationId: string;
+  storeSlug?: string;
+}) {
+  const priority = summary.priority || "media";
+  const palette = PRIORITY_COLORS[priority] || PRIORITY_COLORS.media;
+  const cust = summary.customer || {};
+  const interest = summary.interest || {};
+  const pricing = summary.pricing || {};
+  const products = interest.products || [];
+  const objections = summary.objections || [];
+
+  // Construye URL para crear pedido pre-llenado
+  const orderQuery = new URLSearchParams();
+  if (cust.name) orderQuery.set("customer_name", cust.name);
+  if (cust.phone) orderQuery.set("customer_phone", cust.phone);
+  if (cust.email) orderQuery.set("customer_email", cust.email);
+  if (cust.city) orderQuery.set("city", cust.city);
+  if (cust.address) orderQuery.set("address", cust.address);
+  if (products.length) orderQuery.set("products", products.join(", "));
+  if (pricing.quoted_total) orderQuery.set("total", String(pricing.quoted_total));
+  if (interest.quantity) orderQuery.set("quantity", String(interest.quantity));
+  orderQuery.set("from_chat", conversationId);
+
+  return (
+    <div className={`rounded-xl border ${palette.bg} p-4 m-4 mt-3`}>
+      <div className="flex items-start justify-between gap-3 mb-3 flex-wrap">
+        <div className="flex items-center gap-2">
+          <ClipboardCheck className={`w-4 h-4 ${palette.text}`} />
+          <span className={`text-xs font-bold uppercase tracking-wide ${palette.text}`}>
+            Handoff del agente · prioridad {palette.icon} {priority}
+          </span>
+        </div>
+        <Link
+          href={`/app/orders/new?${orderQuery.toString()}`}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-md transition shadow-sm"
+        >
+          <ShoppingBagIcon className="w-3.5 h-3.5" />
+          Crear pedido
+          <ExternalLink className="w-3 h-3" />
+        </Link>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2 text-xs">
+        {/* Cliente */}
+        <div className="space-y-1">
+          <div className="font-semibold text-gray-700 mb-1">Cliente</div>
+          {cust.name && (
+            <div className="text-gray-700">
+              <span className="text-gray-500">Nombre:</span> {cust.name}
+            </div>
+          )}
+          {cust.phone && (
+            <div className="text-gray-700 flex items-center gap-1">
+              <Phone className="w-3 h-3 text-gray-400" /> {cust.phone}
+            </div>
+          )}
+          {cust.email && (
+            <div className="text-gray-700 truncate">
+              <span className="text-gray-500">Email:</span> {cust.email}
+            </div>
+          )}
+          {(cust.city || cust.address) && (
+            <div className="text-gray-700 flex items-start gap-1">
+              <MapPin className="w-3 h-3 text-gray-400 mt-0.5" />
+              <span>
+                {[cust.address, cust.city].filter(Boolean).join(", ")}
+              </span>
+            </div>
+          )}
+          {cust.reference && (
+            <div className="text-gray-600 italic">Ref: {cust.reference}</div>
+          )}
+          {cust.observations && (
+            <div className="text-gray-600 italic">Obs: {cust.observations}</div>
+          )}
+        </div>
+
+        {/* Pedido */}
+        <div className="space-y-1">
+          <div className="font-semibold text-gray-700 mb-1">Pedido</div>
+          {products.length > 0 && (
+            <div className="text-gray-700">
+              <span className="text-gray-500">Productos:</span> {products.join(", ")}
+            </div>
+          )}
+          {interest.quantity != null && (
+            <div className="text-gray-700">
+              <span className="text-gray-500">Cantidad:</span> {interest.quantity}
+            </div>
+          )}
+          {pricing.quoted_total && (
+            <div className="text-gray-900 font-semibold">
+              Total: {pricing.quoted_total} {pricing.currency || ""}
+            </div>
+          )}
+          {interest.budget_range && (
+            <div className="text-gray-600">
+              <span className="text-gray-500">Budget:</span> {interest.budget_range}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Objeciones */}
+      {objections.length > 0 && (
+        <div className="mt-3 pt-3 border-t border-gray-200/60">
+          <div className="flex items-start gap-2">
+            <AlertTriangle className="w-3.5 h-3.5 text-amber-600 mt-0.5 shrink-0" />
+            <div className="text-xs">
+              <span className="font-semibold text-gray-700">Objeciones / dudas:</span>{" "}
+              <span className="text-gray-600">{objections.join(" · ")}</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {summary.additional_info && (
+        <div className="mt-2 text-xs text-gray-600 italic">
+          📝 {summary.additional_info}
+        </div>
+      )}
+    </div>
+  );
+}
+
 
 /* ════════════════════════════════════════════════════ */
 /*              CONVERSATIONS PAGE                     */
@@ -838,6 +989,17 @@ export default function ConversationsPage() {
                   </div>
                 )}
               </div>
+
+              {/* Banner del handoff_summary (cuando el agente escaló el chat) */}
+              {(() => {
+                const summary = parseHandoffSummary(selected.handoff_summary);
+                return summary ? (
+                  <HandoffSummaryBanner
+                    summary={summary}
+                    conversationId={selected.id}
+                  />
+                ) : null;
+              })()}
 
               {/* Messages */}
               <div className="flex-1 overflow-y-auto px-6 py-6 space-y-4">

@@ -117,6 +117,11 @@ def list_store_conversations(
             customer_email=customer_email,
             session_id=ss.id if ss else None,
             current_stage=ss.current_stage if ss else None,
+            agent_paused=c.agent_paused,
+            needs_seller_assignment=c.needs_seller_assignment,
+            assigned_user_id=c.assigned_user_id,
+            assigned_at=c.assigned_at.isoformat() if c.assigned_at else None,
+            handoff_summary=c.handoff_summary,
         ))
 
     return results
@@ -168,6 +173,11 @@ def get_conversation(
         customer_email=customer_email,
         session_id=ss.id if ss else None,
         current_stage=ss.current_stage if ss else None,
+        agent_paused=conv.agent_paused,
+        needs_seller_assignment=conv.needs_seller_assignment,
+        assigned_user_id=conv.assigned_user_id,
+        assigned_at=conv.assigned_at.isoformat() if conv.assigned_at else None,
+        handoff_summary=conv.handoff_summary,
     )
 
 

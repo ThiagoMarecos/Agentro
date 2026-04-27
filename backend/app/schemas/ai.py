@@ -38,6 +38,12 @@ class ConversationDetailResponse(BaseModel):
     customer_email: str | None = None
     session_id: str | None = None
     current_stage: str | None = None
+    # Sesión 2B + 3 — sistema de equipo / handoff
+    agent_paused: bool | None = None
+    needs_seller_assignment: bool | None = None
+    assigned_user_id: str | None = None
+    assigned_at: str | None = None
+    handoff_summary: str | None = None  # JSON serializado del resumen del agente
 
     class Config:
         from_attributes = True

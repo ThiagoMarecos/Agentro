@@ -25,6 +25,48 @@ export interface ConversationDetail {
   needs_seller_assignment?: boolean;
   assigned_user_id?: string | null;
   assigned_at?: string | null;
+  handoff_summary?: string | null;  // JSON serializado del resumen del agente
+}
+
+export interface HandoffSummary {
+  version?: string;
+  generated_at?: string;
+  priority?: "baja" | "media" | "alta" | "vip";
+  customer?: {
+    name?: string;
+    phone?: string;
+    email?: string;
+    city?: string;
+    address?: string;
+    reference?: string;
+    observations?: string;
+  };
+  interest?: {
+    products?: string[];
+    categories?: string[];
+    budget_range?: string;
+    quantity?: number | null;
+  };
+  pricing?: {
+    quoted_total?: string | number;
+    discounts_applied?: any[];
+    currency?: string;
+  };
+  objections?: string[];
+  additional_info?: string;
+  history?: {
+    message_count?: number;
+    stage_at_handoff?: string;
+  };
+}
+
+export function parseHandoffSummary(raw: string | null | undefined): HandoffSummary | null {
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as HandoffSummary;
+  } catch {
+    return null;
+  }
 }
 
 export interface ConversationFilters {
