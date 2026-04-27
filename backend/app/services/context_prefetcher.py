@@ -248,6 +248,31 @@ def _prefetch_categories_summary(
     return summary, total
 
 
+def _prefetch_featured_products(
+    db: Session, store_id: str, limit: int = 6
+) -> list[PrefetchedProduct]:
+    """
+    Productos destacados (featured=true) o más recientes si no hay featured.
+    Útil cuando el cliente pide recomendaciones genéricas y no hay matches
+    específicos del intent.
+    """
+    products = (
+        db.query(Product)
+        .filter(
+            Product.store_id == store_id,
+            Product.is_active == True,
+            Product.status == "active",
+        )
+        .order_by(
+            Product.is_featured.desc().nullslast(),
+            Product.created_at.desc(),
+        )
+        .limit(limit)
+        .all()
+    )
+    return [_to_prefetched_product(p) for p in products]
+
+
 def _prefetch_active_discounts(db: Session, store_id: str, limit: int = 5) -> list[dict]:
     """Productos con descuento vigente (compare_at_price > price)."""
     products = (
@@ -325,6 +350,22 @@ def prefetch(
         ctx.categories_summary, ctx.total_products = _prefetch_categories_summary(
             db, session.store_id, limit=8
         )
+
+    # ── Productos destacados (fallback contextual) ──
+    # Si el cliente pidió ver el catálogo, o quiere avanzar/comprar pero no
+    # hay match específico, cargamos los productos featured para que el agente
+    # pueda recomendar algo concreto en vez de quedarse sin propuesta.
+    needs_featured = (
+        intent.needs_catalog_overview
+        or intent.wants_to_proceed
+        or (not ctx.matched_products and not intent.is_empty())
+    )
+    if needs_featured:
+        featured = _prefetch_featured_products(db, session.store_id, limit=6)
+        for p in featured:
+            if p.id not in seen_product_ids:
+                ctx.matched_products.append(p)
+                seen_product_ids.add(p.id)
 
     # ── Descuentos vigentes (si pidió descuentos) ──
     if intent.needs_discounts:

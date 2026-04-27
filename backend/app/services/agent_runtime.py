@@ -26,7 +26,7 @@ from app.models.sales_session import SalesSession, EMPTY_NOTEBOOK
 from app.services.agent_tools import get_tools_for_agent, TOOL_EXECUTORS
 from app.services.agent_prompts import build_sales_prompt
 from app.services.context_prefetcher import prefetch as prefetch_context, render_for_prompt
-from app.services.intent_extractor import extract as extract_intent
+from app.services.intent_extractor import extract as extract_intent, extract_product_terms
 from app.services.platform_settings_service import get_setting_value
 
 logger = logging.getLogger(__name__)
@@ -420,17 +420,46 @@ def process_message(
     active_lessons = _get_active_lessons(db, agent)
 
     # ── 5.1. CONTEXT-FIRST: extraer intent + pre-fetch de DB ──
-    # En vez de dejar que el LLM decida cuándo llamar tools (probabilístico),
-    # escaneamos el mensaje del cliente DETERMINÍSTICAMENTE y pre-cargamos
-    # todos los datos relevantes (productos, stock, descuentos, datos personales).
-    # El LLM ve esos datos en el system prompt — no tiene cómo inventar.
+    # Detección híbrida:
+    #   Tier 1 (regex): flags universales + datos personales (rápido, gratis)
+    #   Tier 2 (LLM-mini): productos vía catálogo real de la tienda (DINÁMICO)
+    # El Tier 2 elimina la necesidad de diccionarios hardcoded — el "diccionario"
+    # se construye en cada turno desde los productos reales de la tienda.
     prefetched_block = ""
+    openai_client_for_intent = None
     try:
+        # Tier 1: regex sobre flags y datos personales
         intent = extract_intent(
             user_message=message,
             conversation_history=history,
             notebook=session.get_notebook(),
         )
+
+        # Tier 2: detección dinámica de productos vía LLM-mini con catálogo real
+        # Solo si el mensaje no es trivial (saludo / agradecimiento / sí-no corto).
+        try:
+            openai_client_for_intent = _get_openai_client()
+            product_terms = extract_product_terms(
+                db=db,
+                session=session,
+                user_message=message,
+                openai_client=openai_client_for_intent,
+            )
+            if product_terms:
+                # Mergeamos con lo que pueda haber dejado el Tier 1 (deduplicado)
+                seen = {q.lower() for q in intent.product_queries}
+                for t in product_terms:
+                    if t.lower() not in seen:
+                        intent.product_queries.append(t)
+                        seen.add(t.lower())
+                # Si hay productos detectados Y stock query, garantizamos check
+                if intent.needs_stock_check is False and any(
+                    p in (intent.normalized or "") for p in ("tenes", "tienes", "hay", "stock", "queda")
+                ):
+                    intent.needs_stock_check = True
+        except Exception as tier2_exc:
+            logger.warning(f"[agent] tier2 product extraction skipped: {tier2_exc}")
+
         if not intent.is_empty():
             prefetched_ctx = prefetch_context(db, session, intent)
             currency = store_config.get("currency", "USD")
