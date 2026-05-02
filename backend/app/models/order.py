@@ -41,6 +41,24 @@ class Order(Base, UUIDMixin, TimestampMixin):
     currency = Column(String(3), default="USD")
     notes = Column(Text, nullable=True)
 
+    # ── POS / multi-canal (Sesión POS-1) ──
+    # source: pos | chat | storefront | manual
+    # Para distinguir el origen y filtrar reportes (ventas en local vs online).
+    source = Column(String(20), nullable=True, default="manual")
+
+    # Método de pago elegido (FK a PaymentMethod, opcional)
+    payment_method_id = Column(String(36), ForeignKey("payment_methods.id", ondelete="SET NULL"), nullable=True)
+    # Estado de pago: pending | paid | failed | refunded | partial_refund
+    payment_status = Column(String(20), nullable=True, default="pending")
+    # Monto recibido (efectivo) — sirve para calcular vuelto
+    payment_received = Column(Numeric(12, 2), nullable=True)
+    # Comprobante (URL imagen subida o texto del cliente)
+    payment_proof = Column(Text, nullable=True)
+    # Quién hizo la venta en POS
+    created_by_user_id = Column(String(36), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    # Caja de POS asociada (para cierre Z)
+    cash_register_id = Column(String(36), ForeignKey("cash_registers.id", ondelete="SET NULL"), nullable=True)
+
     # Relaciones
     items = relationship("OrderItem", back_populates="order", cascade="all, delete-orphan")
 

@@ -16,6 +16,7 @@ from app.models.audit import AuditLog
 from app.models.settings import Setting
 from app.models.supplier import Supplier
 from app.models.team import TeamInvitation
+from app.models.payment import PaymentMethod, CashRegister, Refund
 
 __all__ = [
     "User",
@@ -43,4 +44,7 @@ __all__ = [
     "Setting",
     "Supplier",
     "TeamInvitation",
+    "PaymentMethod",
+    "CashRegister",
+    "Refund",
 ]

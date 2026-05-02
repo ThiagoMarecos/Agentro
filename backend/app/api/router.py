@@ -32,6 +32,8 @@ from app.api.v1 import (
     sales_sessions,
     suppliers,
     team,
+    payment_methods,
+    pos,
     whatsapp,
     whatsapp_webhook,
     pages,
@@ -72,6 +74,9 @@ api_router.include_router(suppliers.router, tags=["suppliers"])
 api_router.include_router(pages.router, prefix="/pages", tags=["pages"])
 api_router.include_router(web_import.router, prefix="/import", tags=["import"])
 api_router.include_router(team.router, prefix="/team", tags=["team"])
+api_router.include_router(payment_methods.router, prefix="/payment-methods", tags=["payment-methods"])
+api_router.include_router(payment_methods.providers_router, prefix="/payment-providers", tags=["payment-providers"])
+api_router.include_router(pos.router, prefix="/pos", tags=["pos"])
 
 # WhatsApp (admin, requiere auth)
 api_router.include_router(whatsapp.router, prefix="/whatsapp", tags=["whatsapp"])
