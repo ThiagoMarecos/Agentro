@@ -21,6 +21,7 @@ import {
   ShieldBan,
   Globe,
   UserPlus,
+  ScanLine,
 } from "lucide-react";
 import { useAuth } from "@/app/providers/AuthProvider";
 import { useStore } from "@/lib/context/StoreContext";
@@ -29,6 +30,7 @@ const navItems = [
   { href: "/app", label: "Panel", icon: LayoutDashboard },
   { href: "/app/products", label: "Productos", icon: Package },
   { href: "/app/categories", label: "Categorías", icon: FolderTree },
+  { href: "/app/pos", label: "POS", icon: ScanLine },
   { href: "/app/orders", label: "Pedidos", icon: ShoppingCart },
   { href: "/app/customers", label: "Clientes", icon: Users },
   { href: "/app/team", label: "Equipo", icon: UserPlus },
