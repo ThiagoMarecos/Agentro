@@ -42,8 +42,9 @@ export function ProviderLogo({ provider, size = 40, rounded = "lg" }: Props) {
           src={src}
           alt={provider.name}
           className="object-contain"
-          style={{ width: size * 0.7, height: size * 0.7 }}
+          style={{ width: size * 0.82, height: size * 0.82 }}
           onError={() => setStep((s) => (s < 2 ? ((s + 1) as 0 | 1 | 2) : 2))}
+          referrerPolicy="no-referrer"
         />
       </div>
     );

@@ -31,7 +31,7 @@ import { ProviderLogo } from "@/components/payments/ProviderLogo";
 import {
   Search, Plus, Minus, Trash2, Loader2, X, Receipt, Lock, Unlock,
   AlertTriangle, CheckCircle2, Printer, UserPlus, ShoppingCart,
-  CreditCard, PackageOpen,
+  CreditCard, PackageOpen, Settings, Wallet,
 } from "lucide-react";
 
 interface CartItem {
@@ -314,9 +314,18 @@ export default function POSPage() {
             )}
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Link a configurar métodos de pago */}
+          <Link
+            href="/app/settings/payments"
+            className="px-3 py-1.5 text-xs bg-white border border-gray-200 hover:bg-gray-50 hover:border-indigo-300 rounded-lg font-medium inline-flex items-center gap-1.5 text-gray-700"
+            title="Agregar / editar métodos de pago"
+          >
+            <Wallet className="w-3.5 h-3.5" /> Métodos de pago
+          </Link>
+
           {register ? (
-            <div className="flex items-center gap-3 bg-white border border-emerald-200 rounded-lg px-3 py-1.5">
+            <div className="flex items-center gap-2 bg-white border border-emerald-200 rounded-lg px-3 py-1.5">
               <div className="text-xs">
                 <div className="text-emerald-700 font-semibold inline-flex items-center gap-1">
                   <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" /> Caja abierta
@@ -327,7 +336,7 @@ export default function POSPage() {
               </div>
               <button
                 onClick={() => setCloseCashModal(true)}
-                className="px-2.5 py-1 text-xs border border-gray-200 hover:bg-gray-50 rounded font-medium inline-flex items-center gap-1"
+                className="px-2.5 py-1 text-xs border border-gray-200 hover:bg-gray-50 rounded font-medium inline-flex items-center gap-1 shrink-0"
               >
                 <Lock className="w-3.5 h-3.5" /> Cerrar Z
               </button>
@@ -424,10 +433,45 @@ export default function POSPage() {
           {/* Items del carrito */}
           <div className="flex-1 overflow-y-auto">
             {cart.length === 0 ? (
-              <div className="text-center py-16 px-4 text-gray-400">
-                <ShoppingCart className="w-10 h-10 mx-auto mb-3 opacity-40" />
-                <p className="text-sm font-medium text-gray-500 mb-1">Carrito vacío</p>
-                <p className="text-xs text-gray-400">Tocá un producto a la izquierda para agregar</p>
+              <div className="px-4 py-8 text-gray-400">
+                <div className="text-center mb-6">
+                  <ShoppingCart className="w-10 h-10 mx-auto mb-3 opacity-40" />
+                  <p className="text-sm font-medium text-gray-500 mb-1">Carrito vacío</p>
+                  <p className="text-xs text-gray-400">Tocá un producto a la izquierda para agregar</p>
+                </div>
+
+                {/* Preview de métodos de pago disponibles */}
+                {methods.length > 0 && (
+                  <div className="border-t border-gray-100 pt-5">
+                    <div className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide mb-2 text-center">
+                      Vas a poder cobrar con:
+                    </div>
+                    <div className="flex flex-wrap gap-2 justify-center">
+                      {methods.map((m) => {
+                        const provInfo = providersInfo.find((p) => p.key === m.provider);
+                        return (
+                          <div
+                            key={m.id}
+                            className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-white border border-gray-200"
+                          >
+                            {provInfo && <ProviderLogo provider={provInfo} size={24} rounded="md" />}
+                            <span className="text-xs font-medium text-gray-700">
+                              {m.display_name || provInfo?.name || m.provider}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <div className="mt-3 text-center">
+                      <Link
+                        href="/app/settings/payments"
+                        className="text-[11px] text-indigo-600 hover:text-indigo-700 font-medium inline-flex items-center gap-1"
+                      >
+                        <Settings className="w-3 h-3" /> Editar / agregar métodos
+                      </Link>
+                    </div>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="p-4">
@@ -607,10 +651,18 @@ export default function POSPage() {
                 </div>
               </div>
 
-              {/* Métodos de pago como chips */}
+              {/* Métodos de pago como chips grandes */}
               <div className="pt-2">
-                <div className="text-[10px] text-gray-500 uppercase tracking-wide mb-1.5">Método de pago</div>
-                <div className="grid grid-cols-2 gap-1.5">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="text-[10px] text-gray-500 uppercase tracking-wide font-semibold">Método de pago</div>
+                  <Link
+                    href="/app/settings/payments"
+                    className="text-[10px] text-indigo-600 hover:text-indigo-700 font-medium inline-flex items-center gap-1"
+                  >
+                    <Plus className="w-3 h-3" /> Agregar
+                  </Link>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
                   {methods.map((m) => {
                     const provInfo = providersInfo.find((p) => p.key === m.provider);
                     const sel = paymentMethodId === m.id;
@@ -618,16 +670,23 @@ export default function POSPage() {
                       <button
                         key={m.id}
                         onClick={() => setPaymentMethodId(m.id)}
-                        className={`flex items-center gap-2 p-2 rounded-lg border transition text-left ${
+                        className={`flex items-center gap-2.5 p-2.5 rounded-xl border-2 transition text-left ${
                           sel
-                            ? "border-indigo-500 bg-indigo-50 ring-2 ring-indigo-200"
-                            : "border-gray-200 bg-white hover:bg-gray-50"
+                            ? "border-indigo-500 bg-indigo-50 shadow-sm"
+                            : "border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300"
                         }`}
                       >
-                        {provInfo && <ProviderLogo provider={provInfo} size={28} rounded="md" />}
-                        <span className="text-xs font-medium text-gray-900 line-clamp-1">
-                          {m.display_name || provInfo?.name || m.provider}
-                        </span>
+                        {provInfo && <ProviderLogo provider={provInfo} size={36} rounded="md" />}
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-semibold text-gray-900 line-clamp-1">
+                            {m.display_name || provInfo?.name || m.provider}
+                          </div>
+                          {sel && (
+                            <div className="text-[10px] text-indigo-600 font-medium inline-flex items-center gap-0.5">
+                              <CheckCircle2 className="w-3 h-3" /> Seleccionado
+                            </div>
+                          )}
+                        </div>
                       </button>
                     );
                   })}
