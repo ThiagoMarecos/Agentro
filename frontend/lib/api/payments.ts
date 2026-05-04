@@ -20,6 +20,9 @@ export interface ProviderInfo {
   kind: ProviderKind;
   config_fields: ProviderConfigField[];
   icon: string;
+  logo_url: string | null;
+  logo_domain: string | null;
+  color: string | null;
   description: string;
 }
 

@@ -26,6 +26,9 @@ class ProviderInfo(BaseModel):
     kind: Literal["cash", "manual_external", "manual_transfer", "digital_redirect"]
     config_fields: list[ProviderConfigField]
     icon: str
+    logo_url: str | None = None       # URL directa al logo (Wikimedia, CDN propio del provider)
+    logo_domain: str | None = None    # dominio para usar con logo.clearbit.com como fallback
+    color: str | None = None          # color brand (hex) para fondo del avatar
     description: str
 
 
