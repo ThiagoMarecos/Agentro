@@ -117,6 +117,68 @@ def _build_customer_context(db: Session, customer: Customer, is_new_customer: bo
     }
 
 
+def _auto_advance_stage_if_needed(
+    db: Session,
+    session: SalesSession,
+    intent,
+    customer_context: dict,
+    prefetched_ctx=None,
+) -> str | None:
+    """
+    Avanza el stage de la SalesSession SIN esperar al LLM.
+
+    El LLM es probabilístico — a veces no llama `move_stage` aunque el
+    prompt se lo pida. Esta función detecta señales determinísticas
+    (intent flags + estado del notebook) y mueve el stage automáticamente.
+
+    Reglas (en orden de evaluación):
+      • Cliente quiere avanzar/comprar → data_collection (forzado).
+      • Pidió hablar con humano → escalated_to_seller.
+      • discovery + tiene nombre + hay productos matcheados → validation.
+      • validation + cliente cambia/refina algo o sigue charlando → negotiation.
+
+    Retorna el nuevo stage si hubo cambio, None si no.
+    """
+    from app.services.stage_engine import move_to_stage
+
+    nb = session.get_notebook()
+    current = session.current_stage
+    if current in {"escalated_to_seller", "completed", "lost", "abandoned"}:
+        return None
+
+    has_name = bool(
+        (nb.get("customer", {}) or {}).get("name")
+        or (customer_context or {}).get("display_name")
+    )
+    has_products_in_ctx = bool(prefetched_ctx and prefetched_ctx.matched_products)
+    target: str | None = None
+
+    # Cliente pide humano explícitamente → escala
+    if getattr(intent, "wants_human", False):
+        target = "escalated_to_seller"
+
+    # Cliente quiere avanzar / comprar → saltar a data_collection
+    elif getattr(intent, "wants_to_proceed", False):
+        target = "data_collection"
+
+    # discovery + tiene nombre + hay productos → avanzar a validation
+    elif current == "discovery" and has_name and has_products_in_ctx:
+        target = "validation"
+
+    # validation + nuevos términos de búsqueda (cliente refina) → negotiation
+    elif current == "validation" and has_products_in_ctx and has_name:
+        target = "negotiation"
+
+    if target and target != current:
+        try:
+            move_to_stage(db, session, target, reason=f"auto-advance: {current} → {target}")
+            logger.info(f"[stage-auto] {session.id[:8]} {current} → {target}")
+            return target
+        except Exception as exc:
+            logger.warning(f"[stage-auto] move_to_stage failed: {exc}")
+    return None
+
+
 def _greeting_time_window(language: str = "es") -> str:
     """Devuelve 'mañana' / 'tarde' / 'noche' según hora local del servidor."""
     hour = datetime.now().hour
@@ -460,10 +522,23 @@ def process_message(
         except Exception as tier2_exc:
             logger.warning(f"[agent] tier2 product extraction skipped: {tier2_exc}")
 
+        prefetched_ctx = None
         if not intent.is_empty():
             prefetched_ctx = prefetch_context(db, session, intent)
             currency = store_config.get("currency", "USD")
             prefetched_block = render_for_prompt(prefetched_ctx, currency=currency)
+
+        # ── 5.2. Auto-advance de stages basado en SEÑALES OBJETIVAS ──
+        # No dependemos de que el LLM llame `move_stage` (probabilístico).
+        # Avanzamos cuando se cumplen condiciones determinísticas:
+        try:
+            _auto_advance_stage_if_needed(
+                db, session, intent, customer_context,
+                prefetched_ctx=prefetched_ctx,
+            )
+            db.refresh(session)
+        except Exception as auto_exc:
+            logger.warning(f"[agent] auto-advance skipped: {auto_exc}")
     except Exception as exc:
         # Si el prefetch falla, seguimos con tools como fallback (no rompemos el turno)
         logger.warning(f"[agent] context-first prefetch skipped: {exc}", exc_info=True)

@@ -232,12 +232,21 @@ def _build_next_action(
         # Diagrama FASE 1: ¿Nombre? → ¿Sabe lo que quiere? → entendemos producto
         if not has_name:
             return (
-                "▶ ACCIÓN — FASE 1 (Descubrimiento): NO tenés el nombre del cliente.\n"
-                "  1. Si el cliente nombró un producto/categoría, primero buscá con `product_search`\n"
-                "  2. Pedí el nombre de forma natural en tu respuesta\n"
-                "     Ej: 'Genial, antes de seguir, ¿con quién hablo?'\n"
-                "  3. Cuando lo diga, guardalo: `update_notebook` section='customer' data={name: '...'}\n"
-                "  4. NO saludes de nuevo."
+                "▶ ACCIÓN — FASE 1 (Descubrimiento): NO tenés el nombre del cliente.\n\n"
+                "🚨 REGLA CRÍTICA — PRIMERO EL NOMBRE, DESPUÉS LOS PRODUCTOS:\n"
+                "  • AUNQUE haya productos en el bloque DATOS DISPONIBLES, NO se los\n"
+                "    muestres todavía. NO listes precios ni descripciones de productos.\n"
+                "  • Tu respuesta TIENE que ser cortita y pedir el nombre del cliente.\n"
+                "    Mostrar productos antes de saber su nombre rompe el flujo del diagrama.\n\n"
+                "  Ejemplo de respuesta CORRECTA:\n"
+                '    "¡Genial! Antes de mostrarte opciones, ¿con quién hablo? 🙂"\n'
+                '    "Perfecto, tengo varias cosas para vos. Antes, ¿cómo te llamás?"\n\n'
+                "  Ejemplo INCORRECTO (NO HACER):\n"
+                '    "¡Genial! Acá tenés algunos productos: Producto A $X, Producto B $Y..."\n'
+                "    ↑ Eso muestra productos sin tener el nombre. NO HACER.\n\n"
+                "  Cuando el cliente responda con su nombre:\n"
+                "    1. Guardalo: `update_notebook` section='customer' data={'name': '<nombre>'}\n"
+                "    2. En el SIGUIENTE turno te llegan los productos para mostrar."
             )
         if not has_intent:
             return (
