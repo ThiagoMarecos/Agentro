@@ -10,13 +10,12 @@ interface Props {
 }
 
 /**
- * Renderiza el logo del provider de pago. Prioriza:
- *   1. logo_url directa si existe
+ * Render del logo del provider con fallback en cascada:
+ *   1. logo_url directa (Wikimedia / CDN propio del provider)
  *   2. logo.clearbit.com con logo_domain
- *   3. fallback: cuadrado con color de marca + emoji icon
+ *   3. Iniciales del nombre sobre color brand (estilo Notion/Slack)
  *
- * Si una imagen falla, hace fallback al siguiente paso. El fondo siempre
- * usa el color brand del provider para que se vea consistente.
+ * El paso 3 es 100% confiable y se ve profesional cuando los otros fallan.
  */
 export function ProviderLogo({ provider, size = 40, rounded = "lg" }: Props) {
   const [step, setStep] = useState<0 | 1 | 2>(provider.logo_url ? 0 : provider.logo_domain ? 1 : 2);
@@ -50,20 +49,43 @@ export function ProviderLogo({ provider, size = 40, rounded = "lg" }: Props) {
     );
   }
 
-  // Fallback: emoji sobre fondo de color brand
+  // Fallback: iniciales del nombre sobre color brand
+  // Tomamos hasta 2 iniciales (ej: "Mercado Pago" → "MP", "Pix" → "P", "Banco GNB" → "BG").
+  const words = (provider.name || "?")
+    .replace(/[()]/g, "")
+    .split(/\s+/)
+    .filter(Boolean);
+  const initials =
+    words.length === 1
+      ? words[0].substring(0, 2).toUpperCase()
+      : (words[0][0] + words[1][0]).toUpperCase();
+
   return (
     <div
-      className="grid place-items-center text-white shrink-0"
+      className="grid place-items-center text-white shrink-0 font-bold tracking-tight select-none"
       style={{
         width: size,
         height: size,
         borderRadius: radius,
-        background: `linear-gradient(135deg, ${bg}, ${bg}dd)`,
-        fontSize: size * 0.5,
+        background: `linear-gradient(135deg, ${bg}, ${shade(bg, -18)})`,
+        fontSize: size * 0.42,
+        boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.06)",
       }}
       title={provider.name}
     >
-      {provider.icon}
+      {initials}
     </div>
   );
+}
+
+/** Oscurece (o aclara) un color hex en X% — usado para gradient sutil. */
+function shade(hex: string, percent: number): string {
+  const h = hex.replace("#", "");
+  if (h.length !== 6) return hex;
+  const r = parseInt(h.substring(0, 2), 16);
+  const g = parseInt(h.substring(2, 4), 16);
+  const b = parseInt(h.substring(4, 6), 16);
+  const adjust = (c: number) => Math.max(0, Math.min(255, Math.round(c + (c * percent) / 100)));
+  const toHex = (c: number) => c.toString(16).padStart(2, "0");
+  return `#${toHex(adjust(r))}${toHex(adjust(g))}${toHex(adjust(b))}`;
 }
