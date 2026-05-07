@@ -79,15 +79,15 @@ def get_current_store(
             detail="X-Store-ID header o store_id en query requerido",
         )
 
-    # Superadmin: bypass de membership, sólo valida que la tienda exista y esté activa
+    # Superadmin: bypass de membership Y bypass de is_active.
+    # El super admin tiene que poder operar sobre TODAS las tiendas, incluidas
+    # las suspendidas (es justamente el rol que gestiona la suspensión).
     if getattr(user, "is_superadmin", False):
         store = db.query(Store).filter(Store.id == store_id).first()
         if not store:
             store = db.query(Store).filter(Store.slug == store_id).first()
         if not store:
             raise HTTPException(status_code=404, detail="Tienda no encontrada")
-        if not store.is_active:
-            raise HTTPException(status_code=403, detail="STORE_SUSPENDED")
         return store
 
     member = db.query(StoreMember).filter(
