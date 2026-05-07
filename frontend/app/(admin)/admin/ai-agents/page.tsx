@@ -17,9 +17,10 @@ import {
 } from "@/lib/api/agent-performance";
 import {
   listLessons, createLesson, updateLesson, deleteLesson, toggleLearningMode,
+  // creación de agente cuando la tienda no tiene ninguno todavía
   type AgentLesson, type AgentLessonCreate,
 } from "@/lib/api/agent-lessons";
-import { getAgents, type AIAgent } from "@/lib/api/ai-agents";
+import { getAgents, createAgent, type AIAgent } from "@/lib/api/ai-agents";
 
 const API = "/api/v1/admin";
 const SETTINGS_URL = "/api/v1/admin/platform-settings";
@@ -1155,39 +1156,92 @@ function TabAprendizaje({
 
       {error && <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-sm text-red-700">{error}</div>}
 
-      {/* Filtros + acción */}
-      <div className="flex items-center justify-between gap-3 flex-wrap">
-        <div className="flex items-center gap-2 flex-wrap">
-          <button onClick={() => setFilterCategory(null)}
-            className={`text-xs font-medium px-3 py-1.5 rounded-full transition ${!filterCategory ? "bg-violet-600 text-white" : "bg-white border border-gray-200 text-gray-600 hover:border-gray-300"}`}>
-            Todas ({lessons.length})
+      {/* CASO ESPECIAL: tienda sin agente IA todavía → estado vacío con CTA */}
+      {agents.length === 0 ? (
+        <div className="bg-gradient-to-br from-violet-50 to-indigo-50 border border-violet-200 rounded-2xl p-12 text-center">
+          <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-white shadow-sm grid place-items-center">
+            <Bot className="w-8 h-8 text-violet-500" />
+          </div>
+          <p className="text-gray-900 font-semibold text-lg mb-2">Esta tienda no tiene un agente IA todavía</p>
+          <p className="text-gray-500 text-sm max-w-md mx-auto mb-6">
+            Las lecciones se aplican sobre un agente concreto. Creá uno con configuración por defecto y después podés ajustarlo.
+          </p>
+          <button
+            onClick={async () => {
+              if (!storeId) return;
+              try {
+                const ag = await createAgent(storeId, {
+                  name: "Asistente de ventas",
+                  description: "Agente IA de pre-venta (creado desde modo aprendizaje)",
+                  system_prompt: "",
+                  config: JSON.stringify({ model: "gpt-4o", temperature: 0.7 }),
+                  is_active: true,
+                  agent_type: "generic",
+                  tone: "friendly",
+                  language: "es",
+                  sales_style: "consultative",
+                  enabled_tools: JSON.stringify(["all"]),
+                  learning_mode_enabled: true,
+                });
+                setAgents([ag, ...agents]);
+                setAgentId(ag.id);
+              } catch (e: any) {
+                setError(e.message || "Error creando agente");
+              }
+            }}
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-violet-600 hover:bg-violet-700 text-white rounded-lg text-sm font-semibold shadow-sm"
+          >
+            <Plus className="w-4 h-4" /> Crear agente IA
           </button>
-          {Object.entries(CATEGORY_LABELS).map(([k, v]) => {
-            const count = lessons.filter(l => l.category === k).length;
-            if (count === 0) return null;
-            const active = filterCategory === k;
-            return (
-              <button key={k} onClick={() => setFilterCategory(active ? null : k)}
-                className={`text-xs font-medium px-3 py-1.5 rounded-full transition ${active ? "bg-violet-600 text-white" : `${CATEGORY_COLORS[k] || "bg-gray-100"} hover:opacity-80`}`}>
-                {v} ({count})
-              </button>
-            );
-          })}
         </div>
-        <button onClick={() => setCreating(true)} disabled={!agentId}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-violet-600 text-white text-sm font-medium hover:bg-violet-700 disabled:opacity-50">
-          <Plus className="w-4 h-4" /> Nueva lección
-        </button>
-      </div>
+      ) : (
+        <>
+          {/* Filtros + acción */}
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div className="flex items-center gap-2 flex-wrap">
+              <button onClick={() => setFilterCategory(null)}
+                className={`text-xs font-medium px-3 py-1.5 rounded-full transition ${!filterCategory ? "bg-violet-600 text-white" : "bg-white border border-gray-200 text-gray-600 hover:border-gray-300"}`}>
+                Todas ({lessons.length})
+              </button>
+              {Object.entries(CATEGORY_LABELS).map(([k, v]) => {
+                const count = lessons.filter(l => l.category === k).length;
+                if (count === 0) return null;
+                const active = filterCategory === k;
+                return (
+                  <button key={k} onClick={() => setFilterCategory(active ? null : k)}
+                    className={`text-xs font-medium px-3 py-1.5 rounded-full transition ${active ? "bg-violet-600 text-white" : `${CATEGORY_COLORS[k] || "bg-gray-100"} hover:opacity-80`}`}>
+                    {v} ({count})
+                  </button>
+                );
+              })}
+            </div>
+            <button
+              onClick={() => setCreating(true)}
+              disabled={!agentId}
+              title={!agentId ? "Elegí un agente primero" : "Crear nueva lección"}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-violet-600 text-white text-sm font-medium hover:bg-violet-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Plus className="w-4 h-4" /> Nueva lección
+            </button>
+          </div>
+        </>
+      )}
 
-      {/* Lessons list */}
-      {loading ? (
+      {/* Lessons list — solo si hay agentes (sino mostramos el CTA de arriba) */}
+      {agents.length > 0 && (loading ? (
         <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-violet-500" /></div>
       ) : filteredLessons.length === 0 ? (
         <div className="bg-white rounded-xl border border-gray-200/60 p-12 text-center">
           <Lightbulb className="w-10 h-10 mx-auto mb-3 text-gray-300" />
           <p className="text-sm font-medium text-gray-500 mb-1">Sin lecciones todavía</p>
           <p className="text-xs text-gray-400">Creá lecciones para corregir respuestas específicas del agente</p>
+          <button
+            onClick={() => setCreating(true)}
+            disabled={!agentId}
+            className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-violet-600 hover:bg-violet-700 disabled:opacity-50 text-white text-sm font-medium"
+          >
+            <Plus className="w-4 h-4" /> Crear primera lección
+          </button>
         </div>
       ) : (
         <div className="space-y-3">
@@ -1251,7 +1305,7 @@ function TabAprendizaje({
             </div>
           ))}
         </div>
-      )}
+      ))}
 
       {/* Modals */}
       {(creating || editing) && storeId && agentId && (
