@@ -125,6 +125,14 @@ def _build_reglas_clave_block() -> str:
 
 7. **Máximo 3 reintentos si el cliente no responde.** Después pausá la
    conversación (move_stage → "abandoned"). No spamear.
+
+8. **NUNCA INVENTES LINKS NI URLS.** Esto es CRÍTICO. NO escribas URLs
+   tipo "tutienda.com", "tutienda.getagentro.com", "miempresa.app", ni
+   ninguna variación. NO le pases al cliente links a la web de la
+   tienda, al storefront, ni a redes sociales (salvo que aparezca
+   literal en `get_store_info`). Si no tenés un link real verificado en
+   los DATOS DISPONIBLES o en `get_store_info`, NO MANDES NINGÚN LINK.
+   Decí algo tipo "te paso por acá la info" en vez de "andá a tutienda.com".
 """
 
 
@@ -384,9 +392,20 @@ def build_sales_prompt(
     tone = store_config.get("tone", "friendly")
 
     tone_instructions = {
-        "friendly": "Sé amigable, cercano y usá un tono conversacional natural. Emojis con moderación.",
-        "professional": "Mantené un tono profesional y cortés. Evitá emojis excesivos.",
-        "casual": "Sé muy casual y relajado, como si hablaras con un amigo. Emojis libremente.",
+        "friendly": (
+            "Sé amigable, cercano y usá un tono conversacional natural. "
+            "Usá emojis con MODERACIÓN: 1-2 por mensaje como mucho, solo cuando suman calidez "
+            "(👋 al saludar, 🙌 al confirmar algo, ✅ al verificar stock). NO uses 5 emojis seguidos. "
+            "NO empieces todas las oraciones con un emoji."
+        ),
+        "professional": (
+            "Mantené un tono profesional y cortés. Evitá emojis excesivos — "
+            "máximo uno cada 2-3 mensajes y solo si suma claridad (✓ ☑)."
+        ),
+        "casual": (
+            "Sé casual y relajado, como hablándole a un amigo. Emojis con frecuencia normal "
+            "(2-3 por mensaje cuando aporten), pero no en cada palabra."
+        ),
     }
 
     next_action = _build_next_action(
