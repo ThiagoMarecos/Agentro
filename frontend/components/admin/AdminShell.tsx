@@ -15,6 +15,7 @@ import {
   ChevronLeft,
   Shield,
   Bot,
+  Sparkles,
 } from "lucide-react";
 import { useAuth } from "@/app/providers/AuthProvider";
 
@@ -23,6 +24,7 @@ const navItems = [
   { href: "/admin/stores", label: "Tiendas", icon: Building2 },
   { href: "/admin/users", label: "Usuarios", icon: Users },
   { href: "/admin/ai-agents", label: "Agentes IA", icon: Bot },
+  { href: "/admin/chat-simulator", label: "Simulador", icon: Sparkles },
   { href: "/admin/logs", label: "Logs", icon: ScrollText },
   { href: "/admin/health", label: "Sistema", icon: Activity },
   { href: "/admin/terminal", label: "Terminal", icon: Terminal },
