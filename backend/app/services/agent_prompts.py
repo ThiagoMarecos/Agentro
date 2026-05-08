@@ -23,6 +23,37 @@ from app.models.sales_session import SalesSession
 #  Helpers de bloques del prompt
 # ════════════════════════════════════════════════════════════════════
 
+def _render_cart_block(nb: dict) -> str:
+    """
+    Renderiza el carrito actual del notebook (order.items) como una lista
+    legible para el LLM. Si está vacío, devuelve un placeholder.
+    """
+    order = nb.get("order", {}) or {}
+    items = order.get("items") or []
+    if not items:
+        return "❌ Carrito vacío — agregá items con `update_notebook` cuando el cliente confirme un producto."
+    lines = []
+    total = 0.0
+    for i, it in enumerate(items, 1):
+        try:
+            qty = int(it.get("quantity") or 1)
+        except Exception:
+            qty = 1
+        try:
+            unit = float(it.get("unit_price") or 0)
+        except Exception:
+            unit = 0.0
+        line_total = qty * unit
+        total += line_total
+        name = it.get("name") or "(sin nombre)"
+        variant = it.get("variant_name") or it.get("variant_id") or ""
+        variant_str = f" — {variant}" if variant else ""
+        lines.append(f"  {i}. {name}{variant_str} — Cant. {qty} — ${unit:,.0f} c/u — Subt. ${line_total:,.0f}")
+    lines.append(f"  ───────────────")
+    lines.append(f"  TOTAL acumulado: ${total:,.0f}")
+    return "\n".join(lines)
+
+
 def _build_customer_block(customer_context: dict | None, store_name: str) -> str:
     """
     Bloque informativo (no instruccional) sobre quién es el cliente.
@@ -590,6 +621,51 @@ Si el cliente pidió varios productos, mostrá UNO O DOS por turno y preguntá s
 - Si dice "backorder permitido, llega en X días" → mencionalo así al cliente.
 - NUNCA inventes stock que no aparezca en DATOS DISPONIBLES.
 
+### COLORES Y VARIANTES VISUALES
+- En esta tienda, las **variantes en `variants`** son típicamente TALLES (S, M, L, XL).
+- Los **colores u otras variantes visuales** pueden estar en la **galería de imágenes**
+  del producto (mirá la línea "galería" en DATOS DISPONIBLES).
+- Si el cliente pregunta "¿lo tenés en otro color?" o "¿qué colores tenés?":
+  1. **NO digas inmediatamente "solo el color estándar"** sin chequear la galería.
+  2. Si en DATOS DISPONIBLES dice "galería: N imágenes (...)", ofrecé mandar
+     las fotos: "Te muestro las opciones que tenemos" + `send_product_image`.
+  3. Si los `alt_text` de la galería mencionan colores, podés decir explícitamente
+     "lo tenemos en negro y gris" (basado en lo que muestren los alt_text reales).
+  4. Si hay solo 1 imagen y ningún alt_text, recién ahí decir "viene en color
+     único, ¿querés ver la foto?".
+
+### CARRITO ACUMULATIVO — TRACKEAR PRODUCTOS QUE EL CLIENTE ELIGE
+A medida que la conversación avanza, el cliente puede mostrar interés en VARIOS
+productos. Por ejemplo: confirma un short, después pregunta por una camiseta, después
+por un hoodie. **TENÉS QUE LLEVAR REGISTRO** de todos los items elegidos:
+
+  Cada vez que el cliente confirma interés concreto en un producto + variante:
+  → llamá `update_notebook` section="order" data={"items": [...]}
+  → el array "items" debe contener TODOS los productos confirmados hasta ese turno
+    (no solo el último). Formato de cada item:
+    {"product_id": "<UUID>", "name": "<nombre>", "variant_id": "<UUID o null>",
+     "variant_name": "<talle o color>", "quantity": 1, "unit_price": <precio>}
+
+  Cuando armás el PRESUPUESTO FORMAL en FASE 3, **DEBE INCLUIR TODOS los items
+  del carrito**, no solo el último confirmado. El total se calcula sumando
+  `quantity * unit_price` de cada item.
+
+  Ejemplo CORRECTO de presupuesto con 3 productos:
+    📋 *Resumen de tu pedido:*
+    1. **FLEX-01 Shorts** — Talle L — Cant. 1 — $350.000
+    2. **WEIGHT-02 Hoodie** — Talle L — Cant. 1 — $450.000
+    3. **COMPRESS-01 TEE** — Talle M — Cant. 1 — $400.000
+
+    Subtotal: $1.200.000
+    Envío: a confirmar
+    *Total: $1.200.000 PYG*
+    Tiempo de entrega: 3-5 días
+
+    ¿Confirmás esta propuesta?
+
+  Ejemplo INCORRECTO: armar el presupuesto con 1 solo producto cuando el cliente
+  confirmó 3. Eso pierde la venta.
+
 ### IDs DE PRODUCTO — NO INVENTES IDS
 - Los IDs son UUIDs largos (formato `8b78bd11-2d8b-4e8e-ad52-aae00f454087`).
 - En DATOS DISPONIBLES, cada producto trae su UUID exacto en una línea.
@@ -679,6 +755,11 @@ Etapa actual: **{stage}** | Mensajes: {message_count} | Moneda: {currency}
 ### Validación:
 - Disponibilidad checkeada: {json.dumps(nb.get("availability", {}), ensure_ascii=False) if nb.get("availability") else "❌ pendiente"}
 - Pricing acordado: {json.dumps(nb.get("pricing", {}), ensure_ascii=False) if nb.get("pricing") else "—"}
+
+### 🛒 CARRITO ACTUAL (productos confirmados por el cliente):
+{_render_cart_block(nb)}
+Cuando armes el presupuesto formal en FASE 3, INCLUÍ TODOS los items del carrito,
+NO solo el último. El total = suma de quantity * unit_price.
 
 Usá esta información para NO repetir preguntas y mantener continuidad total.
 """

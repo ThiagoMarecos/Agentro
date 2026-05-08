@@ -57,8 +57,12 @@ class PrefetchedProduct:
     # Variantes resumidas (talles, colores)
     variants: list[dict] = field(default_factory=list)
 
-    # Imagen para enviar
+    # Imagen para enviar (cover)
     cover_image_url: str | None = None
+
+    # Galería completa de imágenes (puede contener variantes visuales como colores).
+    # Cada item: {"id", "url", "alt_text"}
+    gallery: list[dict] = field(default_factory=list)
 
 
 @dataclass
@@ -155,6 +159,17 @@ def _to_prefetched_product(product: Product) -> PrefetchedProduct:
         product.images[0].url if product.images else None
     )
 
+    # Galería completa: cada imagen con su alt_text (suele indicar color/variante visual).
+    # Si el comerciante carga 3+ fotos de "negro frontal", "blanco frontal", el agente
+    # puede inferir que hay variantes de color en la galería.
+    gallery = []
+    for img in (product.images or []):
+        gallery.append({
+            "id": img.id,
+            "url": img.url,
+            "alt_text": (img.alt_text or "").strip() or None,
+        })
+
     return PrefetchedProduct(
         id=product.id,
         name=product.name,
@@ -172,6 +187,7 @@ def _to_prefetched_product(product: Product) -> PrefetchedProduct:
         internal_notes=getattr(product, "internal_notes", None),
         variants=variants,
         cover_image_url=cover_url,
+        gallery=gallery,
     )
 
 
@@ -455,9 +471,29 @@ def render_for_prompt(ctx: PrefetchedContext, currency: str = "USD") -> str:
                 in_stock_variants = [v for v in p.variants if v["available"]]
                 if in_stock_variants:
                     var_names = ", ".join(v["name"] for v in in_stock_variants[:8])
-                    parts.append(f"    — variantes con stock: {var_names}")
+                    parts.append(f"    — variantes (talles/medidas) con stock: {var_names}")
                 else:
                     parts.append("    — variantes: ninguna con stock")
+
+            # Galería de imágenes — puede tener variantes visuales (colores).
+            # Si hay >1 imagen, lo mencionamos para que el agente no diga "sin variantes
+            # de color" cuando en realidad las hay como fotos de galería.
+            if p.gallery:
+                gal_count = len(p.gallery)
+                # alt_texts útiles (no vacíos) — pueden indicar el color/variante
+                alts = [g["alt_text"] for g in p.gallery if g.get("alt_text")]
+                if alts:
+                    alt_preview = " / ".join(alts[:5])
+                    parts.append(
+                        f"    — galería: {gal_count} imágenes ({alt_preview})"
+                    )
+                elif gal_count > 1:
+                    parts.append(
+                        f"    — galería: {gal_count} imágenes (pueden ser distintas vistas o colores; "
+                        f"si el cliente pregunta por color, ofrecé enviar las imágenes con `send_product_image`)"
+                    )
+                else:
+                    parts.append(f"    — galería: 1 imagen")
 
             # Origen / lead time (info interna, NO compartir literal con cliente)
             if p.origin_type and p.origin_type != "external_supplier":
