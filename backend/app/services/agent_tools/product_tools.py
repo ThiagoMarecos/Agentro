@@ -432,9 +432,15 @@ def tool_send_product_image(db: Session, session: SalesSession, **params) -> str
     """
     Programa el envío de la foto de un producto al cliente por WhatsApp.
     Las imágenes se envían después del mensaje de texto.
+
+    CRÍTICO: el caption SIEMPRE arranca con el nombre real del producto al que
+    pertenece la imagen (sacado de la DB). Si el LLM se equivoca de product_id
+    y manda la foto incorrecta, al menos el caption va a delatar el mismatch
+    (ej: el LLM dice "la TEE" pero el producto real es "Shorts" → el caption
+    dirá "Shorts" y el cliente verá la inconsistencia).
     """
     product_id = params.get("product_id", "")
-    caption = params.get("caption", "")
+    extra_caption = (params.get("caption") or "").strip()
     pending_media: list | None = params.get("_pending_media")
 
     product = db.query(Product).filter(
@@ -444,15 +450,44 @@ def tool_send_product_image(db: Session, session: SalesSession, **params) -> str
     ).first()
 
     if not product:
-        return json.dumps({"sent": False, "reason": "Producto no encontrado"})
+        return json.dumps({
+            "sent": False,
+            "reason": (
+                "Producto no encontrado — el ID que pasaste no es un UUID válido en la DB. "
+                "Probablemente copiaste el slug o el nombre en vez del UUID."
+            ),
+            "id_provided": product_id,
+            "hint": (
+                "Re-mirá el bloque DATOS DISPONIBLES y copiá el UUID exacto del producto "
+                "del que querés mandar la foto. NO lo inventes."
+            ),
+        })
 
     images = product.images or []
     if not images:
-        return json.dumps({"sent": False, "reason": "El producto no tiene imágenes cargadas"})
+        return json.dumps({"sent": False, "reason": f"El producto '{product.name}' no tiene imágenes cargadas"})
 
     # Tomar la imagen de portada o la primera
     cover = next((i for i in images if i.is_cover), images[0])
     url = cover.url
+
+    # Caption canónico: SIEMPRE arranca con el nombre real del producto.
+    # Si el LLM mandó un caption extra que NO incluye el nombre del producto
+    # (caso típico de bug con IDs cruzados), lo prefijeamos.
+    canonical_name = product.name
+    if extra_caption and canonical_name.lower() in extra_caption.lower():
+        # El LLM ya incluyó el nombre — confiamos en su caption
+        caption = extra_caption
+    elif extra_caption:
+        # El caption del LLM no menciona el producto real → prefijeamos con el canónico
+        caption = f"{canonical_name} — {extra_caption}"
+        logger.warning(
+            f"[send_image] caption del LLM no mencionaba '{canonical_name}' "
+            f"(decia: {extra_caption[:80]!r}). Prefijado con nombre canónico."
+        )
+    else:
+        # Sin caption del LLM → usamos el nombre del producto a secas
+        caption = canonical_name
 
     # Leer el archivo del disco y codificar en base64.
     # Evolution API acepta base64 directamente → no depende de URLs públicas.
