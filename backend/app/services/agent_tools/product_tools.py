@@ -428,19 +428,71 @@ def tool_recommend_product(db: Session, session: SalesSession, **params) -> str:
     return json.dumps({"recommendations": results}, ensure_ascii=False)
 
 
+def _attach_image_to_pending(
+    image_url: str,
+    caption: str,
+    pending_media: list | None,
+) -> tuple[str, bool]:
+    """
+    Helper: agrega una imagen a la cola de pending_media. Lee del disco si es
+    un upload local y la encoda como base64. Retorna (public_url, b64_available).
+    """
+    b64_data: str | None = None
+    if image_url.startswith("/uploads/"):
+        try:
+            rel_path = image_url[len("/uploads/"):]
+            file_path = _UPLOADS_DIR / rel_path
+            if file_path.exists() and file_path.is_file():
+                b64_data = base64.b64encode(file_path.read_bytes()).decode()
+            else:
+                logger.warning(f"Image file not found on disk: {file_path}")
+        except Exception as e:
+            logger.warning(f"Could not encode image to base64: {e}")
+
+    public_url = image_url
+    if image_url.startswith("/") and not b64_data:
+        from app.config import get_settings
+        settings = get_settings()
+        public_url = f"{settings.backend_url}{image_url}"
+
+    if pending_media is not None:
+        pending_media.append({
+            "type": "image",
+            "url": public_url,
+            "b64": b64_data,
+            "caption": caption,
+        })
+    return public_url, b64_data is not None
+
+
+def _resolve_canonical_caption(product_name: str, extra_caption: str | None) -> str:
+    """Caption canónico que SIEMPRE incluye el nombre real del producto."""
+    extra = (extra_caption or "").strip()
+    if extra and product_name.lower() in extra.lower():
+        return extra
+    if extra:
+        logger.warning(
+            f"[send_image] caption del LLM no mencionaba '{product_name}' "
+            f"(decía: {extra[:80]!r}). Prefijado con nombre canónico."
+        )
+        return f"{product_name} — {extra}"
+    return product_name
+
+
 def tool_send_product_image(db: Session, session: SalesSession, **params) -> str:
     """
-    Programa el envío de la foto de un producto al cliente por WhatsApp.
-    Las imágenes se envían después del mensaje de texto.
+    Manda UNA imagen específica de un producto al cliente.
 
-    CRÍTICO: el caption SIEMPRE arranca con el nombre real del producto al que
-    pertenece la imagen (sacado de la DB). Si el LLM se equivoca de product_id
-    y manda la foto incorrecta, al menos el caption va a delatar el mismatch
-    (ej: el LLM dice "la TEE" pero el producto real es "Shorts" → el caption
-    dirá "Shorts" y el cliente verá la inconsistencia).
+    Por default manda la imagen cover (portada). Si pasás `image_index`, manda
+    la imagen N-ésima de la galería del producto (0=cover, 1=segunda, etc.).
+
+    Para mandar TODAS las imágenes del producto (útil cuando el cliente pregunta
+    por colores u otras variantes visuales), usá `send_product_gallery` en su
+    lugar.
     """
     product_id = params.get("product_id", "")
     extra_caption = (params.get("caption") or "").strip()
+    image_index = params.get("image_index")
     pending_media: list | None = params.get("_pending_media")
 
     product = db.query(Product).filter(
@@ -452,14 +504,11 @@ def tool_send_product_image(db: Session, session: SalesSession, **params) -> str
     if not product:
         return json.dumps({
             "sent": False,
-            "reason": (
-                "Producto no encontrado — el ID que pasaste no es un UUID válido en la DB. "
-                "Probablemente copiaste el slug o el nombre en vez del UUID."
-            ),
+            "reason": "Producto no encontrado — el ID no es un UUID válido en la DB.",
             "id_provided": product_id,
             "hint": (
-                "Re-mirá el bloque DATOS DISPONIBLES y copiá el UUID exacto del producto "
-                "del que querés mandar la foto. NO lo inventes."
+                "Re-mirá DATOS DISPONIBLES y copiá el UUID exacto del producto. "
+                "Si querés mandar TODAS las imágenes (ej: colores), usá `send_product_gallery`."
             ),
         })
 
@@ -467,64 +516,89 @@ def tool_send_product_image(db: Session, session: SalesSession, **params) -> str
     if not images:
         return json.dumps({"sent": False, "reason": f"El producto '{product.name}' no tiene imágenes cargadas"})
 
-    # Tomar la imagen de portada o la primera
-    cover = next((i for i in images if i.is_cover), images[0])
-    url = cover.url
-
-    # Caption canónico: SIEMPRE arranca con el nombre real del producto.
-    # Si el LLM mandó un caption extra que NO incluye el nombre del producto
-    # (caso típico de bug con IDs cruzados), lo prefijeamos.
-    canonical_name = product.name
-    if extra_caption and canonical_name.lower() in extra_caption.lower():
-        # El LLM ya incluyó el nombre — confiamos en su caption
-        caption = extra_caption
-    elif extra_caption:
-        # El caption del LLM no menciona el producto real → prefijeamos con el canónico
-        caption = f"{canonical_name} — {extra_caption}"
-        logger.warning(
-            f"[send_image] caption del LLM no mencionaba '{canonical_name}' "
-            f"(decia: {extra_caption[:80]!r}). Prefijado con nombre canónico."
-        )
-    else:
-        # Sin caption del LLM → usamos el nombre del producto a secas
-        caption = canonical_name
-
-    # Leer el archivo del disco y codificar en base64.
-    # Evolution API acepta base64 directamente → no depende de URLs públicas.
-    b64_data: str | None = None
-    if url.startswith("/uploads/"):
+    # Elegir imagen: por índice si se pasó, sino la cover (o primera)
+    if image_index is not None:
         try:
-            rel_path = url[len("/uploads/"):]  # quitar el prefijo "/uploads/"
-            file_path = _UPLOADS_DIR / rel_path
-            if file_path.exists() and file_path.is_file():
-                b64_data = base64.b64encode(file_path.read_bytes()).decode()
-                logger.info(f"Image encoded as base64: {file_path} ({len(b64_data)} chars)")
-            else:
-                logger.warning(f"Image file not found on disk: {file_path}")
-        except Exception as e:
-            logger.warning(f"Could not encode image to base64: {e}")
+            idx = int(image_index)
+        except (ValueError, TypeError):
+            idx = 0
+        if 0 <= idx < len(images):
+            chosen = images[idx]
+        else:
+            chosen = next((i for i in images if i.is_cover), images[0])
+    else:
+        chosen = next((i for i in images if i.is_cover), images[0])
 
-    # Fallback: si no se pudo leer del disco, intentar con URL pública
-    public_url = url
-    if url.startswith("/") and not b64_data:
-        from app.config import get_settings
-        settings = get_settings()
-        public_url = f"{settings.backend_url}{url}"
-
-    if pending_media is not None:
-        pending_media.append({
-            "type": "image",
-            "url": public_url,
-            "b64": b64_data,
-            "caption": caption or product.name,
-        })
+    caption = _resolve_canonical_caption(product.name, extra_caption)
+    public_url, has_b64 = _attach_image_to_pending(chosen.url, caption, pending_media)
 
     return json.dumps({
         "sent": True,
         "product": product.name,
         "image_url": public_url,
-        "caption": caption or product.name,
-        "base64_available": b64_data is not None,
+        "caption": caption,
+        "image_index": image_index if image_index is not None else 0,
+        "total_images_in_gallery": len(images),
+        "base64_available": has_b64,
+    }, ensure_ascii=False)
+
+
+def tool_send_product_gallery(db: Session, session: SalesSession, **params) -> str:
+    """
+    Manda TODAS las imágenes de la galería de un producto al cliente.
+
+    Útil cuando el cliente pregunta por colores u otras variantes visuales:
+    en SØLACE (y muchas tiendas) los colores no están en `variants` (que son
+    talles) sino en distintas imágenes del mismo producto. Esta tool envía
+    cada imagen como un mensaje separado con su alt_text si lo tiene.
+    """
+    product_id = params.get("product_id", "")
+    pending_media: list | None = params.get("_pending_media")
+
+    product = db.query(Product).filter(
+        Product.id == product_id,
+        Product.store_id == session.store_id,
+        Product.is_active == True,
+    ).first()
+    if not product:
+        return json.dumps({
+            "sent": False,
+            "reason": "Producto no encontrado — el ID no es un UUID válido en la DB.",
+            "id_provided": product_id,
+            "hint": "Re-mirá DATOS DISPONIBLES y copiá el UUID exacto.",
+        })
+
+    images = product.images or []
+    if not images:
+        return json.dumps({"sent": False, "reason": f"El producto '{product.name}' no tiene imágenes cargadas"})
+
+    # Cover primero, después el resto
+    sorted_imgs = sorted(images, key=lambda i: (0 if i.is_cover else 1, getattr(i, "id", "")))
+
+    sent_count = 0
+    captions_sent = []
+    for idx, img in enumerate(sorted_imgs):
+        # Caption: nombre del producto + alt_text si lo hay (suele indicar color)
+        alt = (img.alt_text or "").strip()
+        if alt:
+            caption = f"{product.name} — {alt}"
+        else:
+            caption = f"{product.name} (imagen {idx + 1} de {len(sorted_imgs)})"
+        _attach_image_to_pending(img.url, caption, pending_media)
+        sent_count += 1
+        captions_sent.append(caption)
+
+    return json.dumps({
+        "sent": True,
+        "product": product.name,
+        "images_sent": sent_count,
+        "captions": captions_sent,
+        "hint": (
+            f"Mandé {sent_count} imágenes del producto '{product.name}'. "
+            "Si los alt_text de las imágenes mencionan colores, comentale al cliente "
+            "qué colores tiene. Si no hay alt_text, decile que estas son las opciones "
+            "visuales que tenés cargadas."
+        ),
     }, ensure_ascii=False)
 
 
@@ -612,15 +686,41 @@ PRODUCT_TOOL_DEFINITIONS = [
         "function": {
             "name": "send_product_image",
             "description": (
-                "Enviar la foto de un producto al cliente por WhatsApp. "
-                "Usá esta tool cuando el cliente pida ver una foto, o cuando presentes un producto por primera vez. "
-                "La imagen se envía justo después de tu mensaje de texto."
+                "Enviar UNA imagen de un producto. Por default la cover (portada). "
+                "Para mandar TODAS las imágenes (ej: cuando el cliente pregunta por colores), "
+                "usá `send_product_gallery` en su lugar. "
+                "El UUID del product_id TIENE que copiarse literal del bloque DATOS DISPONIBLES "
+                "— NO inventes IDs ni uses slugs / nombres."
             ),
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "product_id": {"type": "string", "description": "ID del producto cuya imagen enviar"},
-                    "caption": {"type": "string", "description": "Texto que acompaña la imagen (opcional, por defecto el nombre del producto)"},
+                    "product_id": {"type": "string", "description": "UUID exacto del producto (copiar de DATOS DISPONIBLES, no inventar)"},
+                    "caption": {"type": "string", "description": "Texto que acompaña la imagen (opcional)"},
+                    "image_index": {
+                        "type": "integer",
+                        "description": "Índice de imagen específica en la galería (0=cover, 1=segunda, etc.). Si no se pasa, manda la cover.",
+                    },
+                },
+                "required": ["product_id"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "send_product_gallery",
+            "description": (
+                "Enviar TODAS las imágenes de la galería de un producto. Útil cuando el cliente "
+                "pregunta '¿en qué colores lo tenés?' o '¿me podés mostrar más fotos?'. En SØLACE "
+                "(y muchas tiendas), los colores no están en `variants` sino como distintas imágenes "
+                "del producto. Esta tool manda cada imagen con su alt_text como caption — si los "
+                "alt_text mencionan colores, después podés decirle al cliente qué colores tiene."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "product_id": {"type": "string", "description": "UUID exacto del producto (copiar de DATOS DISPONIBLES)"},
                 },
                 "required": ["product_id"],
             },

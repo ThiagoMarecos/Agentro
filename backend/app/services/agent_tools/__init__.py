@@ -9,6 +9,7 @@ from app.services.agent_tools.product_tools import (
     tool_check_availability,
     tool_recommend_product,
     tool_send_product_image,
+    tool_send_product_gallery,
     tool_list_categories,
     PRODUCT_TOOL_DEFINITIONS,
 )
@@ -49,6 +50,7 @@ TOOL_EXECUTORS = {
     "check_availability": tool_check_availability,
     "recommend_product": tool_recommend_product,
     "send_product_image": tool_send_product_image,
+    "send_product_gallery": tool_send_product_gallery,
     "list_categories": tool_list_categories,
     "estimate_shipping": tool_estimate_shipping,
     "create_payment_link": tool_create_payment_link,
@@ -68,7 +70,8 @@ TOOL_EXECUTORS = {
 # automáticamente para el agente de ventas principal.
 _DEFAULT_SAFE_TOOLS = {
     "product_search", "product_detail", "check_availability",
-    "recommend_product", "send_product_image", "list_categories",
+    "recommend_product", "send_product_image", "send_product_gallery",
+    "list_categories",
     "get_store_info", "get_store_discounts",
     "update_notebook", "move_stage",
     "notify_owner", "escalate_to_human", "handoff_to_seller",
