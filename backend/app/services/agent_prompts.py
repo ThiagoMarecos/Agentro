@@ -640,11 +640,11 @@ productos. Por ejemplo: confirma un short, después pregunta por una camiseta, d
 por un hoodie. **TENÉS QUE LLEVAR REGISTRO** de todos los items elegidos:
 
   Cada vez que el cliente confirma interés concreto en un producto + variante:
-  → llamá `update_notebook` section="order" data={"items": [...]}
+  → llamá `update_notebook` section="order" data={{"items": [...]}}
   → el array "items" debe contener TODOS los productos confirmados hasta ese turno
     (no solo el último). Formato de cada item:
-    {"product_id": "<UUID>", "name": "<nombre>", "variant_id": "<UUID o null>",
-     "variant_name": "<talle o color>", "quantity": 1, "unit_price": <precio>}
+    {{"product_id": "<UUID>", "name": "<nombre>", "variant_id": "<UUID o null>",
+     "variant_name": "<talle o color>", "quantity": 1, "unit_price": <precio>}}
 
   Cuando armás el PRESUPUESTO FORMAL en FASE 3, **DEBE INCLUIR TODOS los items
   del carrito**, no solo el último confirmado. El total se calcula sumando
