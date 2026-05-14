@@ -27,11 +27,29 @@ def _render_cart_block(nb: dict) -> str:
     """
     Renderiza el carrito actual del notebook (order.items) como una lista
     legible para el LLM. Si está vacío, devuelve un placeholder.
+
+    Defensivo ante items malformados (strings, None, etc.) — el LLM a veces
+    guarda items como lista de strings; los normalizamos en lugar de explotar.
     """
-    order = nb.get("order", {}) or {}
-    items = order.get("items") or []
+    order = nb.get("order") if isinstance(nb, dict) else None
+    if not isinstance(order, dict):
+        order = {}
+    raw_items = order.get("items") or []
+    if not isinstance(raw_items, list) or not raw_items:
+        return "❌ Carrito vacío — agregá items con `update_notebook` cuando el cliente confirme un producto."
+
+    # Normalizar items: si no es dict, lo wrappeamos como {"name": str(it)}
+    items: list[dict] = []
+    for it in raw_items:
+        if isinstance(it, dict):
+            items.append(it)
+        elif isinstance(it, str):
+            items.append({"name": it})
+        # cualquier otro tipo (None, int, etc.) se ignora silenciosamente
+
     if not items:
         return "❌ Carrito vacío — agregá items con `update_notebook` cuando el cliente confirme un producto."
+
     lines = []
     total = 0.0
     for i, it in enumerate(items, 1):

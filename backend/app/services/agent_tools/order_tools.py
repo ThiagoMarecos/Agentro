@@ -75,6 +75,10 @@ def tool_create_order(db: Session, session: SalesSession, **params) -> str:
     order_items = []
 
     for item in items_data:
+        # Defensivo: el LLM a veces manda items como strings sueltos
+        if not isinstance(item, dict):
+            continue
+
         # SECURITY: filtrar por store_id para evitar IDOR cross-tenant
         product = db.query(Product).filter(
             Product.id == item.get("product_id"),

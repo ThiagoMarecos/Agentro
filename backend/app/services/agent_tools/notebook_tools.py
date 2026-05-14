@@ -10,6 +10,24 @@ from app.models.sales_session import SalesSession
 from app.services.stage_engine import move_to_stage, STAGES
 
 
+def _normalize_order_items(raw_items) -> list[dict]:
+    """
+    Defensivo: el LLM a veces manda items como strings o como lista mixta.
+    Devolvemos siempre una lista de dicts con al menos {name} para no romper
+    el render del carrito ni los renders downstream.
+    """
+    if not isinstance(raw_items, list):
+        return []
+    out: list[dict] = []
+    for it in raw_items:
+        if isinstance(it, dict):
+            out.append(it)
+        elif isinstance(it, str) and it.strip():
+            out.append({"name": it.strip()})
+        # ignoramos None, números sueltos, etc.
+    return out
+
+
 def tool_update_notebook(db: Session, session: SalesSession, **params) -> str:
     """Actualiza una sección del notebook con nuevos datos."""
     section = params.get("section", "")
@@ -26,6 +44,11 @@ def tool_update_notebook(db: Session, session: SalesSession, **params) -> str:
 
     if section not in valid_sections:
         return json.dumps({"error": f"Sección inválida: {section}. Válidas: {valid_sections}"})
+
+    # Para la sección "order", normalizar el campo `items` si viene presente.
+    # Garantiza que siempre quede como list[dict] aunque el LLM lo arme mal.
+    if section == "order" and isinstance(data, dict) and "items" in data:
+        data = {**data, "items": _normalize_order_items(data.get("items"))}
 
     session.update_notebook_section(section, data)
     db.add(session)
