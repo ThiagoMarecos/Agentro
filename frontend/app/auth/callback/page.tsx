@@ -6,7 +6,7 @@ import { setTokens } from "@/lib/auth";
 import { getOnboardingStatus } from "@/lib/api/onboarding";
 import { useAuth } from "@/app/providers/AuthProvider";
 
-function parseTokensFromUrl(): { access: string; refresh: string } | null {
+function parseTokensFromUrl(): { access: string; refresh: string; state: string | null } | null {
   if (typeof window === "undefined") return null;
   // Prioridad: fragment (hash) - tokens no se envían al servidor
   const hash = window.location.hash?.slice(1);
@@ -14,13 +14,13 @@ function parseTokensFromUrl(): { access: string; refresh: string } | null {
     const params = new URLSearchParams(hash);
     const access = params.get("access_token");
     const refresh = params.get("refresh_token");
-    if (access && refresh) return { access, refresh };
+    if (access && refresh) return { access, refresh, state: params.get("state") };
   }
   // Fallback: query (compatibilidad)
   const params = new URLSearchParams(window.location.search);
   const access = params.get("access_token");
   const refresh = params.get("refresh_token");
-  if (access && refresh) return { access, refresh };
+  if (access && refresh) return { access, refresh, state: params.get("state") };
   return null;
 }
 
@@ -38,6 +38,17 @@ export default function AuthCallbackPage() {
     const run = async () => {
       setTokens(tokens.access, tokens.refresh);
       await reloadUser();
+
+      // Flujo de invitación: si el state es "invite:<token>" volvemos a la
+      // página de invitación, donde el usuario ya logueado puede aceptarla.
+      if (tokens.state && tokens.state.startsWith("invite:")) {
+        const inviteToken = tokens.state.slice("invite:".length);
+        if (inviteToken) {
+          router.replace(`/team-invite/${inviteToken}`);
+          return;
+        }
+      }
+
       try {
         const status = await getOnboardingStatus();
         if (status.suggested_redirect === "/admin") {

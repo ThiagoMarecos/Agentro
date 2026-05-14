@@ -4,6 +4,7 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/app/providers/AuthProvider";
+import { getGoogleAuthUrl, logout as clearStoredTokens } from "@/lib/auth";
 import {
   acceptInvitation,
   getInvitationInfo,
@@ -175,8 +176,15 @@ export default function TeamInvitePage() {
   }, []);
 
   const isLoggedInAsRightUser = !!(user && info && user.email === info.email);
+  const isLoggedInAsWrongUser = !!(user && info && user.email !== info.email);
   const needsPasswordOnly     = !!(info?.user_exists && !isLoggedInAsRightUser);
   const isCreatingAccount     = !!(info && !info.user_exists);
+  const googleOAuthUrl        = getGoogleAuthUrl(`invite:${token}`);
+
+  const handleLogoutAndRetry = () => {
+    clearStoredTokens();
+    window.location.reload();
+  };
 
   const onAccept = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -359,8 +367,21 @@ export default function TeamInvitePage() {
               </div>
             )}
 
+            {/* Logged-in with WRONG email — needs to switch accounts */}
+            {isLoggedInAsWrongUser && (
+              <div className={styles.wrongUserBox}>
+                <div>
+                  Estás conectado como <strong>{user!.email}</strong>, pero esta
+                  invitación es para <strong>{info.email}</strong>.
+                </div>
+                <button type="button" onClick={handleLogoutAndRetry} className={styles.wrongUserBtn}>
+                  Cerrar sesión y volver a intentar
+                </button>
+              </div>
+            )}
+
             {/* Email (always readonly) */}
-            {!isLoggedInAsRightUser && (
+            {!isLoggedInAsRightUser && !isLoggedInAsWrongUser && (
               <div className={styles.field}>
                 <label className={styles.fieldLabel}>
                   Email de la invitación
@@ -371,7 +392,7 @@ export default function TeamInvitePage() {
             )}
 
             {/* Full name (new accounts only) */}
-            {isCreatingAccount && (
+            {isCreatingAccount && !isLoggedInAsWrongUser && (
               <div className={styles.field}>
                 <label className={styles.fieldLabel}>Tu nombre (opcional)</label>
                 <input
@@ -385,7 +406,7 @@ export default function TeamInvitePage() {
             )}
 
             {/* Password */}
-            {!isLoggedInAsRightUser && (
+            {!isLoggedInAsRightUser && !isLoggedInAsWrongUser && (
               <div className={styles.field}>
                 <label className={styles.fieldLabel}>
                   {needsPasswordOnly ? "Contraseña de tu cuenta" : "Elegí una contraseña"}
@@ -405,7 +426,7 @@ export default function TeamInvitePage() {
             )}
 
             {/* Confirm password (new accounts only) */}
-            {isCreatingAccount && (
+            {isCreatingAccount && !isLoggedInAsWrongUser && (
               <div className={styles.field}>
                 <label className={styles.fieldLabel}>Confirmá tu contraseña</label>
                 <input
@@ -425,7 +446,7 @@ export default function TeamInvitePage() {
             {/* Bottom group: terms + buttons */}
             <div className={styles.bottomGroup}>
               {/* Terms checkbox (new accounts only) */}
-              {isCreatingAccount && (
+              {isCreatingAccount && !isLoggedInAsWrongUser && (
                 <div
                   className={`${styles.checkRow}${termsError ? ` ${styles.termsError}` : ""}`}
                   onClick={() => { setTermsChecked(!termsChecked); setTermsError(false); }}
@@ -447,20 +468,22 @@ export default function TeamInvitePage() {
                 </div>
               )}
 
-              <button type="submit" disabled={submitting} className={styles.btnPrimary}>
-                {submitting ? <span className={styles.spinner} /> : null}
-                {submitting ? "Procesando…" : "Aceptar invitación"}
-              </button>
+              {!isLoggedInAsWrongUser && (
+                <button type="submit" disabled={submitting} className={styles.btnPrimary}>
+                  {submitting ? <span className={styles.spinner} /> : null}
+                  {submitting ? "Procesando…" : "Aceptar invitación"}
+                </button>
+              )}
 
-              {isCreatingAccount && (
+              {!isLoggedInAsRightUser && (
                 <>
                   <div className={styles.divider}>
                     <span className={styles.dividerText}>o continuá con</span>
                   </div>
-                  <button type="button" className={styles.btnGoogle}>
+                  <a href={googleOAuthUrl} className={styles.btnGoogle}>
                     <GoogleIcon />
-                    Continuar con Google
-                  </button>
+                    {isCreatingAccount ? "Continuar con Google" : "Entrar con Google"}
+                  </a>
                 </>
               )}
             </div>

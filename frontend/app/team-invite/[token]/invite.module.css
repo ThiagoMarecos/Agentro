@@ -292,6 +292,39 @@
   line-height: 1.5;
 }
 
+/* Wrong-user warning (amber) */
+.wrongUserBox {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px;
+  background: rgba(245,158,11,0.07);
+  border: 1px solid rgba(245,158,11,0.28);
+  border-radius: 12px;
+  font-size: 13px;
+  color: #fde68a;
+  margin-bottom: 16px;
+  line-height: 1.5;
+}
+.wrongUserBox strong { color: #fff; font-weight: 600; }
+.wrongUserBtn {
+  align-self: flex-start;
+  padding: 7px 12px;
+  background: rgba(245,158,11,0.18);
+  border: 1px solid rgba(245,158,11,0.35);
+  color: #fde68a;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  transition: background 0.2s, color 0.2s;
+}
+.wrongUserBtn:hover {
+  background: rgba(245,158,11,0.28);
+  color: #fff;
+}
+
 /* Fields */
 .field {
   display: flex;

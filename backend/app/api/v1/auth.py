@@ -181,6 +181,23 @@ def google_login(state: str | None = None):
 VALID_OAUTH_STATES = {"app", "onboarding", "login"}
 
 
+def _validate_oauth_state(state: str | None) -> str:
+    """
+    Devuelve el state seguro a pasar al frontend.
+    Acepta: states fijos en VALID_OAUTH_STATES, o "invite:<token>" con token
+    alfanumérico (+ '-' y '_') de hasta 128 chars.
+    """
+    if not state:
+        return "app"
+    if state in VALID_OAUTH_STATES:
+        return state
+    if state.startswith("invite:") and len(state) <= 200:
+        token = state[len("invite:"):]
+        if token and len(token) <= 128 and all(c.isalnum() or c in "-_" for c in token):
+            return state
+    return "app"
+
+
 @router.get("/google/callback")
 async def google_callback(
     request: Request,
@@ -202,8 +219,8 @@ async def google_callback(
         from fastapi.responses import RedirectResponse
         return RedirectResponse(url=f"{settings.frontend_url}/login?error=oauth_failed")
 
-    # Validar state: debe ser un valor conocido (CSRF simple)
-    safe_state = state if state and state in VALID_OAUTH_STATES else "app"
+    # Validar state: debe ser un valor conocido (CSRF simple) o "invite:<token>"
+    safe_state = _validate_oauth_state(state)
 
     try:
         user = await exchange_google_code_for_user(db, code)
