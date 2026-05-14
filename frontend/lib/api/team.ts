@@ -35,6 +35,7 @@ export interface InvitationInfo {
   role: Role;
   store_name: string;
   inviter_name: string | null;
+  inviter_avatar_url: string | null;
   expires_at: string | null;
   user_exists: boolean;
 }

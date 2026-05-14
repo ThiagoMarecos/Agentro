@@ -392,6 +392,7 @@ def get_invitation_info(token: str, db: Session = Depends(get_db)):
         "role": inv.role,
         "store_name": store.name if store else "—",
         "inviter_name": (inviter.full_name or inviter.email) if inviter else None,
+        "inviter_avatar_url": inviter.avatar_url if inviter else None,
         "expires_at": inv.expires_at.isoformat() if inv.expires_at else None,
         "user_exists": bool(existing_user),
     }
