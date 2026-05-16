@@ -239,45 +239,46 @@ def _build_next_action(
     if stage == "incoming":
         if is_first_message:
             display_name = (cc.get("display_name") or customer.get("name") or "").strip()
-            tod = cc.get("time_of_day", "")
-            saludo_inicial = {
-                "mañana": "¡Buen día!",
-                "tarde": "¡Buenas tardes!",
-                "noche": "¡Buenas noches!",
-            }.get(tod, "¡Hola!")
+            tod = cc.get("time_of_day", "")  # "mañana" / "tarde" / "noche"
+            tod_hint = f"(es de {tod}, podés mencionarlo si suena natural)" if tod else ""
 
+            # Datos contextuales del cliente — el LLM los usa para improvisar
+            # el saludo. NO le damos ejemplos textuales (los copia literal).
             if cc.get("has_prior_orders") and display_name:
                 n = cc.get("prior_orders_count", 0)
-                return (
-                    f"▶ ACCIÓN — FASE 1 (Inicio): PRIMER mensaje, CLIENTE RECURRENTE ({display_name}, {n} compras).\n\n"
-                    "Saludá CÁLIDAMENTE reconociendo que ya se conocen. NO uses una frase robotica fija — variá\n"
-                    "el saludo. NUNCA respondas igual a dos clientes distintos. Inspirate en estos ejemplos\n"
-                    "(NO copiar literal, sentilo natural y propio):\n"
-                    f"  • '{saludo_inicial} {display_name}! Qué bueno tenerte de nuevo por acá 🙌 ¿qué andás buscando?'\n"
-                    f"  • '¡{display_name}! Tanto tiempo, contame, ¿en qué te ayudo hoy?'\n\n"
-                    "Reglas: 1-2 oraciones. Mencioná {store_name} si suena natural. Máximo 1 emoji.\n"
-                    "Pregunta abierta al final. NADA MÁS — esperá la respuesta antes de mostrar productos."
+                kind_line = (
+                    f"CLIENTE: recurrente — se llama {display_name}, ya compró {n} veces antes. "
+                    f"Reconocelo, mostrá que te acordás de él/ella."
                 )
             elif display_name:
-                return (
-                    f"▶ ACCIÓN — FASE 1 (Inicio): PRIMER mensaje. Conocés el nombre ({display_name}).\n\n"
-                    "Saludá amistoso y personal. NO uses la misma plantilla siempre — variá. Inspirate en\n"
-                    "estos ejemplos (no copiar literal, hacelo propio):\n"
-                    f"  • '{saludo_inicial} {display_name}! Soy de {store_name}, ¿qué estás buscando?'\n"
-                    f"  • '¡Hola {display_name}! 👋 ¿en qué te puedo ayudar?'\n\n"
-                    "Reglas: 1-2 oraciones, máximo 1 emoji, pregunta abierta al final. NADA MÁS."
+                kind_line = (
+                    f"CLIENTE: nuevo pero ya tenés su nombre ({display_name}). "
+                    f"Tratalo de vos por el nombre desde el primer mensaje."
                 )
             else:
-                return (
-                    "▶ ACCIÓN — FASE 1 (Inicio): PRIMER mensaje, cliente NUEVO sin nombre.\n\n"
-                    "Saludá natural, cálido y NO ROBÓTICO. Mencioná el nombre de la tienda. CRÍTICO: NO uses\n"
-                    "siempre la misma frase — variá entre conversaciones. Inspirate en estos ejemplos\n"
-                    "(NO copiar literal, hacelo propio cada vez):\n"
-                    f"  • '¡Hola! 👋 Te escribís con {store_name}. Contame, ¿qué buscás?'\n"
-                    f"  • '{saludo_inicial} Acá {store_name}. Decime, ¿buscás algo en particular?'\n\n"
-                    "Reglas: 1-2 oraciones, 1 emoji opcional, pregunta abierta. NADA MÁS — no muestres\n"
-                    "productos ni categorías todavía, esperá la respuesta del cliente."
+                kind_line = (
+                    "CLIENTE: nuevo, sin nombre conocido. Esperás que te cuente qué busca. "
+                    "NO le pidas el nombre todavía en el primer saludo — pedilo recién en el segundo turno cuando ya tenga contexto."
                 )
+
+            return (
+                "▶ ACCIÓN — FASE 1 (Inicio): este es el PRIMER mensaje de la conversación.\n\n"
+                f"{kind_line}\n"
+                f"{tod_hint}\n\n"
+                "GENERÁ EL SALUDO AHORA MISMO, NO USES PLANTILLAS.\n\n"
+                "Reglas del saludo:\n"
+                "  • 2-3 líneas (no una sola, no un párrafo).\n"
+                "  • Mostrá personalidad real: que se sienta una persona, no un script.\n"
+                "  • Mencioná el nombre de la tienda (" + store_name + ") en algún lado natural.\n"
+                "  • Terminá con UNA pregunta abierta sobre qué busca / en qué ayudarlo.\n"
+                "  • 0-1 emoji máximo (no en cada oración).\n"
+                "  • PROHIBIDO arrancar con 'Acá " + store_name + "...' o '¡Hola! Soy de " + store_name + "...'\n"
+                "    (son plantillas reconocibles que ya usamos demasiado).\n"
+                "  • PROHIBIDO 'Gracias por escribirnos', '¡Con gusto te asisto!', '¡Claro que sí!'.\n\n"
+                "NO muestres productos ni categorías todavía — esperá la respuesta del cliente.\n"
+                "Tu saludo debe sonar DISTINTO a cualquier saludo previo conocido del modelo —\n"
+                "si te sale algo que 'suena familiar', reescribilo."
+            )
         else:
             return (
                 "▶ ACCIÓN: Ya hay mensajes previos. La etapa avanza a 'discovery'.\n"
@@ -338,35 +339,55 @@ def _build_next_action(
     # ── FASE 3: PROPUESTA Y NEGOCIACIÓN ──
     if stage == "negotiation":
         return (
-            "▶ ACCIÓN — FASE 3 (Propuesta y Negociación): Presentá propuesta + variantes + presupuesto FORMAL.\n\n"
-            "Diagrama: Presentar info → responder dudas → ¿descuento? → **PROPUESTA FINAL CON PRECIO Y CONDICIONES** → ¿cliente cambia algo? → ¿está interesado en avanzar? → SI SÍ → FASE 4.\n\n"
+            "▶ ACCIÓN — FASE 3 (Propuesta y Negociación): Presentá propuesta + variantes + carrito.\n\n"
+            "════════════════════════════════════════════════════════════\n"
+            "🛒 REGLA #0 — INVIOLABLE: ACTUALIZÁ EL CARRITO ANTES DE TODO\n"
+            "════════════════════════════════════════════════════════════\n"
+            "**CADA VEZ que el cliente confirma interés en un producto** (con talle/color\n"
+            "confirmado o sin variantes), TU PRIMER ACCIÓN del turno tiene que ser:\n\n"
+            "    `update_notebook(section='order', data={'items': [...]})`\n\n"
+            "El array `items` debe contener TODOS los productos que el cliente confirmó\n"
+            "hasta este turno (acumulativo — incluí los previos, no solo el nuevo).\n"
+            "Cada item: `{product_id, name, variant_id, variant_name, quantity, unit_price}`\n\n"
+            "Recién DESPUÉS de actualizar el notebook, escribís tu respuesta al cliente.\n"
+            "**Esta es la única fuente de verdad del carrito.** Si no llamás update_notebook,\n"
+            "el carrito se pierde y el próximo presupuesto va a estar incompleto.\n\n"
+            "Mirá ahora mismo el bloque 🛒 CARRITO ACTUAL del notebook (más abajo). Si\n"
+            "está vacío pero el cliente ya eligió cosas, es que faltó actualizarlo —\n"
+            "actualizalo YA antes de responder.\n"
+            "════════════════════════════════════════════════════════════\n\n"
             f"  1. Mostrá: nombre del producto, precio en {currency}, tiempo estimado, envío (si tenés ciudad).\n"
             "  2. **PEDIR VARIANTE — OBLIGATORIO si el producto tiene variantes** (mirá DATOS DISPONIBLES):\n"
-            "     • Si dice 'variantes con stock: M, L, XL' → preguntá '¿qué talle querés?'\n"
-            "     • Si dice 'variantes con stock: rojo, azul' → preguntá '¿qué color querés?'\n"
-            "     • Si tiene combinación (ej. 'M-rojo, L-azul') → preguntá ambas cosas.\n"
+            "     • Si dice 'variantes con stock: M, L, XL' → preguntá qué talle.\n"
+            "     • Si tiene combinación talle-color → preguntá ambas cosas.\n"
             "     • NO sigas hasta que el cliente elija variante.\n"
-            "  3. Cuando elija → `update_notebook` section='interest' data={variant_name: 'M', variant_id: '...'}\n"
+            "  3. Cuando elija variante → primero `update_notebook(section='order', ...)` (regla #0).\n"
             "  4. Respondé dudas con info real de la DB (no inventes).\n"
-            "  5. Si pide descuento → `get_store_discounts` → si hay, aplicalo; si no, decílo honestamente.\n\n"
+            "  5. Si pide descuento → `get_store_discounts` → aplicalo si hay / decílo honestamente si no.\n\n"
             "  ════════════════════════════════════════════════════════\n"
-            "  6. **PRESUPUESTO FORMAL — OBLIGATORIO ANTES DE PEDIR DATOS**\n"
+            "  6. **RESUMEN DEL PEDIDO — cuando el cliente esté listo para confirmar**\n"
             "  ════════════════════════════════════════════════════════\n"
-            "     Cuando el cliente eligió producto + variante (si aplica) + cantidad,\n"
-            "     ANTES de pedir cualquier dato personal, mandá un mensaje con este formato:\n\n"
-            "     📋 *Resumen de tu pedido:*\n"
-            "     • [Producto] — Talle [X] — Cantidad [N]\n"
-            f"     • Precio unitario: $X.XXX {currency}\n"
-            f"     • Subtotal: $X.XXX {currency}\n"
-            "     • Envío: $X.XXX (si ya tenés ciudad) / a confirmar (si no)\n"
-            f"     • *Total: $X.XXX {currency}*\n"
-            "     • Tiempo de entrega: X-Y días hábiles\n\n"
-            "     ¿Confirmás esta propuesta? Una vez aprobada, te pido los datos para coordinar la entrega.\n\n"
-            "     **NO pidas dirección, teléfono ni datos personales hasta que el cliente apruebe ESE mensaje.**\n"
+            "     Cuando el cliente diga algo tipo 'dale, confirmo' / 'cerralo' / 'me lo llevo',\n"
+            "     ANTES de pedir cualquier dato personal, mandale un resumen del pedido.\n\n"
+            "     **CRÍTICO:** ese resumen lo armás LEYENDO el bloque 🛒 CARRITO ACTUAL del notebook,\n"
+            "     NO de tu memoria del historial. El carrito es la fuente de verdad. Si el carrito\n"
+            "     tiene 4 items, el resumen tiene 4 items. Si tiene 1, tiene 1.\n\n"
+            "     El resumen tiene que incluir SIEMPRE estos datos (en el formato que vos elijas,\n"
+            "     no copies plantillas):\n"
+            "       • Cada item: nombre, variante elegida (talle/color), cantidad, precio unitario\n"
+            "       • Subtotal sumado de todos los items\n"
+            "       • Envío (si tenés ciudad calculá costo, sino 'a confirmar')\n"
+            f"      • Total final en {currency}\n"
+            "       • Tiempo de entrega estimado\n"
+            "       • Pregunta de confirmación al final\n\n"
+            "     PROHIBIDO usar la plantilla exacta '📋 *Resumen de tu pedido:*' palabra por palabra.\n"
+            "     Escribilo natural, con tu propio fraseo, pero con los datos completos del carrito.\n\n"
+            "     **NO pidas dirección, teléfono ni datos personales hasta que el cliente apruebe el resumen.**\n"
             "  ════════════════════════════════════════════════════════\n\n"
-            "  7. Si dice 'Sí, confirmo' / 'Dale' / 'Avancemos' → `move_stage` a 'data_collection' y RECIÉN AHÍ pedís datos.\n"
+            "  7. Si dice 'sí, confirmo' / 'avancemos' después del resumen → el sistema avanza\n"
+            "     automáticamente a 'data_collection' y ahí pedís los datos para coordinar entrega.\n"
             "  8. Si dice 'no' / 'lo pienso' / 'es caro' → manejá objeción, ofrecé alternativa, NO insistas.\n"
-            "  9. Si cambia de producto → `update_notebook` y volvé a FASE 2.\n"
+            "  9. Si cambia de producto → primero `update_notebook` con el carrito actualizado, después volvé a FASE 2 con el nuevo.\n"
             "  10. Si dice NO definitivo → `move_stage` a 'lost'."
         )
 
@@ -645,37 +666,32 @@ Si el cliente pidió varios productos, mostrá UNO O DOS por turno y preguntá s
   4. Si el producto tiene SOLO 1 imagen → decí "viene en color único, ¿querés
      ver la foto?" y usá `send_product_image` con esa única imagen.
 
-### CARRITO ACUMULATIVO — TRACKEAR PRODUCTOS QUE EL CLIENTE ELIGE
+### CARRITO ACUMULATIVO — UPDATE_NOTEBOOK NO ES OPCIONAL
 A medida que la conversación avanza, el cliente puede mostrar interés en VARIOS
-productos. Por ejemplo: confirma un short, después pregunta por una camiseta, después
-por un hoodie. **TENÉS QUE LLEVAR REGISTRO** de todos los items elegidos:
+productos. Por ejemplo: confirma un short, después una camiseta, después un hoodie.
 
-  Cada vez que el cliente confirma interés concreto en un producto + variante:
-  → llamá `update_notebook` section="order" data={{"items": [...]}}
-  → el array "items" debe contener TODOS los productos confirmados hasta ese turno
-    (no solo el último). Formato de cada item:
-    {{"product_id": "<UUID>", "name": "<nombre>", "variant_id": "<UUID o null>",
-     "variant_name": "<talle o color>", "quantity": 1, "unit_price": <precio>}}
+**LA REGLA ES SIMPLE:** cada vez que el cliente confirma interés concreto en un
+producto + variante (talle/color) o decide agregarlo al pedido:
 
-  Cuando armás el PRESUPUESTO FORMAL en FASE 3, **DEBE INCLUIR TODOS los items
-  del carrito**, no solo el último confirmado. El total se calcula sumando
-  `quantity * unit_price` de cada item.
+  → PRIMERO llamás `update_notebook(section="order", data={{"items": [...]}})`
+  → DESPUÉS escribís tu respuesta de texto al cliente
 
-  Ejemplo CORRECTO de presupuesto con 3 productos:
-    📋 *Resumen de tu pedido:*
-    1. **FLEX-01 Shorts** — Talle L — Cant. 1 — $350.000
-    2. **WEIGHT-02 Hoodie** — Talle L — Cant. 1 — $450.000
-    3. **COMPRESS-01 TEE** — Talle M — Cant. 1 — $400.000
+Eso NO es una sugerencia, es la única forma de que el carrito quede guardado.
+Si no lo hacés, en el próximo turno el carrito va a estar incompleto y vas a
+armar un resumen sin todos los productos — el cliente se enoja y perdés la venta.
 
-    Subtotal: $1.200.000
-    Envío: a confirmar
-    *Total: $1.200.000 PYG*
-    Tiempo de entrega: 3-5 días
+Formato de cada item en el array:
+  `{{"product_id": "<UUID del bloque DATOS DISPONIBLES>", "name": "<nombre>",
+     "variant_id": "<UUID o null>", "variant_name": "<talle o color>",
+     "quantity": <int>, "unit_price": <número>}}`
 
-    ¿Confirmás esta propuesta?
+El array `items` siempre debe contener TODOS los items confirmados HASTA ESE TURNO,
+no solo el último (acumulativo). Si el cliente ya tenía 2 items y agrega un tercero,
+mandás los 3 — no solo el nuevo.
 
-  Ejemplo INCORRECTO: armar el presupuesto con 1 solo producto cuando el cliente
-  confirmó 3. Eso pierde la venta.
+Cuando llegue el momento de armar el resumen del pedido (FASE 3), **leelo del
+bloque 🛒 CARRITO ACTUAL del notebook**, no de tu memoria del historial. Si el
+carrito tiene 4 items, tu resumen tiene 4 items.
 
 ### IDs DE PRODUCTO — NO INVENTES IDS
 - Los IDs son UUIDs largos (formato `8b78bd11-2d8b-4e8e-ad52-aae00f454087`).

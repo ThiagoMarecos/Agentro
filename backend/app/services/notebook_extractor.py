@@ -259,3 +259,212 @@ def extract_and_apply_pre_turn(
 
     logger.info(f"[notebook-extractor:pre] applied sections={list(clean.keys())}")
     return clean
+
+
+# ════════════════════════════════════════════════════════════════════
+#  CART SYNC: safety net — si el agente armó un resumen pero NO llamó
+#  update_notebook, parseamos los items del texto y los guardamos igual.
+# ════════════════════════════════════════════════════════════════════
+
+# Señales en el texto del agente que sugieren que hay un resumen/pedido.
+_CART_SUMMARY_SIGNALS = re.compile(
+    r"\b(resumen\s+de\s+(tu\s+)?pedido|pedido|carrito|"
+    r"subtotal|total\s*:|productos\s+confirmados|"
+    r"presupuesto)\b",
+    re.IGNORECASE,
+)
+
+_CART_EXTRACT_PROMPT = """Sos un parser de carritos de compra.
+
+Recibís un mensaje que un asesor de ventas le acaba de mandar a un cliente.
+Tu trabajo: si el mensaje contiene un RESUMEN DE PEDIDO o LISTA DE PRODUCTOS
+CONFIRMADOS, extraer cada item como JSON estructurado.
+
+Devolvé SOLO un JSON con esta forma:
+{
+  "items": [
+    {"name": "<nombre del producto>", "variant_name": "<talle/color o null>",
+     "quantity": <int>, "unit_price": <número o null>}
+  ]
+}
+
+Si el mensaje NO contiene un resumen / lista de productos, devolvé `{"items": []}`.
+
+REGLAS:
+1. Solo extraé productos que el asesor está PRESENTANDO como confirmados o
+   incluidos en el pedido (líneas con bullets, números, precios, talles).
+2. NO extraés productos que el asesor SOLO menciona / recomienda /
+   pregunta si le interesan. Solo los que están en el resumen final.
+3. Si un item no tiene talle/cantidad/precio explícito, dejá esos campos como null
+   o 1 para quantity por defecto.
+4. NO inventes productos.
+
+EJEMPLO INPUT:
+"Resumen de tu pedido:
+1. FLEX-01 Joggers — Talle L — Cant. 1
+2. WEIGHT-02 HOODIE — Talle M — 450,000 PYG
+Subtotal: 450,000 PYG"
+
+EJEMPLO OUTPUT:
+{"items": [
+  {"name": "FLEX-01 Joggers", "variant_name": "L", "quantity": 1, "unit_price": null},
+  {"name": "WEIGHT-02 HOODIE", "variant_name": "M", "quantity": 1, "unit_price": 450000}
+]}
+
+Respondé SOLO con el JSON. Nada más."""
+
+
+def sync_cart_from_assistant_message(
+    db: Session,
+    session: SalesSession,
+    assistant_message: str,
+    openai_client: OpenAI,
+) -> dict[str, Any] | None:
+    """
+    Safety net del carrito: si el asistente armó un resumen de pedido en su
+    respuesta pero NO llamó `update_notebook(section='order')`, este extractor
+    parsea los items mencionados en el texto y los guarda en el notebook.
+
+    Solo dispara si:
+      - El texto del asistente contiene señales de "resumen"/"pedido"/"carrito"
+      - El carrito actual del notebook está vacío O tiene menos items que los
+        que aparecen en el texto
+
+    Matchea cada item por NOMBRE contra los productos reales de la tienda
+    (filtrando por store_id). Si no matchea ningún producto real, no agrega.
+
+    Tolerante a fallo silencioso.
+    """
+    if not assistant_message or not assistant_message.strip():
+        return None
+
+    # Solo disparar si hay señales de resumen en el texto
+    if not _CART_SUMMARY_SIGNALS.search(assistant_message):
+        return None
+
+    # Llamar al LLM-mini para extraer items estructurados
+    try:
+        response = openai_client.chat.completions.create(
+            model=EXTRACTOR_MODEL,
+            messages=[
+                {"role": "system", "content": _CART_EXTRACT_PROMPT},
+                {"role": "user", "content": assistant_message[:2000]},
+            ],
+            temperature=0.0,
+            response_format={"type": "json_object"},
+            max_tokens=500,
+        )
+        raw = response.choices[0].message.content or "{}"
+        data = json.loads(raw)
+    except json.JSONDecodeError as e:
+        logger.warning(f"[cart-sync] invalid JSON from LLM: {e}")
+        return None
+    except Exception as e:
+        logger.warning(f"[cart-sync] extraction failed: {e}")
+        return None
+
+    extracted_items = data.get("items") if isinstance(data, dict) else None
+    if not isinstance(extracted_items, list) or not extracted_items:
+        return None
+
+    # Matchear contra productos reales de la tienda
+    from app.models.product import Product, ProductVariant
+    from sqlalchemy import func as sa_func
+
+    matched_items: list[dict] = []
+    for it in extracted_items:
+        if not isinstance(it, dict):
+            continue
+        name = (it.get("name") or "").strip()
+        if not name:
+            continue
+
+        # Match case-insensitive por nombre, filtrado por store
+        product = db.query(Product).filter(
+            Product.store_id == session.store_id,
+            Product.is_active == True,
+            sa_func.lower(Product.name) == name.lower(),
+        ).first()
+
+        # Fallback: match parcial si no encontró exacto
+        if not product:
+            product = db.query(Product).filter(
+                Product.store_id == session.store_id,
+                Product.is_active == True,
+                Product.name.ilike(f"%{name}%"),
+            ).first()
+
+        if not product:
+            logger.info(f"[cart-sync] item '{name}' no matcheó ningún producto real — skip")
+            continue
+
+        # Resolver variant_id si hay variant_name
+        variant_id = None
+        variant_name = (it.get("variant_name") or "").strip() or None
+        if variant_name:
+            variant = db.query(ProductVariant).filter(
+                ProductVariant.product_id == product.id,
+                ProductVariant.is_active == True,
+                sa_func.lower(ProductVariant.name) == variant_name.lower(),
+            ).first()
+            if variant:
+                variant_id = variant.id
+
+        # Resolver unit_price: si el LLM dio uno usar ese; si no, el del producto
+        unit_price = it.get("unit_price")
+        if unit_price is None or unit_price == 0:
+            unit_price = float(product.price or 0)
+
+        try:
+            qty = int(it.get("quantity") or 1)
+        except (TypeError, ValueError):
+            qty = 1
+
+        matched_items.append({
+            "product_id": product.id,
+            "name": product.name,
+            "variant_id": variant_id,
+            "variant_name": variant_name,
+            "quantity": qty,
+            "unit_price": unit_price,
+        })
+
+    if not matched_items:
+        return None
+
+    # Mergear con el carrito actual del notebook
+    try:
+        nb = session.get_notebook()
+        order_section = nb.get("order") or {}
+        if not isinstance(order_section, dict):
+            order_section = {}
+        existing_items = order_section.get("items") or []
+        if not isinstance(existing_items, list):
+            existing_items = []
+
+        # Si los items extraídos son MÁS o IGUALES en count que los existentes,
+        # significa que el agente está mostrando un resumen completo —
+        # reemplazamos el carrito por los items extraídos (que son la versión
+        # autoritativa del agente).
+        # Si son MENOS, no tocamos (probablemente es una respuesta parcial).
+        if len(matched_items) >= len(existing_items):
+            order_section["items"] = matched_items
+            nb["order"] = order_section
+            session.set_notebook(nb)
+            db.add(session)
+            db.commit()
+            logger.info(
+                f"[cart-sync] cart updated from assistant message: "
+                f"{len(existing_items)} → {len(matched_items)} items"
+            )
+            return {"order": {"items": matched_items}}
+        else:
+            logger.info(
+                f"[cart-sync] extracted {len(matched_items)} items but cart already "
+                f"has {len(existing_items)} — skip (probably partial message)"
+            )
+    except Exception as e:
+        logger.warning(f"[cart-sync] merge/persist failed: {e}")
+        return None
+
+    return None

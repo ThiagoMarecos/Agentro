@@ -819,6 +819,22 @@ def process_message(
     except Exception as exc:
         logger.warning(f"[agent] notebook auto-extract skipped: {exc}")
 
+    # ── 9.5. Cart-sync (safety net del carrito) ──
+    # Si el agente armó un resumen/presupuesto en su respuesta pero NO llamó
+    # update_notebook(section='order'), parseamos los items del texto y los
+    # guardamos en el carrito del notebook. Así nunca se pierde un item que
+    # el agente mostró al cliente. Tolerante a fallo silencioso.
+    try:
+        from app.services.notebook_extractor import sync_cart_from_assistant_message
+        sync_cart_from_assistant_message(
+            db=db,
+            session=session,
+            assistant_message=assistant_content,
+            openai_client=client,
+        )
+    except Exception as exc:
+        logger.warning(f"[agent] cart-sync skipped: {exc}")
+
     turn_total_ms = int((time.perf_counter() - turn_start_ms) * 1000)
     logger.info(
         f"[agent] turn done conv={conversation.id[:8]} stage={session.current_stage} "
