@@ -272,13 +272,13 @@ def tool_product_detail(db: Session, session: SalesSession, **params) -> str:
     }
     origin_type = getattr(product, "origin_type", None) or "external_supplier"
     supplier_obj = getattr(product, "supplier", None)
+    # NO exponer supplier.name ni supplier.id al LLM — riesgo de filtración vía
+    # prompt injection. Solo mantenemos `country` que es info no sensible.
     supplier_info = None
     if supplier_obj:
-        supplier_info = {
-            "id": supplier_obj.id,
-            "name": supplier_obj.name,
-            "country": getattr(supplier_obj, "country", None),
-        }
+        supplier_country = getattr(supplier_obj, "country", None)
+        if supplier_country:
+            supplier_info = {"country": supplier_country}
 
     result = {
         "id": product.id,
@@ -291,14 +291,13 @@ def tool_product_detail(db: Session, session: SalesSession, **params) -> str:
         "has_variants": product.has_variants,
         "variants": variants,
         "images": [{"url": i.url, "alt": i.alt_text} for i in (product.images or [])],
-        # Contexto interno
+        # Contexto interno — NUNCA incluir cost, supplier.name ni internal_notes:
+        # el LLM puede filtrarlos al cliente vía prompt injection.
         "_internal": {
             "origin_type": origin_type,
             "origin_label": origin_label_map.get(origin_type, origin_type),
             "lead_time_days": getattr(product, "lead_time_days", None),
             "supplier": supplier_info,
-            "internal_notes": getattr(product, "internal_notes", None),
-            "cost": str(product.cost) if product.cost else None,
         },
     }
 
@@ -319,17 +318,23 @@ def tool_check_availability(db: Session, session: SalesSession, **params) -> str
     quantity = params.get("quantity", 1)
 
     if variant_id:
-        variant = db.query(ProductVariant).filter(
+        variant = db.query(ProductVariant).join(
+            Product, ProductVariant.product_id == Product.id
+        ).filter(
             ProductVariant.id == variant_id,
             ProductVariant.product_id == product_id,
+            Product.store_id == session.store_id,
+            Product.is_active == True,
         ).first()
         if not variant:
-            logger.warning(f"[stock] variant_not_found product_id={product_id} variant_id={variant_id}")
+            logger.warning(
+                f"[stock] variant_not_found_or_cross_tenant "
+                f"product_id={product_id} variant_id={variant_id} store_id={session.store_id}"
+            )
             return json.dumps({
-                "available": None,  # null = "no pude determinar", NO false
-                "reason": "Variante no encontrada — verificá que el variant_id sea un UUID exacto del bloque DATOS DISPONIBLES",
-                "id_provided": variant_id,
-                "hint": "NO le digas al cliente 'no hay stock'. Re-mirá el bloque DATOS DISPONIBLES y copiá el UUID exacto del producto/variante.",
+                "available": False,
+                "reason": "Producto no encontrado",
+                "hint": "verificá que el ID sea correcto",
             })
         available = variant.stock_quantity >= quantity or not variant.track_inventory
         logger.info(
@@ -350,6 +355,7 @@ def tool_check_availability(db: Session, session: SalesSession, **params) -> str
         product = db.query(Product).filter(
             Product.id == product_id,
             Product.store_id == session.store_id,
+            Product.is_active == True,
         ).first()
         if not product:
             logger.warning(f"[stock] product_not_found product_id={product_id} store_id={session.store_id}")

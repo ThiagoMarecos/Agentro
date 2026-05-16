@@ -158,8 +158,35 @@ def _auto_advance_stage_if_needed(
         target = "escalated_to_seller"
 
     # Cliente quiere avanzar / comprar → saltar a data_collection
+    # PERO solo si el carrito tiene al menos 1 item con variante confirmada.
+    # "dale", "vamos", "perfecto" son muletillas comunes en es-AR que NO
+    # significan "quiero comprar" si todavía no hay producto + variante elegidos.
     elif getattr(intent, "wants_to_proceed", False):
-        target = "data_collection"
+        order_section = nb.get("order", {}) or {}
+        cart_items = order_section.get("items") or []
+        has_confirmed_item = False
+        if isinstance(cart_items, list):
+            for it in cart_items:
+                if not isinstance(it, dict):
+                    continue
+                # Confirmado = tiene product_id Y (variant_id o variant_name no vacío)
+                has_pid = bool(it.get("product_id"))
+                has_var = bool(
+                    (it.get("variant_id") or "").strip()
+                    if isinstance(it.get("variant_id"), str)
+                    else it.get("variant_id")
+                ) or bool((it.get("variant_name") or "").strip())
+                if has_pid and has_var:
+                    has_confirmed_item = True
+                    break
+
+        if has_confirmed_item:
+            target = "data_collection"
+        else:
+            logger.info(
+                f"[stage-auto] wants_to_proceed=True pero falta producto/variante "
+                f"confirmado en carrito — me quedo en {current}"
+            )
 
     # discovery + tiene nombre + hay productos → avanzar a validation
     elif current == "discovery" and has_name and has_products_in_ctx:
@@ -522,6 +549,26 @@ def process_message(
         except Exception as tier2_exc:
             logger.warning(f"[agent] tier2 product extraction skipped: {tier2_exc}")
 
+        # ── 5.1.5. PRE-TURN notebook extractor ──
+        # Corre ANTES de construir el prompt. Extrae datos personales (nombre,
+        # teléfono, email, dirección, ciudad) del mensaje actual del cliente y los
+        # mete al notebook. Así cuando build_sales_prompt se ejecuta, el notebook
+        # ya tiene la info que el cliente acaba de dar — el agente no repregunta
+        # cosas que el cliente recién dijo. Tolerante a fallo silencioso.
+        try:
+            from app.services.notebook_extractor import extract_and_apply_pre_turn
+            if openai_client_for_intent is None:
+                openai_client_for_intent = _get_openai_client()
+            extract_and_apply_pre_turn(
+                db=db,
+                session=session,
+                user_message=message,
+                openai_client=openai_client_for_intent,
+            )
+            db.refresh(session)
+        except Exception as pre_exc:
+            logger.warning(f"[agent] pre-turn notebook extract skipped: {pre_exc}")
+
         prefetched_ctx = None
         if not intent.is_empty():
             prefetched_ctx = prefetch_context(db, session, intent)
@@ -646,8 +693,18 @@ def process_message(
                     try:
                         tool_result = executor(db, session, _pending_media=pending_media, **fn_args)
                     except Exception as exc:
-                        logger.exception(f"[agent] tool {fn_name} crashed: {exc}")
-                        tool_result = json.dumps({"error": f"tool {fn_name} crashed: {exc!s}"})
+                        logger.exception(
+                            f"[tool-error] {fn_name} failed with {type(exc).__name__}: {exc}"
+                        )
+                        tool_result = json.dumps({
+                            "error": "tool failed",
+                            "tool": fn_name,
+                            "type": type(exc).__name__,
+                            "message": str(exc)[:200],
+                            "hint": "intentá con otros parámetros o cambiá de approach; "
+                                    "si pediste un product_id, verificá que sea el UUID literal "
+                                    "del bloque DATOS DISPONIBLES.",
+                        })
                 else:
                     tool_result = json.dumps({"error": f"Tool no encontrada: {fn_name}"})
                 dt_ms = int((time.perf_counter() - t0) * 1000)

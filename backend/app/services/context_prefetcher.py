@@ -196,7 +196,7 @@ def _to_prefetched_product(product: Product) -> PrefetchedProduct:
 # ════════════════════════════════════════════════════════════════════
 
 def _prefetch_products_for_query(
-    db: Session, store_id: str, query: str, limit: int = 3
+    db: Session, store_id: str, query: str, limit: int = 5
 ) -> list[PrefetchedProduct]:
     """Busca productos que matcheen la query y los devuelve hidratados."""
     pattern_conditions, _ = _build_product_filters(query)
@@ -463,6 +463,9 @@ def render_for_prompt(ctx: PrefetchedContext, currency: str = "USD") -> str:
 
             cat = f" · {p.category_name}" if p.category_name else ""
             parts.append(f"  • **{p.name}**{cat}")
+            if p.short_description:
+                desc_clean = p.short_description.strip().replace("\n", " ")[:200]
+                parts.append(f"    — descripción: {desc_clean}")
             parts.append(f"    — UUID (copiar literal si llamás tools): `{p.id}`")
             parts.append(f"    — precio: {price_line} {currency}")
             parts.append(f"    — {stock_line}")
@@ -507,11 +510,9 @@ def render_for_prompt(ctx: PrefetchedContext, currency: str = "USD") -> str:
             elif p.lead_time_days:
                 parts.append(f"    — _interno: lead {p.lead_time_days}d_")
 
-            if p.internal_notes:
-                # Truncamos para no inflar el prompt
-                note_short = (p.internal_notes or "")[:120].strip()
-                if note_short:
-                    parts.append(f"    — _nota interna (NO citar literal): {note_short}_")
+            # internal_notes NUNCA se inyectan al prompt: el LLM puede filtrarlas
+            # al cliente vía prompt injection. Si el negocio necesita exponer esa
+            # info, debería hacerse vía una tool con auth explícita.
 
             parts.append("")
     else:

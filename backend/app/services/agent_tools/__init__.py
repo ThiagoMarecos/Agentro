@@ -3,6 +3,8 @@ Agent Tools: herramientas que los agentes IA pueden invocar via function calling
 Cada tool se registra con su definición OpenAI y su función ejecutora.
 """
 
+import logging
+
 from app.services.agent_tools.product_tools import (
     tool_product_search,
     tool_product_detail,
@@ -36,6 +38,8 @@ from app.services.agent_tools.store_tools import (
     STORE_TOOL_DEFINITIONS,
 )
 
+logger = logging.getLogger(__name__)
+
 ALL_TOOL_DEFINITIONS = (
     PRODUCT_TOOL_DEFINITIONS
     + ORDER_TOOL_DEFINITIONS
@@ -53,6 +57,7 @@ TOOL_EXECUTORS = {
     "send_product_gallery": tool_send_product_gallery,
     "list_categories": tool_list_categories,
     "estimate_shipping": tool_estimate_shipping,
+    # STUB — no implementado. NO incluir en agentes de producción hasta integrar gateway real.
     "create_payment_link": tool_create_payment_link,
     "create_order": tool_create_order,
     "update_notebook": tool_update_notebook,
@@ -90,6 +95,13 @@ def get_tools_for_agent(enabled_tools: list[str] | None) -> list[dict]:
     """
     if not enabled_tools:
         return [t for t in ALL_TOOL_DEFINITIONS if t["function"]["name"] in _DEFAULT_SAFE_TOOLS]
+
+    # Warning si se está habilitando el stub de payment link
+    if "all" in enabled_tools or "create_payment_link" in enabled_tools:
+        logger.warning(
+            "⚠️ create_payment_link está habilitado pero es un STUB que devuelve URLs falsas. "
+            "NO usar en producción."
+        )
 
     if "all" in enabled_tools:
         return list(ALL_TOOL_DEFINITIONS)

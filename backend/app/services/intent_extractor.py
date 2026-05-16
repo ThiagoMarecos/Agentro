@@ -330,7 +330,10 @@ def extract_product_terms(
     product_lines = []
     for p in sample_products:
         cat = p.category.name if p.category else "—"
-        product_lines.append(f"- {p.name} ({cat})")
+        desc = ((p.short_description or p.description or "") or "").strip()
+        desc = desc[:120].replace("\n", " ").replace("  ", " ")
+        desc_part = f" — {desc}" if desc else ""
+        product_lines.append(f"- {p.name} ({cat}){desc_part}")
 
     catalog_block = (
         f"CATEGORÍAS ({len(category_names)}):\n"
