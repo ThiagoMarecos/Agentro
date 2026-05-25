@@ -556,6 +556,18 @@ export default function ConversationsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentStore?.id, assignmentFilter]);
 
+  // Polling de la LISTA de conversaciones cada 8s para que aparezcan
+  // automáticamente las conversaciones nuevas (clientes que recién escribieron)
+  // sin que el dueño tenga que refrescar la página.
+  useEffect(() => {
+    if (!currentStore) return;
+    const interval = setInterval(() => {
+      reloadConversations();
+    }, 8000);
+    return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentStore?.id, assignmentFilter]);
+
   // Cargamos los miembros del equipo en paralelo (puede fallar silenciosamente
   // si el usuario no tiene permisos — los sellers no ven equipo).
   useEffect(() => {
@@ -575,29 +587,32 @@ export default function ConversationsPage() {
     }
   }, [convIdFromUrl, conversations]);
 
-  // Polling: si el agente está pausado (modo manual), refrescar mensajes
-  // cada 5s para ver lo que escribe el cliente en tiempo casi real.
+  // Polling de la conversación seleccionada cada 4s.
+  // Antes solo polleaba si el agente estaba pausado → ahora siempre, así el
+  // dueño ve en vivo los mensajes nuevos del cliente Y las respuestas del
+  // agente IA mientras suceden (clave para monitorear comportamiento).
   useEffect(() => {
-    if (!currentStore || !selected || !selected.agent_paused) return;
+    if (!currentStore || !selected) return;
     const interval = setInterval(async () => {
       try {
         const fresh = await getConversation(currentStore.id, selected.id);
-        // Solo actualizamos si hay cambios reales (más mensajes o pause flip)
         setSelected((prev) => {
           if (!prev) return prev;
           const prevCount = prev.messages?.length || 0;
           const newCount = fresh.messages?.length || 0;
           const pauseChanged = prev.agent_paused !== fresh.agent_paused;
-          if (newCount === prevCount && !pauseChanged) return prev;
-          return { ...prev, messages: fresh.messages, agent_paused: fresh.agent_paused };
+          const stageChanged = (prev as any).current_stage !== (fresh as any).current_stage;
+          // Solo re-rendereamos si hay cambios reales (más mensajes, pause flip o stage)
+          if (newCount === prevCount && !pauseChanged && !stageChanged) return prev;
+          return { ...prev, ...fresh };
         });
       } catch {
         // Silencioso — no spammear errores en polling
       }
-    }, 5000);
+    }, 4000);
     return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentStore?.id, selected?.id, selected?.agent_paused]);
+  }, [currentStore?.id, selected?.id]);
 
   const selectConversation = async (conv: ConversationDetail) => {
     if (!currentStore) return;

@@ -119,6 +119,14 @@ def extract_and_apply(
     for section, payload in data.items():
         if section not in _VALID_SECTIONS or not isinstance(payload, dict):
             continue
+        # BLACKLIST: la sección "order" la maneja SOLO el LLM principal vía
+        # update_notebook + el cart-sync que parsea resúmenes. Si el extractor
+        # post-turn la tocara, podría contaminar el carrito con strings sueltos
+        # u objetos malformados (bug visto: ["dict", "dict", "string", "string"]).
+        if section == "order":
+            continue
+        # Dentro de "interest": el campo "products_mentioned" lo deja crecer
+        # libre (es informativo), pero hay que evitar items vacíos / dups.
         clean[section] = payload
 
     if not clean:

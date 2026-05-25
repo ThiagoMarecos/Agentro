@@ -50,6 +50,65 @@ def _get_openai_client() -> OpenAI:
     return OpenAI(api_key=api_key)
 
 
+# Dominios "basura" típicos que el LLM inventa cuando no consigue una imagen real.
+# Cualquier markdown de imagen `![...](...)` o URL plana que apunte a estos
+# dominios se elimina del texto antes de mandar al cliente.
+_INVENTED_URL_DOMAINS = (
+    "placeholder.com", "via.placeholder.com",
+    "example.com", "example.org", "example.net",
+    "tutienda.com", "miempresa.app",
+    "lorempixel.com", "picsum.photos",
+    "imageplaceholder.net",
+)
+
+import re as _re_for_urls
+
+# ![alt](url) → captura todo el bloque markdown de imagen
+_MD_IMAGE_PATTERN = _re_for_urls.compile(r"!\[[^\]]*\]\([^)]+\)")
+# URL plana http(s)://... (para limpiar links sueltos también)
+_PLAIN_URL_PATTERN = _re_for_urls.compile(r"https?://\S+")
+
+
+def _strip_invented_urls(text: str) -> str:
+    """
+    Quita del texto las URLs inventadas que el LLM mete cuando una tool falla.
+    Casos típicos:
+      - `![alt](https://via.placeholder.com/150)` → quita el bloque entero
+      - `https://example.com/img.jpg` → quita la URL plana
+    Solo limpia URLs que apuntan a dominios basura conocidos — links legítimos
+    (ej: el sitio real de la tienda configurado en get_store_info) se respetan.
+    """
+    if not text:
+        return text
+
+    def _is_invented(url: str) -> bool:
+        low = url.lower()
+        return any(d in low for d in _INVENTED_URL_DOMAINS)
+
+    # 1) Quitar markdown de imagen con URL inventada
+    def _replace_md(m: _re_for_urls.Match) -> str:
+        block = m.group(0)
+        if _is_invented(block):
+            return ""
+        return block
+
+    cleaned = _MD_IMAGE_PATTERN.sub(_replace_md, text)
+
+    # 2) Quitar URLs planas inventadas
+    def _replace_plain(m: _re_for_urls.Match) -> str:
+        url = m.group(0)
+        if _is_invented(url):
+            return "[imagen no disponible]"
+        return url
+
+    cleaned = _PLAIN_URL_PATTERN.sub(_replace_plain, cleaned)
+
+    # 3) Limpiar artefactos: dobles espacios, líneas vacías por borrado
+    cleaned = _re_for_urls.sub(r" {2,}", " ", cleaned)
+    cleaned = _re_for_urls.sub(r"\n{3,}", "\n\n", cleaned)
+    return cleaned.strip()
+
+
 def _find_or_create_customer(
     db: Session, store_id: str, identifier: str
 ) -> tuple[Customer, bool]:
@@ -732,6 +791,13 @@ def process_message(
     except Exception as e:
         logger.error(f"Error calling OpenAI: {e}", exc_info=True)
         assistant_content = "Disculpa, tuve un problema procesando tu mensaje. ¿Podrías intentarlo de nuevo?"
+
+    # ── 6.4. URL-guard (red de seguridad determinística) ──
+    # El prompt prohíbe inventar URLs pero el LLM a veces igual lo hace
+    # (visto: 'via.placeholder.com', 'example.com/...'). Acá lo limpiamos
+    # ANTES de mandárselo al cliente. Cero false positives porque solo
+    # quitamos URLs basura — las imágenes reales van por pending_media.
+    assistant_content = _strip_invented_urls(assistant_content)
 
     # ── 6.5. Stock-guard (red de seguridad — modo solo-log) ──
     # En la arquitectura Context-First, los datos de stock ya vienen en el
