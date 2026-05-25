@@ -149,7 +149,8 @@ _ROBOT_PHRASES_TO_STRIP = [
     # Cierres serviles típicos
     r"\s*(Si\s+(necesit[áa]s|ten[ée]s)\s+(algo\s+más|alguna\s+(otra\s+)?(pregunta|duda|consulta))[^.]{0,80}\.?)\s*$",
     r"\s*No\s+dudes\s+en\s+(decírmelo|consultarme|preguntarme|escribirme)[^.]{0,40}\.?\s*$",
-    r"\s*Estoy\s+(aqu[íi]|a\s+(tu|su)\s+disposici[óo]n|disponible)\s+para\s+(ayudarte|asistirte)[^.]{0,40}\.?\s*$",
+    # "Estoy aquí para ayudarte" — frase plantilla típica, en cualquier posición
+    r"\s*Estoy\s+(aqu[íi]|a\s+(tu|su)\s+disposici[óo]n|disponible)\s+para\s+(ayudarte|asistirte)[^.]{0,40}\.?\s*",
     r"\s*Con\s+gusto\s+(te\s+)?(ayudo|asisto)[^.]{0,40}\.?\s*$",
     # "Bienvenido a TIENDA" plantilla típica — solo borrar si está al PRINCIPIO
     # del mensaje (los mensajes naturales no arrancan así).
