@@ -20,8 +20,8 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Agentro - Tu tienda online. La IA vende por vos.",
-  description: "Creá tu tienda en minutos. Sin complicaciones. La inteligencia artificial atiende a tus clientes 24/7.",
+  title: "Agentro — La IA vende. Vos cerrás.",
+  description: "Tu vendedor de IA atiende WhatsApp 24/7, pre-vende y te pasa el cliente listo para cobrar. Tienda online + caja + equipo en un solo lugar. Beta cerrada por invitación.",
   icons: {
     icon: "/favicon.png",
     apple: "/favicon.png",
