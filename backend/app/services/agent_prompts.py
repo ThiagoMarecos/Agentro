@@ -240,44 +240,56 @@ def _build_next_action(
         if is_first_message:
             display_name = (cc.get("display_name") or customer.get("name") or "").strip()
             tod = cc.get("time_of_day", "")  # "mañana" / "tarde" / "noche"
-            tod_hint = f"(es de {tod}, podés mencionarlo si suena natural)" if tod else ""
+            tod_hint = f"Es de {tod}." if tod else ""
 
-            # Datos contextuales del cliente — el LLM los usa para improvisar
-            # el saludo. NO le damos ejemplos textuales (los copia literal).
+            # Contexto del cliente para personalizar (sin dar frases para copiar)
             if cc.get("has_prior_orders") and display_name:
                 n = cc.get("prior_orders_count", 0)
                 kind_line = (
-                    f"CLIENTE: recurrente — se llama {display_name}, ya compró {n} veces antes. "
-                    f"Reconocelo, mostrá que te acordás de él/ella."
+                    f"Quien escribe se llama **{display_name}** y ya compró {n} veces antes. "
+                    f"Es un cliente recurrente, conocido. Tratalo como alguien que vuelve, "
+                    f"con calidez genuina — que se note que lo reconocés."
                 )
             elif display_name:
                 kind_line = (
-                    f"CLIENTE: nuevo pero ya tenés su nombre ({display_name}). "
-                    f"Tratalo de vos por el nombre desde el primer mensaje."
+                    f"Quien escribe se llama **{display_name}**. Tratalo de vos, por su nombre, "
+                    f"desde el primer mensaje. Aún no sabés qué busca."
                 )
             else:
                 kind_line = (
-                    "CLIENTE: nuevo, sin nombre conocido. Esperás que te cuente qué busca. "
-                    "NO le pidas el nombre todavía en el primer saludo — pedilo recién en el segundo turno cuando ya tenga contexto."
+                    "Quien escribe es nuevo, todavía no sabés su nombre. "
+                    "NO le pidas el nombre en este primer saludo (sería abrupto) — "
+                    "primero recibilo bien, después en el siguiente turno se lo pedís."
                 )
 
             return (
-                "▶ ACCIÓN — FASE 1 (Inicio): este es el PRIMER mensaje de la conversación.\n\n"
-                f"{kind_line}\n"
+                "▶ PRIMER MENSAJE DE LA CONVERSACIÓN — generá un saludo de bienvenida.\n\n"
+                f"CONTEXTO: {kind_line}\n"
                 f"{tod_hint}\n\n"
-                "GENERÁ EL SALUDO AHORA MISMO, NO USES PLANTILLAS.\n\n"
-                "Reglas del saludo:\n"
-                "  • 2-3 líneas (no una sola, no un párrafo).\n"
-                "  • Mostrá personalidad real: que se sienta una persona, no un script.\n"
-                "  • Mencioná el nombre de la tienda (" + store_name + ") en algún lado natural.\n"
-                "  • Terminá con UNA pregunta abierta sobre qué busca / en qué ayudarlo.\n"
-                "  • 0-1 emoji máximo (no en cada oración).\n"
-                "  • PROHIBIDO arrancar con 'Acá " + store_name + "...' o '¡Hola! Soy de " + store_name + "...'\n"
-                "    (son plantillas reconocibles que ya usamos demasiado).\n"
-                "  • PROHIBIDO 'Gracias por escribirnos', '¡Con gusto te asisto!', '¡Claro que sí!'.\n\n"
-                "NO muestres productos ni categorías todavía — esperá la respuesta del cliente.\n"
-                "Tu saludo debe sonar DISTINTO a cualquier saludo previo conocido del modelo —\n"
-                "si te sale algo que 'suena familiar', reescribilo."
+                "════════════════════════════════════════════════════════════\n"
+                "PENSALO ASÍ — IMAGINATE LA ESCENA:\n"
+                "════════════════════════════════════════════════════════════\n"
+                f"Trabajás en {store_name}. Es como si acabara de entrar alguien al local\n"
+                "y vos sos quien lo recibe. ¿Cómo lo saludarías? Una persona genuinamente\n"
+                "presente, sin apuro, contenta de que la persona haya venido. Le decís\n"
+                "algo cálido, le mostrás que estás ahí para ayudar, y le abrís la puerta\n"
+                "a que te cuente qué necesita.\n\n"
+                "NO es un sistema que recita una bienvenida. NO es un call-center que\n"
+                "dice 'gracias por contactarnos'. Es UNA PERSONA REAL recibiendo a otra.\n\n"
+                "════════════════════════════════════════════════════════════\n"
+                "FORMA DEL MENSAJE:\n"
+                "════════════════════════════════════════════════════════════\n"
+                "  • LARGO: 2 a 4 oraciones cortas. Ni 'Hola!' suelto, ni párrafo entero.\n"
+                "  • CÁLIDO: que se sienta humano, no de manual.\n"
+                "  • CONTEXTUAL: si es recurrente, reconocelo. Si tenés su nombre, usalo.\n"
+                f"  • MENCIONÁ {store_name} de manera natural — no como 'Bienvenido a X.'\n"
+                "  • CERRÁ INVITANDO a contar qué busca, con tus palabras\n"
+                "    (NO uses la frase 'en qué te puedo ayudar' — está gastada).\n"
+                "  • Máximo 1 emoji, y solo si SUMA. Cero emojis también está bien.\n"
+                "  • Cada saludo debe ser DISTINTO a los demás de tu carrera.\n"
+                "    Si te sale algo que 'sonaría igual a cualquier cliente', reescribilo.\n\n"
+                "Después del saludo, NO muestres productos ni categorías todavía — esperá\n"
+                "la respuesta del cliente y de ahí seguís la conversación."
             )
         else:
             return (

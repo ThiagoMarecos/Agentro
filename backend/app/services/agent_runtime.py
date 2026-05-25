@@ -151,13 +151,15 @@ _ROBOT_PHRASES_TO_STRIP = [
     r"\s*No\s+dudes\s+en\s+(decírmelo|consultarme|preguntarme|escribirme)[^.]{0,40}\.?\s*$",
     r"\s*Estoy\s+(aqu[íi]|a\s+(tu|su)\s+disposici[óo]n|disponible)\s+para\s+(ayudarte|asistirte)[^.]{0,40}\.?\s*$",
     r"\s*Con\s+gusto\s+(te\s+)?(ayudo|asisto)[^.]{0,40}\.?\s*$",
-    # "Bienvenido a TIENDA" se usa demasiado al saludar.
-    # No usamos \w porque caracteres tipo Ø no matchean en regex unicode.
-    r"\bBienvenido(/a|s)?\s+a\s+[^\n.!?]{1,40}[.!]\s*",
+    # "Bienvenido a TIENDA" plantilla típica — solo borrar si está al PRINCIPIO
+    # del mensaje (los mensajes naturales no arrancan así).
+    r"^\s*¡?\s*Hola\s*!?\s*Bienvenido(/a|s)?\s+a\s+[^\n.!?]{1,40}[.!]\s*",
+    r"^\s*Bienvenido(/a|s)?\s+a\s+[^\n.!?]{1,40}[.!]\s*",
     # Frases identidad-bot
     r"\bSoy\s+parte\s+del\s+equipo[^.]{0,40}\.?\s*",
-    # "¿En qué puedo ayudarte?" frase canónica de bot
-    r"\s*¿En\s+qu[ée]\s+(puedo|te\s+puedo|podemos)\s+(ayudarte|asistirte|servirte)[^?]*\?\s*",
+    # "¿En qué puedo ayudarte?" frase canónica de bot — solo si va sola al final
+    # (si el saludo tiene contenido cálido antes, dejamos el cierre)
+    r"\s*¿En\s+qu[ée]\s+(puedo|te\s+puedo|podemos)\s+(ayudarte|asistirte|servirte)\s+hoy\s*\?\s*$",
 ]
 
 _ROBOT_PATTERNS = [_re_for_urls.compile(p, _re_for_urls.IGNORECASE | _re_for_urls.MULTILINE)
