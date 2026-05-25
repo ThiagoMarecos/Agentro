@@ -32,6 +32,37 @@ _PRE_TURN_TRIVIAL_PATTERN = re.compile(
 # Modelo barato para extracción. Si OpenAI lo descontinúa, cambiar acá.
 EXTRACTOR_MODEL = "gpt-4o-mini"
 
+
+# Palabras genéricas que el LLM agrega y "ensucian" la deduplicación
+# (ej: "shorts FLEX-01" y "FLEX-01" son el MISMO producto).
+_GENERIC_PRODUCT_PREFIXES = (
+    "short ", "shorts ", "remera ", "remeras ", "tee ", "camiseta ", "camisetas ",
+    "hoodie ", "hoodies ", "jogger ", "joggers ", "pant ", "pants ", "pantalón ",
+    "pantalones ", "producto ", "el ", "la ", "los ", "las ", "un ", "una ",
+)
+
+
+def _normalize_list_item(value) -> str:
+    """
+    Normaliza un item de lista para deduplicación inteligente.
+    "FLEX-01", "flex-01", "shorts FLEX-01" → todos retornan "flex-01".
+    """
+    if not isinstance(value, str):
+        return ""
+    s = value.strip().lower()
+    # quitar prefijos genéricos repetidamente (por si hay anidados)
+    changed = True
+    while changed:
+        changed = False
+        for p in _GENERIC_PRODUCT_PREFIXES:
+            if s.startswith(p):
+                s = s[len(p):]
+                changed = True
+                break
+    # colapsar espacios y normalizar separadores
+    s = " ".join(s.split())
+    return s
+
 # Secciones válidas del notebook (debe coincidir con sales_session.EMPTY_NOTEBOOK)
 _VALID_SECTIONS = {
     "customer", "intent", "interest", "recommendation",
@@ -137,12 +168,25 @@ def extract_and_apply(
     for section, fields in clean.items():
         current = nb.get(section, {}) or {}
         for key, value in fields.items():
-            # Para listas: append-unique en lugar de reemplazo
+            # Para listas: append-unique con normalización inteligente.
+            # Esto evita duplicados feos tipo:
+            #   ["FLEX-01", "flex-01", "shorts FLEX-01", "short flex-01"]
+            # cuando todos refieren al mismo producto. Normalizamos a
+            # lowercase + sin espacios extra + sin prefijos genéricos
+            # ("short", "remera", "tee", etc) para deduplicar.
             if isinstance(value, list) and isinstance(current.get(key), list):
                 merged = list(current[key])
+                seen_norm = {_normalize_list_item(x) for x in merged}
                 for item in value:
-                    if item and item not in merged:
+                    if not item:
+                        continue
+                    norm = _normalize_list_item(item)
+                    if norm and norm not in seen_norm:
                         merged.append(item)
+                        seen_norm.add(norm)
+                # Si es products_mentioned y crece mucho, quedarse con los últimos N
+                if key == "products_mentioned" and len(merged) > 8:
+                    merged = merged[-8:]
                 current[key] = merged
             elif value not in (None, "", [], {}):
                 current[key] = value
@@ -274,11 +318,27 @@ def extract_and_apply_pre_turn(
 #  update_notebook, parseamos los items del texto y los guardamos igual.
 # ════════════════════════════════════════════════════════════════════
 
-# Señales en el texto del agente que sugieren que hay un resumen/pedido.
+# Señales FUERTES de que el agente está armando un resumen real con datos.
+# Ojo: regex anterior matcheaba con "pedido" suelto, lo cual disparaba el sync
+# en mensajes de cierre tipo "te paso con un asesor que cerrará el pedido" —
+# y el LLM-mini inventaba items contaminando el carrito.
+# Ahora pedimos: (subtotal O total con $) Y al menos un signo de pesos/precio.
 _CART_SUMMARY_SIGNALS = re.compile(
-    r"\b(resumen\s+de\s+(tu\s+)?pedido|pedido|carrito|"
-    r"subtotal|total\s*:|productos\s+confirmados|"
-    r"presupuesto)\b",
+    r"(subtotal\s*:?\s*\$?|total\s*:?\s*\$\s*\d|"
+    r"resumen\s+(de\s+)?(tu\s+)?(pedido|compra|propuesta)|"
+    r"productos\s+confirmados)",
+    re.IGNORECASE,
+)
+_PRICE_LIKE = re.compile(r"\$?\s*\d{1,3}([.,]\d{3})+\s*(pyg|usd|ars|gs|brl|clp|mxn|eur)?", re.IGNORECASE)
+
+# Anti-señales: si el mensaje tiene CUALQUIERA de estas frases, NO ejecutar
+# el cart-sync (son mensajes de cierre/handoff donde "pedido" aparece como
+# referencia pero NO hay items que extraer).
+_CART_SKIP_SIGNALS = re.compile(
+    r"(te\s+paso\s+con|asesor\s+que|pasarte\s+con|"
+    r"te\s+contactar[áa]|te\s+escribir[áa]|"
+    r"derivo\s+(con|al?\s+vendedor)|"
+    r"un\s+(asesor|vendedor|humano|representante)\s+(te|va|se|cerrar))",
     re.IGNORECASE,
 )
 
@@ -286,38 +346,49 @@ _CART_EXTRACT_PROMPT = """Sos un parser de carritos de compra.
 
 Recibís un mensaje que un asesor de ventas le acaba de mandar a un cliente.
 Tu trabajo: si el mensaje contiene un RESUMEN DE PEDIDO o LISTA DE PRODUCTOS
-CONFIRMADOS, extraer cada item como JSON estructurado.
+CONFIRMADOS (con precios), extraer cada item como JSON estructurado.
 
 Devolvé SOLO un JSON con esta forma:
 {
   "items": [
-    {"name": "<nombre del producto>", "variant_name": "<talle/color o null>",
+    {"name": "<nombre EXACTO del producto>", "variant_name": "<talle/color o null>",
      "quantity": <int>, "unit_price": <número o null>}
   ]
 }
 
-Si el mensaje NO contiene un resumen / lista de productos, devolvé `{"items": []}`.
+Si el mensaje NO contiene un resumen / lista de productos con precios, devolvé `{"items": []}`.
 
-REGLAS:
+REGLAS CRÍTICAS:
 1. Solo extraé productos que el asesor está PRESENTANDO como confirmados o
-   incluidos en el pedido (líneas con bullets, números, precios, talles).
-2. NO extraés productos que el asesor SOLO menciona / recomienda /
-   pregunta si le interesan. Solo los que están en el resumen final.
-3. Si un item no tiene talle/cantidad/precio explícito, dejá esos campos como null
-   o 1 para quantity por defecto.
-4. NO inventes productos.
+   incluidos en el pedido (líneas con bullets/números/precios/talles).
+2. NO extraés productos que el asesor SOLO menciona / recomienda / pregunta
+   si le interesan. Solo los que están en el resumen final.
+3. **TALLE/COLOR COMPARTIDO**: si el asesor dice "ambos en talle S" o
+   "los dos en talle M" o "ambos en color azul", el variant_name de TODOS
+   los items extraídos debe ser ese talle/color.
+4. **NOMBRE EXACTO**: copiá el nombre del producto tal cual aparece en el
+   mensaje. Si dice "COMPRESS-01 TEE", devolvé "COMPRESS-01 TEE" (no "TEE").
+5. Si un item no tiene talle/cantidad/precio explícito, dejá esos campos
+   como null o 1 para quantity por defecto.
+6. NO inventes productos. Si dudás si algo es un producto real o solo
+   una mención casual, NO lo incluyas (mejor `[]` que items inventados).
+7. Si el mensaje es un cierre/handoff ("te paso con un asesor") devolvé `[]`.
 
-EJEMPLO INPUT:
-"Resumen de tu pedido:
-1. FLEX-01 Joggers — Talle L — Cant. 1
-2. WEIGHT-02 HOODIE — Talle M — 450,000 PYG
-Subtotal: 450,000 PYG"
-
-EJEMPLO OUTPUT:
-{"items": [
-  {"name": "FLEX-01 Joggers", "variant_name": "L", "quantity": 1, "unit_price": null},
-  {"name": "WEIGHT-02 HOODIE", "variant_name": "M", "quantity": 1, "unit_price": 450000}
+EJEMPLO 1:
+INPUT: "He preparado un combo con la remera **COMPRESS-01 TEE** y el short
+**FLEX-01**, ambos en talle S. Subtotal: 750,000 PYG"
+OUTPUT: {"items": [
+  {"name": "COMPRESS-01 TEE", "variant_name": "S", "quantity": 1, "unit_price": null},
+  {"name": "FLEX-01", "variant_name": "S", "quantity": 1, "unit_price": null}
 ]}
+
+EJEMPLO 2:
+INPUT: "Listo, Javier. Te paso con un asesor que cerrará el pedido."
+OUTPUT: {"items": []}
+
+EJEMPLO 3:
+INPUT: "Tengo el FLEX-01 a 350,000 PYG. ¿Te interesa? ¿Querés ver fotos?"
+OUTPUT: {"items": []}    (esto es recomendación, no resumen)
 
 Respondé SOLO con el JSON. Nada más."""
 
@@ -346,8 +417,20 @@ def sync_cart_from_assistant_message(
     if not assistant_message or not assistant_message.strip():
         return None
 
-    # Solo disparar si hay señales de resumen en el texto
+    # Skip si el mensaje es claramente un cierre/handoff con frases tipo
+    # "te paso con un asesor" — esos mensajes mencionan "pedido" pero NO
+    # contienen items que extraer, y el LLM-mini puede inventar y contaminar.
+    if _CART_SKIP_SIGNALS.search(assistant_message):
+        logger.info("[cart-sync] skip: detectado mensaje de cierre/handoff")
+        return None
+
+    # Solo disparar si hay señales FUERTES de resumen real (subtotal/total con $,
+    # o "resumen de pedido/compra/propuesta", o "productos confirmados")
+    # ADEMÁS requiere al menos UN precio reconocible en el texto (sino no es un resumen real).
     if not _CART_SUMMARY_SIGNALS.search(assistant_message):
+        return None
+    if not _PRICE_LIKE.search(assistant_message):
+        logger.info("[cart-sync] skip: tiene señal de resumen pero sin precios reconocibles")
         return None
 
     # Llamar al LLM-mini para extraer items estructurados
@@ -450,11 +533,31 @@ def sync_cart_from_assistant_message(
         if not isinstance(existing_items, list):
             existing_items = []
 
-        # Si los items extraídos son MÁS o IGUALES en count que los existentes,
-        # significa que el agente está mostrando un resumen completo —
-        # reemplazamos el carrito por los items extraídos (que son la versión
-        # autoritativa del agente).
-        # Si son MENOS, no tocamos (probablemente es una respuesta parcial).
+        # PROTECCIÓN ANTI-CORRUPCIÓN: si el carrito ya tiene items con product_id,
+        # solo reemplazamos si los NUEVOS items contienen TODOS los product_ids
+        # que ya teníamos (es decir, el agente está mostrando un resumen extendido
+        # o igual, no reemplazándolos por otros). Esto previene el bug donde el
+        # cart-sync extrae items inventados/equivocados y pisa los reales.
+        existing_pids = {
+            it.get("product_id") for it in existing_items
+            if isinstance(it, dict) and it.get("product_id")
+        }
+        new_pids = {
+            it.get("product_id") for it in matched_items
+            if isinstance(it, dict) and it.get("product_id")
+        }
+
+        if existing_pids and not existing_pids.issubset(new_pids):
+            missing = existing_pids - new_pids
+            logger.info(
+                f"[cart-sync] SKIP: los items nuevos NO contienen los product_ids "
+                f"ya existentes (faltan {len(missing)}). Carrito actual se mantiene "
+                f"intacto para evitar corrupción."
+            )
+            return None
+
+        # Si el carrito está vacío, o si los nuevos contienen a los existentes
+        # (extensión legítima): aplicar el merge.
         if len(matched_items) >= len(existing_items):
             order_section["items"] = matched_items
             nb["order"] = order_section
