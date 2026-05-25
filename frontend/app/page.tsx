@@ -16,108 +16,133 @@ import Icon, { type IconName } from "@/components/landing-v2/Icon";
 import SmokeHero from "@/components/landing-v2/SmokeHero";
 import HeroMockup from "@/components/landing-v2/HeroMockup";
 import StepVisual from "@/components/landing-v2/StepVisual";
-import MiniGlobe from "@/components/landing-v2/MiniGlobe";
 
 /* ─────────── Datos ─────────── */
 
-const FEATURES: { icon: IconName; title: string; desc: string }[] = [
+const FEATURES: { icon: IconName; title: string; desc: string; tag: string }[] = [
   {
     icon: "chat",
-    title: "Agente IA que vende 24/7",
-    desc: "Responde preguntas, recomienda productos y cierra ventas por vos. En WhatsApp y tu tienda web.",
+    title: "Vendedor de IA 24/7",
+    desc: "Atiende cada DM como vos lo harías. Pregunta, recomienda combos, junta los datos y te pasa el cliente caliente, listo para cobrar.",
+    tag: "WHATSAPP",
   },
   {
-    icon: "sparkle",
-    title: "Catálogo inteligente",
-    desc: "Subís tus productos una sola vez. La IA genera descripciones y los deja listos para vender en WhatsApp y tu tienda web.",
+    icon: "store",
+    title: "Tu tienda online incluida",
+    desc: "Storefront pública en getagentro.com/tu-marca. Catálogo navegable, variantes y stock — sin diseñador ni desarrollador.",
+    tag: "TIENDA WEB",
   },
   {
-    icon: "bolt",
-    title: "Pedidos sin fricción",
-    desc: "Tus clientes confirman el pedido sin salir del chat. Coordinás el pago como prefieras: transferencia, efectivo o el método que ya uses.",
+    icon: "tag",
+    title: "Caja para tu local",
+    desc: "POS de mostrador con apertura y cierre de caja, cliente walk-in, atajos de teclado y ticket imprimible al instante.",
+    tag: "PUNTO DE VENTA",
   },
   {
-    icon: "chart",
-    title: "Analytics en tiempo real",
-    desc: "Ventas, conversión, productos top y performance del agente. Todo en un solo lugar, fácil de leer.",
+    icon: "shield",
+    title: "Equipo + copiloto humano",
+    desc: "Sumás vendedores con su propio acceso. Cuando uno toma el chat, la IA pausa al toque — sin pisarse, sin choque.",
+    tag: "EQUIPO",
   },
   {
     icon: "layers",
     title: "Inbox unificado",
-    desc: "WhatsApp y tu tienda web en un solo lugar. Un solo stock, un solo cliente, una sola conversación.",
+    desc: "WhatsApp y storefront en una sola bandeja. Pipeline kanban por etapa, asignación a vendedor, take-control con un click.",
+    tag: "BANDEJA",
   },
   {
-    icon: "shield",
-    title: "Control total",
-    desc: "Editás el tono, las respuestas y las reglas del agente. Tu marca, tus decisiones. La IA ejecuta.",
+    icon: "sparkle",
+    title: "Catálogo con superpoderes",
+    desc: "Variantes por talle y color, fotos múltiples, stock con backorder. Importás desde Excel, CSV o una URL externa.",
+    tag: "PRODUCTOS",
   },
+];
+
+const PROBLEMS = [
+  { quote: "Atiendo el WhatsApp en el subte, entre clientes, a la noche. Si no contesto en 2 minutos, pierdo la venta.", who: "Dueño · retail" },
+  { quote: "Probé tres chatbots. Todos suenan a robot, el cliente se da cuenta y se va. No quiero un Q&A automático.", who: "Dueña · gastro" },
+  { quote: "Tengo storefront, WhatsApp y caja física separados. Stock en uno, pedidos en otro. Es un caos.", who: "Dueño · e-commerce" },
 ];
 
 const STEPS = [
   {
-    title: "Subí tus productos",
-    desc: "Importá desde Excel o cargá manualmente. La IA completa descripciones y categorías automáticamente.",
+    title: "Pedí tu invitación",
+    desc: "Estamos en beta cerrada. Te respondemos en 24hs, te damos acceso con Google y reservás tu subdominio en getagentro.com/tu-marca.",
   },
   {
-    title: "Entrená a tu agente",
-    desc: "Definí tono, políticas de envío, métodos de pago y horarios. En minutos tu agente está listo para vender.",
+    title: "Cargá tu catálogo",
+    desc: "Subís productos manualmente, importás desde Excel/CSV o scrapeás una URL externa. Variantes, fotos y stock listos.",
   },
   {
-    title: "Conectá tus canales",
-    desc: "WhatsApp Business y tu tienda web. Un clic y queda todo sincronizado con tu catálogo y tu stock.",
+    title: "Conectá tu WhatsApp",
+    desc: "Vinculás tu WhatsApp Business en minutos. Mismo número, mismo historial — el agente arranca a atender al toque.",
   },
   {
-    title: "Vendé mientras dormís",
-    desc: "El agente responde, recomienda y cierra pedidos. Vos confirmás el pago y te dedicás a crecer tu negocio.",
+    title: "Recibí clientes listos para cerrar",
+    desc: "El agente trabaja siempre. Vos abrís el inbox y te encontrás con los pedidos pre-calificados — solo te queda cobrar.",
   },
 ];
 
 const CASES: { icon: IconName; title: string; desc: string; stat: string }[] = [
-  { icon: "store", title: "Retail & moda", desc: "Gestioná talles, stock y recomendaciones personalizadas por cliente.", stat: "Catálogo & stock" },
-  { icon: "coffee", title: "Gastronomía", desc: "Recibí pedidos por WhatsApp, organizá la cocina y coordiná el delivery.", stat: "Pedidos & cocina" },
-  { icon: "scissors", title: "Servicios", desc: "Reservas, consultas y pagos automáticos sin mover un dedo.", stat: "Reservas & pagos" },
-  { icon: "tag", title: "E-commerce", desc: "Convertí visitantes en compradores con asistencia inteligente en cada paso.", stat: "Chat & checkout" },
+  { icon: "store", title: "Ropa y moda", desc: "Variantes por talle y color, captura del talle en el chat, recomendaciones de combos en tiempo real.", stat: "Vendé sin estar" },
+  { icon: "coffee", title: "Gastronomía", desc: "Pedidos por WhatsApp con menú variable, dirección y horario de retiro capturados de una.", stat: "Sin contratar más gente" },
+  { icon: "scissors", title: "Servicios", desc: "Consultas, presupuestos y reservas. El agente filtra los curiosos y te pasa los clientes serios.", stat: "Filtra el ruido por vos" },
+  { icon: "tag", title: "E-commerce", desc: "WhatsApp, tienda online y caja física conectados. Un solo stock, un solo cliente, un solo equipo.", stat: "Todo en un lugar" },
 ];
 
-type Plan = {
-  name: string;
-  price: number;
-  desc: string;
-  features: string[];
-  cta: string;
-  href: string;
-  featured: boolean;
-  tag?: string;
-};
+const DIFFS = [
+  {
+    title: "Pre-venta inteligente, no chatbot de FAQ.",
+    desc: "La mayoría de los chatbots responden tres preguntas y se quedan colgados. El nuestro entiende qué busca el cliente, le recomienda combos, junta talle, color y dirección, y te lo deja servido con todo el contexto para que cierres la venta como si lo hubieras atendido vos.",
+    bad: ["Bot que responde «si/no/horarios»", "Cliente que se aburre y se va", "Respuestas robot que matan la venta"],
+    good: ["Pre-vende y recomienda combos", "Junta producto, datos y prioridad", "Te lo pasa listo para cobrar"],
+  },
+  {
+    title: "Multi-canal real: WhatsApp, tienda online y caja.",
+    desc: "Otros venden «omnicanal» y son tres dashboards distintos. Acá es una sola plataforma: lo que vendés en el mostrador descuenta del stock del WhatsApp y de la tienda web. Un cliente, un pedido, un solo lugar.",
+    bad: ["3 herramientas distintas", "Stock desincronizado todo el tiempo", "Cliente repetido en cada sistema"],
+    good: ["Un solo inbox, un solo stock", "Cliente único en todos los canales", "Caja, tienda y chat en una pantalla"],
+  },
+  {
+    title: "Copiloto humano: la IA pausa cuando tomás control.",
+    desc: "Cuando un vendedor del equipo entra al chat, el agente se hace a un costado. No hay choque, no hay respuestas pisadas, no hay que apagar nada. Vos terminás la venta y el agente sigue trabajando con el resto.",
+    bad: ["IA y humano contestan a la vez", "Cliente recibe dos respuestas distintas", "Hay que apagar el bot manualmente"],
+    good: ["Tomás el chat con un click", "IA pausa, humano cierra", "El agente vuelve cuando terminás"],
+  },
+];
 
-const PLANS: Plan[] = [
+const FAQS = [
   {
-    name: "Starter",
-    price: 0,
-    desc: "Para probar Agentro sin compromiso.",
-    features: ["Hasta 50 pedidos/mes", "WhatsApp + tienda web", "Agente IA básico", "Soporte por email"],
-    cta: "Empezar gratis",
-    href: "__signup__",
-    featured: false,
+    q: "¿La IA cierra la venta sola?",
+    a: "No. El agente pre-califica, recomienda, junta datos y arma el pedido. Cuando el cliente está listo para pagar, te lo pasa a vos (o a un vendedor del equipo) con todo el contexto — producto, variantes, datos personales, prioridad. El cierre lo hacés vos. Eso es a propósito: queremos que el cliente final hable con un humano, no que la IA tome decisiones de venta sin tu visto bueno.",
   },
   {
-    name: "Growth",
-    price: 29,
-    desc: "Para negocios que quieren crecer en serio.",
-    features: ["Pedidos ilimitados", "WhatsApp + tienda web", "Agente IA personalizable", "Analytics avanzado", "Soporte prioritario"],
-    cta: "Probar 14 días gratis",
-    href: "__signup__",
-    featured: true,
-    tag: "Recomendado",
+    q: "¿Necesito tener WhatsApp Business?",
+    a: "Sí. Te conectás con tu cuenta de WhatsApp Business existente. No cambiás de número, no perdés el historial, y podés desconectarlo cuando quieras. Si todavía no tenés WhatsApp Business, te ayudamos a migrar tu número.",
   },
   {
-    name: "Scale",
-    price: 79,
-    desc: "Para marcas con volumen y equipo.",
-    features: ["Todo de Growth", "Onboarding personalizado", "Soporte prioritario por WhatsApp", "Account manager dedicado"],
-    cta: "Hablar con ventas",
-    href: "mailto:hola@getagentro.com",
-    featured: false,
+    q: "¿Cuánto cuesta?",
+    a: "Mientras estemos en beta cerrada, Agentro es gratis. Al lanzamiento público vamos a anunciar el pricing con anticipación, y vos vas a tener un plan preferencial por haber estado desde el principio. No vas a despertarte un día con una factura sorpresa.",
+  },
+  {
+    q: "¿En qué países funciona?",
+    a: "Funciona en cualquier país donde haya WhatsApp Business. Hoy estamos enfocados en LATAM hispanohablante — Argentina, Paraguay, México, Chile y la región. Si tu país no está en el radar, decinos y lo evaluamos.",
+  },
+  {
+    q: "¿Cuántos productos puedo tener?",
+    a: "Pensado para catálogos de 10 a 500 productos — el sweet spot del pequeño y mediano negocio. Variantes por talle/color, fotos múltiples, stock y backorder vienen incluidos.",
+  },
+  {
+    q: "¿Cómo aprende el agente sobre mi negocio?",
+    a: "Levanta tu catálogo automáticamente y le agregás reglas: tono, políticas de envío, métodos de pago habilitados, productos prioritarios. Después afina su forma de hablar y vender con cada conversación — entre más lo usás, mejor entiende a tus clientes.",
+  },
+  {
+    q: "¿Puedo tener varios vendedores en mi equipo?",
+    a: "Sí. Podés sumar a todo tu equipo con accesos diferenciados, asignar conversaciones a cada vendedor y activar el modo copiloto (cuando el vendedor toma control del chat, la IA pausa al toque). Pensado para equipos de 1 a 20 personas.",
+  },
+  {
+    q: "¿Qué pasa si el agente se equivoca?",
+    a: "Honesto: a veces se equivoca. Por eso no le dejamos cerrar la venta sola. Vos ves todas las conversaciones en el inbox, podés tomar control en cualquier momento, y le enseñás correcciones para que no repita el error. La IA es buena haciendo el 80% del laburo aburrido — el 20% crítico te toca a vos.",
   },
 ];
 
@@ -142,25 +167,21 @@ function useReveal() {
   }, []);
 }
 
-/* ─────────── Animated headline ─────────── */
+/* ─────────── Animated headline: "La IA vende. Vos cerrás." ─────────── */
 
 function AnimatedHeadline() {
   const words = [
-    { t: "Creá", hl: false, br: false },
-    { t: "tu", hl: false, br: false },
-    { t: "tienda", hl: false, br: false },
-    { t: "online.", hl: false, br: true },
-    { t: "La", hl: true, br: false },
-    { t: "IA", hl: true, br: false },
-    { t: "vende", hl: true, br: false },
-    { t: "por", hl: true, br: false },
-    { t: "vos.", hl: true, br: false },
+    { t: "La", hl: false, br: false },
+    { t: "IA", hl: false, br: false },
+    { t: "vende.", hl: false, br: true },
+    { t: "Vos", hl: true, br: false },
+    { t: "cerrás.", hl: true, br: false },
   ];
   return (
     <h1>
       {words.map((w, i) => (
         <span key={i}>
-          <span className="word" style={{ animationDelay: `${0.1 + i * 0.08}s` }}>
+          <span className="word" style={{ animationDelay: `${0.1 + i * 0.07}s` }}>
             <span className={w.hl ? "hl" : ""}>{w.t}</span>
           </span>
           {w.br ? <br /> : " "}
@@ -176,7 +197,7 @@ function FeatureCard({
   f,
   i,
 }: {
-  f: { icon: IconName; title: string; desc: string };
+  f: { icon: IconName; title: string; desc: string; tag: string };
   i: number;
 }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -192,16 +213,10 @@ function FeatureCard({
       ref={ref}
       className="feature reveal"
       onMouseMove={onMove}
-      style={{ transitionDelay: `${i * 0.05}s` }}
+      style={{ transitionDelay: `${i * 0.04}s` }}
     >
-      <span className="feature-index">{String(i + 1).padStart(2, "0")}</span>
-      {i === 4 ? (
-        <div style={{ alignSelf: "flex-start", marginBottom: 4 }}>
-          <MiniGlobe size={76} />
-        </div>
-      ) : (
-        <div className="feature-icon"><Icon name={f.icon} size={18} /></div>
-      )}
+      <span className="feature-index">{f.tag}</span>
+      <div className="feature-icon"><Icon name={f.icon} size={18} /></div>
       <div className="feature-title">{f.title}</div>
       <p className="feature-desc">{f.desc}</p>
     </div>
@@ -235,8 +250,8 @@ function HowItWorks() {
       <div className="container">
         <div className="section-head reveal">
           <span className="kicker"><span className="dot" /> Cómo funciona</span>
-          <h2>De cero a vendiendo en minutos.</h2>
-          <p>Cuatro pasos. Sin equipo técnico, sin configuraciones complicadas. Agentro se ocupa del resto.</p>
+          <h2>De cero a vendiendo,<br />sin equipo técnico.</h2>
+          <p>Cuatro pasos y ya estás atendiendo. Sin tarjeta, sin instalaciones largas, sin manuales. El primer chat pre-calificado te llega el mismo día que conectás WhatsApp.</p>
         </div>
 
         <div className="steps">
@@ -257,6 +272,112 @@ function HowItWorks() {
           <div className="step-visual">
             <StepVisual step={active} />
           </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ─────────── Channels strip ─────────── */
+
+function ChannelsStrip() {
+  return (
+    <div className="channels-strip">
+      <div className="channel-card reveal">
+        <div className="channel-tag">CANAL · CHAT</div>
+        <div className="channel-title">WhatsApp Business</div>
+        <p className="channel-desc">Tu vendedor de IA atiende cada DM, pre-vende y arma la propuesta. Sin cambiar de número, sin perder el historial.</p>
+        <div className="channel-list">
+          <span>Pre-venta inteligente</span>
+          <span>Recomendaciones en vivo</span>
+          <span>Carrito acumulativo</span>
+        </div>
+      </div>
+      <div className="channel-card reveal" style={{ transitionDelay: ".1s" }}>
+        <div className="channel-tag">CANAL · WEB</div>
+        <div className="channel-title">Tu tienda online</div>
+        <p className="channel-desc">Lista en getagentro.com/tu-marca. Catálogo, variantes y pedidos sin tener que armar nada vos.</p>
+        <div className="channel-list">
+          <span>Subdominio incluido</span>
+          <span>Catálogo navegable</span>
+          <span>Pedidos desde la web</span>
+        </div>
+      </div>
+      <div className="channel-card reveal" style={{ transitionDelay: ".2s" }}>
+        <div className="channel-tag">CANAL · PRESENCIAL</div>
+        <div className="channel-title">Caja para tu local</div>
+        <p className="channel-desc">Punto de venta para mostrador. Apertura, cierre con cuadre, ticket imprimible y atajos para vender rápido.</p>
+        <div className="channel-list">
+          <span>Cliente walk-in</span>
+          <span>Atajos de teclado</span>
+          <span>Mismo stock que la web</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─────────── Differentiators ─────────── */
+
+function Differentiators() {
+  return (
+    <section id="diferenciales" className="section">
+      <div className="container">
+        <div className="section-head reveal">
+          <span className="kicker"><span className="dot" /> Diferenciales</span>
+          <h2>Mismo precio que los genéricos.<br />Resultados que no se le acercan.</h2>
+          <p>Pre-venta inteligente, multi-canal de verdad y copiloto humano. Tres cosas que cambian cómo vende tu negocio — y que la competencia sigue prometiendo sin entregar.</p>
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          {DIFFS.map((d, i) => (
+            <div key={i} className="diff-card reveal" style={{ transitionDelay: `${i * 0.05}s` }}>
+              <div>
+                <div className="diff-title">{d.title}</div>
+                <p className="diff-desc">{d.desc}</p>
+              </div>
+              <div className="diff-vs">
+                {d.bad.map((b, j) => (
+                  <div key={`b-${j}`} className="row bad">
+                    <span className="mark">×</span> {b}
+                  </div>
+                ))}
+                {d.good.map((g, j) => (
+                  <div key={`g-${j}`} className="row good">
+                    <span className="mark">✓</span> {g}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ─────────── FAQ ─────────── */
+
+function FAQSection() {
+  const [open, setOpen] = useState<number>(0);
+  return (
+    <section id="faq" className="section">
+      <div className="container">
+        <div className="section-head reveal">
+          <span className="kicker"><span className="dot" /> Preguntas frecuentes</span>
+          <h2>Lo que nos preguntan<br />antes de probarlo.</h2>
+          <p>Respondemos sin rodeos. Si tu pregunta no está, mandanos un mail a hola@getagentro.com.</p>
+        </div>
+        <div className="faq reveal">
+          {FAQS.map((f, i) => (
+            <div
+              key={i}
+              className={`faq-item ${open === i ? "open" : ""}`}
+              onClick={() => setOpen(open === i ? -1 : i)}
+            >
+              <div className="faq-q">{f.q}</div>
+              <div className="faq-a">{f.a}</div>
+            </div>
+          ))}
         </div>
       </div>
     </section>
@@ -328,7 +449,7 @@ export default function LandingPage() {
     const onScroll = () => {
       if (!mockupRef.current) return;
       const y = window.scrollY;
-      mockupRef.current.style.transform = `translateY(${y * 0.15}px) perspective(1800px) rotateX(${Math.max(0, 8 - y * 0.02)}deg)`;
+      mockupRef.current.style.transform = `translateY(${y * 0.12}px) perspective(1800px) rotateX(${Math.max(0, 6 - y * 0.015)}deg)`;
     };
     window.addEventListener("scroll", onScroll, { passive: true });
     onScroll();
@@ -349,7 +470,7 @@ export default function LandingPage() {
   };
 
   const signupHref = getGoogleAuthUrl();
-  const planHref = (h: string) => (h === "__signup__" ? signupHref : h);
+  const inviteHref = "#precios";
 
   const kickerStyle: CSSProperties = { opacity: 0, animation: "lp-rise .7s .1s cubic-bezier(.2,.8,.2,1) forwards" };
 
@@ -363,10 +484,11 @@ export default function LandingPage() {
             <span>Agentro</span>
           </a>
           <div className="nav-links">
-            <a href="#features">Features</a>
+            <a href="#features">Producto</a>
             <a href="#como">Cómo funciona</a>
-            <a href="#casos">Casos de uso</a>
-            <a href="#precios">Precios</a>
+            <a href="#diferenciales">Diferenciales</a>
+            <a href="#precios">Beta</a>
+            <a href="#faq">FAQ</a>
           </div>
           <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
             {isLoading ? (
@@ -385,8 +507,8 @@ export default function LandingPage() {
             ) : (
               <>
                 <Link href="/login" className="btn btn-ghost">Entrar</Link>
-                <a href={signupHref} className="btn btn-primary">
-                  Empezar gratis <Icon name="arrow" size={14} className="arrow" />
+                <a href={inviteHref} className="btn btn-primary">
+                  Pedir invitación <Icon name="arrow" size={14} className="arrow" />
                 </a>
               </>
             )}
@@ -404,22 +526,29 @@ export default function LandingPage() {
             <img src="/agentro-white.png" alt="Agentro" />
           </a>
           <span className="kicker" style={kickerStyle}>
-            <span className="dot" /> Nuevo · IA para tu negocio
+            <span className="dot" /> Beta cerrada · por invitación
           </span>
           <AnimatedHeadline />
           <p className="hero-sub">
-            Asistente de ventas con IA para pequeños negocios. Responde, recomienda y cierra ventas por vos en WhatsApp y tu tienda web.
+            El agente atiende tus chats como vos lo harías — pregunta, recomienda combos, junta los datos y te pasa el cliente caliente. Vos te despertás, abrís el inbox y solo te queda cobrar.
           </p>
           <div className="hero-cta">
-            <a href={signupHref} className="btn btn-primary btn-lg">
-              Empezar gratis <Icon name="arrow" size={14} className="arrow" />
+            <a href={inviteHref} className="btn btn-primary btn-lg">
+              Pedir invitación <Icon name="arrow" size={14} className="arrow" />
             </a>
-            <a href="#demo" className="btn btn-ghost btn-lg">Ver demo</a>
+            <a href="#demo" className="btn btn-ghost btn-lg">Ver el agente en vivo</a>
           </div>
           <div className="hero-meta">
-            <span><Icon name="check" size={12} /> Sin tarjeta</span>
-            <span><Icon name="check" size={12} /> Listo en 5 min</span>
-            <span><Icon name="check" size={12} /> Cancelás cuando quieras</span>
+            <span><Icon name="check" size={12} /> Gratis durante la beta</span>
+            <span><Icon name="check" size={12} /> WhatsApp + Tienda web + Caja</span>
+            <span><Icon name="check" size={12} /> Español · LATAM</span>
+          </div>
+
+          <div className="hero-honest-row">
+            <span className="hero-honest-item"><b>24/7</b> sin frenar</span>
+            <span className="hero-honest-item"><b>3 canales</b> unificados</span>
+            <span className="hero-honest-item"><b>5 etapas</b> de venta</span>
+            <span className="hero-honest-item"><b>Copiloto</b> humano</span>
           </div>
 
           <div ref={mockupRef} className="mockup-wrap" id="demo">
@@ -428,13 +557,44 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* FEATURES */}
+      {/* PROBLEM */}
+      <section className="section problem">
+        <div className="container">
+          <div className="section-head reveal">
+            <span className="kicker"><span className="dot" /> El problema</span>
+            <h2>Estás atendiendo todo solo.<br />Y se te va de las manos.</h2>
+            <p>El pequeño negocio que vende por WhatsApp tiene un techo: vos. Cuando crece el volumen, perdés ventas a la noche, mezclás stock entre canales, y no podés contratar a alguien por 4 horas sueltas.</p>
+          </div>
+          <div className="problem-grid">
+            {PROBLEMS.map((p, i) => (
+              <div key={i} className="problem-item reveal" style={{ transitionDelay: `${i * 0.08}s` }}>
+                <p className="problem-quote">{p.quote}</p>
+                <div className="problem-attr">— {p.who}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* CHANNELS */}
       <section id="features" className="section">
         <div className="container">
           <div className="section-head reveal">
+            <span className="kicker"><span className="dot" /> Plataforma</span>
+            <h2>Tres canales, un solo lugar.<br />Y un agente que los maneja por vos.</h2>
+            <p>WhatsApp donde están tus clientes, tu tienda online para los que llegan por Google y la caja para los que entran al local. Mismo stock, mismo cliente, misma pantalla.</p>
+          </div>
+          <ChannelsStrip />
+        </div>
+      </section>
+
+      {/* FEATURES grid */}
+      <section className="section">
+        <div className="container">
+          <div className="section-head reveal">
             <span className="kicker"><span className="dot" /> Features</span>
-            <h2>Todo lo que necesitás<br />para vender sin frenar.</h2>
-            <p>Agentro reemplaza cinco herramientas distintas. Un solo login, un solo dashboard, un solo precio.</p>
+            <h2>Cada pieza, pensada para vender más.</h2>
+            <p>Todo lo que arma una venta — chat, tienda, cobro, caja, equipo — conectado entre sí y manejado por el agente. Sin armar el rompecabezas vos.</p>
           </div>
           <div className="feature-grid">
             {FEATURES.map((f, i) => <FeatureCard key={i} f={f} i={i} />)}
@@ -449,8 +609,8 @@ export default function LandingPage() {
         <div className="container">
           <div className="section-head reveal">
             <span className="kicker"><span className="dot" /> Casos de uso</span>
-            <h2>Hecho para tu tipo de negocio.</h2>
-            <p>Sea lo que sea que vendas, Agentro se adapta. Configurás una vez y la IA aprende de tus ventas.</p>
+            <h2>Para el negocio que ya factura,<br />pero se le queda chico el día.</h2>
+            <p>Si vendés todos los días por WhatsApp y se te van clientes por no llegar a contestar, Agentro fue diseñado exactamente para vos.</p>
           </div>
           <div className="cases">
             {CASES.map((c, i) => (
@@ -467,47 +627,47 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* PRICING */}
+      <Differentiators />
+
+      {/* PRICING — beta */}
       <section id="precios" className="section">
         <div className="container">
           <div className="section-head reveal">
             <span className="kicker"><span className="dot" /> Precios</span>
-            <h2>Simple. Sin sorpresas.</h2>
-            <p>Empezá gratis. Cuando tu negocio crezca, Agentro crece con vos. Sin contratos, sin letra chica.</p>
+            <h2>Gratis durante la beta.<br />Sin letra chica.</h2>
+            <p>Mientras estemos en beta cerrada, todo Agentro es gratis para los negocios invitados. Al lanzamiento público anunciamos pricing con tiempo, y los de la beta arrancan con plan preferencial.</p>
           </div>
-          <div className="pricing">
-            {PLANS.map((p, i) => (
-              <div
-                key={i}
-                className={`plan reveal ${p.featured ? "featured" : ""}`}
-                style={{ transitionDelay: `${i * 0.08}s` }}
-              >
-                {p.tag && <div className="plan-tag">{p.tag}</div>}
-                <div>
-                  <div className="plan-name">{p.name}</div>
-                  <div className="plan-price">
-                    <span className="amount">${p.price}</span>
-                    <span className="period">USD / mes</span>
-                  </div>
-                  <p className="plan-desc">{p.desc}</p>
-                </div>
-                <ul className="plan-features">
-                  {p.features.map((feat, j) => (
-                    <li key={j}><Icon name="check" size={14} /> {feat}</li>
-                  ))}
-                </ul>
-                <a
-                  href={planHref(p.href)}
-                  className={`btn ${p.featured ? "btn-primary" : "btn-ghost"} btn-lg`}
-                  style={{ justifyContent: "center" }}
-                >
-                  {p.cta} <Icon name="arrow" size={14} className="arrow" />
-                </a>
+
+          <div className="beta-pricing reveal">
+            <div className="beta-pricing-left">
+              <span className="beta-tag">BETA CERRADA · POR INVITACIÓN</span>
+              <div className="beta-price">
+                <span className="amount">$0</span>
+                <span className="strike">pricing al lanzamiento</span>
               </div>
-            ))}
+              <p className="beta-sub">Todas las features, sin límites de pedidos ni canales. La única condición: contanos lo que funciona y lo que no.</p>
+              <div className="beta-fine">Sin tarjeta · cancelás cuando quieras · soporte por WhatsApp con el equipo</div>
+            </div>
+            <div className="beta-pricing-right">
+              <div className="beta-includes">Incluye</div>
+              <ul className="beta-list">
+                <li><Icon name="check" size={14} /> Vendedor de IA 24/7 en WhatsApp</li>
+                <li><Icon name="check" size={14} /> Tu tienda online en tu subdominio</li>
+                <li><Icon name="check" size={14} /> Caja para tu local físico</li>
+                <li><Icon name="check" size={14} /> Equipo con copiloto humano</li>
+                <li><Icon name="check" size={14} /> Inbox unificado con kanban</li>
+                <li><Icon name="check" size={14} /> Catálogo con variantes y stock</li>
+                <li><Icon name="check" size={14} /> Soporte directo con el equipo</li>
+              </ul>
+              <a href={signupHref} className="beta-cta">
+                Pedir invitación <Icon name="arrow" size={14} className="arrow" />
+              </a>
+            </div>
           </div>
         </div>
       </section>
+
+      <FAQSection />
 
       {/* CTA FINAL */}
       <section className="cta-final">
@@ -515,10 +675,10 @@ export default function LandingPage() {
           <span className="kicker reveal" style={{ marginBottom: 24 }}>
             <span className="dot" /> Empezá hoy
           </span>
-          <h2 className="reveal">Tu próxima venta<br />puede ser en 5 minutos.</h2>
-          <p className="reveal delay-1">Configurá Agentro, conectá WhatsApp y dejá que la IA haga el resto. Sin tarjeta, sin compromiso.</p>
+          <h2 className="reveal">El agente trabaja siempre.<br />Vos te despertás con plata en el aire.</h2>
+          <p className="reveal delay-1">Conectá WhatsApp, cargá tu catálogo y pasá a pensar el negocio, no en contestar mensajes. Gratis durante la beta — sin tarjeta, sin compromiso.</p>
           <a href={signupHref} className="btn btn-primary btn-lg reveal delay-2">
-            Crear mi tienda gratis <Icon name="arrow" size={16} className="arrow" />
+            Pedir invitación a la beta <Icon name="arrow" size={16} className="arrow" />
           </a>
         </div>
       </section>
@@ -528,12 +688,12 @@ export default function LandingPage() {
         <div className="container footer-inner">
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <div className="logo-mark" />
-            <span>Agentro © {new Date().getFullYear()}</span>
+            <span>Agentro © {new Date().getFullYear()} · getagentro.com</span>
           </div>
           <div className="footer-links">
+            <a href="mailto:hola@getagentro.com">hola@getagentro.com</a>
             <Link href="/terms">Términos</Link>
             <Link href="/privacy">Privacidad</Link>
-            <a href="mailto:hola@getagentro.com">Contacto</a>
             <a href="#">Status</a>
           </div>
         </div>
