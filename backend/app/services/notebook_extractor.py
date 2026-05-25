@@ -204,15 +204,16 @@ def extract_and_apply(
 #  PRE-TURN extractor: corre ANTES de que el LLM construya el prompt
 # ════════════════════════════════════════════════════════════════════
 
-_PRE_TURN_EXTRACT_PROMPT = """Sos un extractor de datos personales del cliente.
-Recibís SOLO el mensaje del cliente (sin respuesta del asesor). Extraé únicamente
-datos personales/de contacto que el cliente acabe de dar en su mensaje.
+_PRE_TURN_EXTRACT_PROMPT = """Sos un extractor de datos del cliente.
+Recibís SOLO el mensaje del cliente (sin respuesta del asesor). Extraé:
+  (a) datos personales/de contacto que acabe de dar
+  (b) CONTEXTO útil de la consulta (a quién va, para qué, ocasión, edad, etc.)
 
 Devolvé SOLO un objeto JSON con las secciones que correspondan. Cada sección es
 opcional — incluí solo si el cliente acaba de mencionar el dato.
 
 Secciones válidas (usá EXACTAMENTE estos nombres):
-- customer: { name, email, phone }
+- customer: { name, email, phone, context_notes }
 - shipping: { address, city }
 
 REGLAS:
@@ -221,8 +222,20 @@ REGLAS:
 3. Si dice un teléfono / número de contacto → customer.phone
 4. Si da una dirección de envío → shipping.address
 5. Si da una ciudad → shipping.city
-6. Si NO hay datos personales claros → devolvé {}
-7. NO inventes. Solo lo que está literal en el mensaje del cliente.
+6. **context_notes**: si el cliente da info contextual valiosa para personalizar la
+   recomendación (ej: "es un regalo para mi sobrino de 13 años", "lo necesito para
+   correr", "soy talle XL", "lo quiero para el viernes", "tengo presupuesto de
+   500.000", "alérgico al poliéster") → incluilo como string corto (max 200 chars).
+   Concatenar contextos previos NO es tu trabajo — si el cliente menciona algo
+   nuevo, devolvelo solo (el merge lo hace otro sistema).
+7. Si NO hay datos nuevos → devolvé {}
+8. NO inventes. Solo lo que está literal en el mensaje del cliente.
+
+EJEMPLO INPUT:
+"hola, busco un regalo para mi sobrino de 13 años que juega básquet"
+
+EJEMPLO OUTPUT:
+{"customer": {"context_notes": "regalo para sobrino de 13 años que juega básquet"}}
 
 Respondé SOLO con el JSON. Nada más."""
 
@@ -560,15 +573,33 @@ def sync_cart_from_assistant_message(
         # (extensión legítima): aplicar el merge.
         if len(matched_items) >= len(existing_items):
             order_section["items"] = matched_items
+            # Calcular subtotal automáticamente para que pricing.total quede al día
+            subtotal = 0.0
+            for it in matched_items:
+                try:
+                    q = int(it.get("quantity") or 1)
+                    p = float(it.get("unit_price") or 0)
+                    subtotal += q * p
+                except (TypeError, ValueError):
+                    continue
+            order_section["total"] = subtotal
             nb["order"] = order_section
+            # También actualizar pricing.total como espejo (algunos consumidores leen de ahí)
+            pricing = nb.get("pricing") or {}
+            if not isinstance(pricing, dict):
+                pricing = {}
+            pricing["total"] = subtotal
+            pricing["quoted"] = subtotal
+            nb["pricing"] = pricing
+
             session.set_notebook(nb)
             db.add(session)
             db.commit()
             logger.info(
                 f"[cart-sync] cart updated from assistant message: "
-                f"{len(existing_items)} → {len(matched_items)} items"
+                f"{len(existing_items)} → {len(matched_items)} items, total={subtotal:.0f}"
             )
-            return {"order": {"items": matched_items}}
+            return {"order": {"items": matched_items, "total": subtotal}}
         else:
             logger.info(
                 f"[cart-sync] extracted {len(matched_items)} items but cart already "

@@ -72,21 +72,40 @@ _PLAIN_URL_PATTERN = _re_for_urls.compile(r"https?://\S+")
 def _strip_invented_urls(text: str) -> str:
     """
     Quita del texto las URLs inventadas que el LLM mete cuando una tool falla.
-    Casos típicos:
+    Casos cubiertos:
       - `![alt](https://via.placeholder.com/150)` → quita el bloque entero
-      - `https://example.com/img.jpg` → quita la URL plana
-    Solo limpia URLs que apuntan a dominios basura conocidos — links legítimos
-    (ej: el sitio real de la tienda configurado en get_store_info) se respetan.
+      - `![alt]()` o `![alt](#)` → markdown vacío inventado por el LLM
+      - `![alt](javascript:...)` o `![alt](data:...)` → URLs maliciosas/fake
+      - `https://example.com/img.jpg` → URL plana inventada
+    Las imágenes reales NO van por texto — el agente las manda vía
+    `send_product_image` / `send_product_gallery` (pending_media). Cualquier
+    URL/markdown de imagen en el texto es siempre invento del LLM.
     """
     if not text:
         return text
 
-    def _is_invented(url: str) -> bool:
-        low = url.lower()
-        return any(d in low for d in _INVENTED_URL_DOMAINS)
+    def _is_invented(url_or_block: str) -> bool:
+        low = url_or_block.lower().strip()
+        # Markdown vacío o casi-vacío: ![alt]() ![alt](#) ![alt]( )
+        if low.endswith("()") or low.endswith("(#)") or "]( )" in low:
+            return True
+        # Schemas maliciosos / fake
+        if "javascript:" in low or "(data:" in low:
+            return True
+        # Dominios conocidos basura
+        if any(d in low for d in _INVENTED_URL_DOMAINS):
+            return True
+        # Markdown de imagen apuntando a algo MUY corto que no es URL real
+        if low.startswith("!["):
+            # extraer URL del paréntesis si existe
+            import re
+            m = re.search(r"\((.*?)\)$", low)
+            if m and len(m.group(1).strip()) < 10:
+                return True
+        return False
 
-    # 1) Quitar markdown de imagen con URL inventada
-    def _replace_md(m: _re_for_urls.Match) -> str:
+    # 1) Quitar markdown de imagen con URL inventada/vacía/fake
+    def _replace_md(m):
         block = m.group(0)
         if _is_invented(block):
             return ""
@@ -95,7 +114,7 @@ def _strip_invented_urls(text: str) -> str:
     cleaned = _MD_IMAGE_PATTERN.sub(_replace_md, text)
 
     # 2) Quitar URLs planas inventadas
-    def _replace_plain(m: _re_for_urls.Match) -> str:
+    def _replace_plain(m):
         url = m.group(0)
         if _is_invented(url):
             return "[imagen no disponible]"
@@ -107,6 +126,58 @@ def _strip_invented_urls(text: str) -> str:
     cleaned = _re_for_urls.sub(r" {2,}", " ", cleaned)
     cleaned = _re_for_urls.sub(r"\n{3,}", "\n\n", cleaned)
     return cleaned.strip()
+
+
+# ════════════════════════════════════════════════════════════════════
+#  Anti-robot post-processor: limpia frases robot determinísticamente
+# ════════════════════════════════════════════════════════════════════
+
+# Frases-robot exactas a borrar. El prompt ya las prohíbe pero el LLM
+# las usa igual. En vez de pelearle al modelo, las quitamos del output.
+_ROBOT_PHRASES_TO_STRIP = [
+    # Aperturas serviles típicas
+    r"^\s*¡?\s*Por\s+supuesto\s*[!.,]+\s*",
+    r"^\s*¡?\s*Claro\s+que\s+s[íi]\s*[!.,]+\s*",
+    r"^\s*¡?\s*Claro\s*[!.,]+\s*(?=[A-ZÁÉÍÓÚÑ¡¿])",  # "¡Claro!" solo si no es "claro que..."
+    r"^\s*¡?\s*Con\s+(mucho\s+)?gusto\s*[!.,]+\s*",
+    r"^\s*¡?\s*Genial\s*[!.,]+\s*(?=[A-ZÁÉÍÓÚÑ¡¿])",
+    r"^\s*¡?\s*Perfecto\s*[!.,]+\s*(?=[A-ZÁÉÍÓÚÑ¡¿])",
+    # Cierres serviles típicos
+    r"\s*(Si\s+(necesit[áa]s|ten[ée]s)\s+(algo\s+más|alguna\s+(otra\s+)?(pregunta|duda|consulta))[^.]{0,80}\.?)\s*$",
+    r"\s*No\s+dudes\s+en\s+(decírmelo|consultarme|preguntarme|escribirme)[^.]{0,40}\.?\s*$",
+    r"\s*Estoy\s+(aqu[íi]|a\s+(tu|su)\s+disposici[óo]n|disponible)\s+para\s+(ayudarte|asistirte)[^.]{0,40}\.?\s*$",
+    r"\s*Con\s+gusto\s+(te\s+)?(ayudo|asisto)[^.]{0,40}\.?\s*$",
+    # "Bienvenido a TIENDA" se usa demasiado al saludar
+    r"\bBienvenido(/a|s)?\s+a\s+[A-ZÁÉÍÓÚÑ][\w\sÁÉÍÓÚÑáéíóúñ-]{1,30}[.!]\s*",
+    # Frases identidad-bot
+    r"\bSoy\s+parte\s+del\s+equipo[^.]{0,40}\.?\s*",
+    # "¿En qué puedo ayudarte?" frase canónica de bot
+    r"\s*¿En\s+qu[ée]\s+(puedo|te\s+puedo|podemos)\s+(ayudarte|asistirte|servirte)[^?]*\?\s*",
+]
+
+_ROBOT_PATTERNS = [_re_for_urls.compile(p, _re_for_urls.IGNORECASE | _re_for_urls.MULTILINE)
+                    for p in _ROBOT_PHRASES_TO_STRIP]
+
+
+def _strip_robot_phrases(text: str) -> str:
+    """
+    Limpia frases-robot determinísticamente del output del agente.
+    Las quita en vez de pedirle al LLM que las evite (que lo ignora).
+    Si después de la limpieza el mensaje queda muy corto (<10 chars),
+    devuelve el original (preferimos algo robot a un mensaje vacío).
+    """
+    if not text or len(text) < 20:
+        return text
+    cleaned = text
+    for pattern in _ROBOT_PATTERNS:
+        cleaned = pattern.sub("", cleaned)
+    # Limpiar espacios sobrantes
+    cleaned = _re_for_urls.sub(r"\n{3,}", "\n\n", cleaned)
+    cleaned = _re_for_urls.sub(r" {2,}", " ", cleaned).strip()
+    # Si quedó vacío o muy corto, devolver original
+    if len(cleaned) < 10:
+        return text
+    return cleaned
 
 
 def _find_or_create_customer(
@@ -792,12 +863,12 @@ def process_message(
         logger.error(f"Error calling OpenAI: {e}", exc_info=True)
         assistant_content = "Disculpa, tuve un problema procesando tu mensaje. ¿Podrías intentarlo de nuevo?"
 
-    # ── 6.4. URL-guard (red de seguridad determinística) ──
-    # El prompt prohíbe inventar URLs pero el LLM a veces igual lo hace
-    # (visto: 'via.placeholder.com', 'example.com/...'). Acá lo limpiamos
-    # ANTES de mandárselo al cliente. Cero false positives porque solo
-    # quitamos URLs basura — las imágenes reales van por pending_media.
+    # ── 6.4. Guards determinísticos antes de enviar al cliente ──
+    # (a) URL-guard: quita markdown de imagen vacío/fake y URLs basura
+    # (b) Anti-robot: quita frases-robot que el LLM usa aunque el prompt las prohíbe
+    # Ambas son red de seguridad: si fallan, el cliente recibe ruido.
     assistant_content = _strip_invented_urls(assistant_content)
+    assistant_content = _strip_robot_phrases(assistant_content)
 
     # ── 6.5. Stock-guard (red de seguridad — modo solo-log) ──
     # En la arquitectura Context-First, los datos de stock ya vienen en el

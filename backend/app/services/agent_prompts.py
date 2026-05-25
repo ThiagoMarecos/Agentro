@@ -317,7 +317,13 @@ def _build_next_action(
             "▶ ACCIÓN — FASE 1 → FASE 2: Cliente sabe qué quiere. Validá en DB.\n"
             "  1. `product_search` con la query del cliente (en español E inglés si hace falta)\n"
             "  2. Si hay resultados → `move_stage` a 'validation'\n"
-            "  3. Si no hay → probá sinónimos o `list_categories`. NUNCA digas 'no tenemos eso' sin haber buscado al menos 2 veces."
+            "  3. Si no hay → probá sinónimos o `list_categories`. NUNCA digas 'no tenemos eso' sin haber buscado al menos 2 veces.\n\n"
+            "  💡 REGLA DE RECOMENDACIÓN:\n"
+            "  • Si el cliente pidió algo ESPECÍFICO ('quiero la FLEX-01') → mostrá ESE producto.\n"
+            "  • Si el cliente pidió algo ABIERTO ('recomendame algo', 'qué tenés para gym', 'busco un regalo')\n"
+            "    → ofrecé 2-3 opciones distintas para que pueda elegir, NO una sola.\n"
+            "  • Si el contexto sugiere COMBO (regalo, conjunto, look completo) → pensá complementos\n"
+            "    (remera + short, jogger + hoodie, etc) — un vendedor real piensa en propuesta completa."
         )
 
     # ── FASE 2: VALIDACIÓN ──
@@ -418,23 +424,47 @@ def _build_next_action(
             )
         return (
             "▶ ACCIÓN — FASE 4 → FASE 5: Tenés todos los datos clave. Tiempo de escalar.\n\n"
-            "  1. Confirmá brevemente lo que tenés: 'Listo, te confirmo: <producto>, <cantidad>, "
-            "envío a <ciudad>. ¿Está todo bien?'\n"
+            "  1. Confirmá brevemente lo que tenés (producto + cantidad + ciudad).\n"
             "  2. Si confirma → llamá `handoff_to_seller` con:\n"
             "     • priority: 'alta' si es compra inmediata, 'vip' si es cliente recurrente con compras previas, sino 'media'\n"
             "     • objections: lista de dudas que mencionó durante el chat (puede estar vacía)\n"
             "     • notes: cualquier detalle relevante para el vendedor\n"
-            "  3. Después del handoff_to_seller, decile al cliente: 'Listo, te paso con un asesor que confirma todo y cierra el pedido. Te escribe en breve 🙌'"
+            "  3. Después del handoff_to_seller, despedite del cliente NATURAL — sin plantilla.\n"
+            "     Mencioná que un vendedor se va a contactar para confirmar y cerrar.\n"
+            "     2 líneas máximo, cálido pero breve."
         )
 
     # ── FASE 5: ESCALAMIENTO COMPLETADO ──
     if stage == "escalated_to_seller":
+        # Adaptar mensaje según el contexto del handoff:
+        cart_items = (nb.get("order", {}) or {}).get("items") or []
+        has_cart = isinstance(cart_items, list) and any(
+            isinstance(it, dict) and it.get("product_id") for it in cart_items
+        )
+
+        if not has_cart:
+            # Escalación inmediata sin pedido (cliente pidió humano YA, queja, etc)
+            return (
+                "▶ ACCIÓN — Escalación inmediata (sin pedido en curso).\n\n"
+                "El cliente fue derivado a un vendedor humano (probablemente pidió hablar con\n"
+                "alguien real, o se trata de una queja/consulta especial). El handoff ya está hecho.\n\n"
+                "Tu mensaje al cliente:\n"
+                "  • Confirmá que lo derivás a un vendedor humano.\n"
+                "  • NO menciones 'pedido', 'compra' ni 'cerrar' — NO hay pedido en curso.\n"
+                "  • Sugerí que cuente brevemente qué necesita, así el vendedor llega con contexto.\n"
+                "  • 2 líneas, cálido y breve. Sin plantilla.\n\n"
+                "Si el cliente vuelve a escribir después: respondé brevemente que el vendedor\n"
+                "está por escribirle, y si tiene algo nuevo lo derivás con `escalate_to_human`."
+            )
+        # Hay carrito → escalación post-flujo normal
         return (
-            "▶ ACCIÓN — FASE 5 COMPLETADA: La conversación ya fue escalada al vendedor humano.\n"
-            "  • NO sigas el flujo de venta — el vendedor humano se encarga ahora.\n"
-            "  • Si el cliente vuelve a escribir, respondé con cortesía:\n"
-            "    'Tu pedido ya está con nuestro asesor, te escribe en breve. ¿Algo urgente?'\n"
-            "  • Si pasa algo crítico (queja, cambio importante) → `escalate_to_human` con motivo."
+            "▶ ACCIÓN — FASE 5 COMPLETADA: pedido escalado al vendedor humano.\n\n"
+            "  • El cliente tiene pedido confirmado en el carrito. El vendedor lo va a contactar.\n"
+            "  • NO sigas el flujo de venta — el humano se encarga ahora.\n"
+            "  • Si vuelve a escribir, respondé cálido: que su pedido ya está con el asesor,\n"
+            "    que va a recibir contacto pronto. Si tiene algo URGENTE → `escalate_to_human`.\n"
+            "  • NO repitas plantillas como 'te paso con un asesor que cierra el pedido' (eso\n"
+            "    ya lo dijiste). Variá."
         )
 
     # ── Stages legacy (manejo cortés) ──
@@ -648,23 +678,35 @@ Si el cliente pidió varios productos, mostrá UNO O DOS por turno y preguntá s
 - Si dice "backorder permitido, llega en X días" → mencionalo así al cliente.
 - NUNCA inventes stock que no aparezca en DATOS DISPONIBLES.
 
-### COLORES Y VARIANTES VISUALES — USAR send_product_gallery
-- En esta tienda, las **variantes en `variants`** son TALLES (S, M, L, XL).
-- Los **colores y vistas alternativas** viven en la galería de imágenes (mirá
-  "galería: N imágenes" en DATOS DISPONIBLES).
-- Si el cliente pregunta "¿lo tenés en otro color?", "¿qué colores hay?",
-  "¿más fotos?", "¿otra vista?":
-  1. **NO digas "solo color estándar"** sin haber visto la galería.
-  2. **NO mandes `send_product_image` repetida con índices distintos**: usá
-     **`send_product_gallery(product_id=<UUID>)`** que manda TODAS las imágenes
-     en una sola llamada. Cada imagen lleva su alt_text como caption.
-  3. Después de la llamada, mirá los alt_text que devuelve y comentale al
-     cliente qué viste:
-     • Si los alt_text mencionan colores → "lo tenemos en negro, blanco y rojo"
-     • Si no hay alt_text descriptivos → "te paso las opciones que tenemos
-       cargadas, contame cuál te gusta"
-  4. Si el producto tiene SOLO 1 imagen → decí "viene en color único, ¿querés
-     ver la foto?" y usá `send_product_image` con esa única imagen.
+### IMÁGENES DE PRODUCTOS — SIEMPRE VIA TOOLS, JAMÁS EN TEXTO
+**REGLA #1:** las imágenes de productos NUNCA van como texto/markdown en tu
+respuesta. Van SIEMPRE como tool call:
+  • `send_product_image(product_id=<UUID>)` → manda 1 imagen (la cover por default)
+  • `send_product_gallery(product_id=<UUID>)` → manda TODAS las imágenes del producto
+
+**PROHIBIDO ABSOLUTO:**
+  ❌ Escribir `![Imagen del Jogger]()` o `![nombre](https://...)` en tu mensaje
+  ❌ Escribir "[ver imagen]" o cualquier markdown de imagen
+  ❌ Decir "te envié imágenes" sin haber llamado a la tool real
+Si ves que ibas a escribir un markdown de imagen → **PARÁ. Llamá la tool en su lugar.**
+
+**Cuándo usás `send_product_gallery`:**
+- Cliente pide "imagen", "foto", "mostrame", "ver", "cómo es"
+- Cliente pregunta por colores / variantes visuales
+- Cliente quiere "más fotos"
+Por cada producto que querés mostrar, llamá la tool UNA vez con el UUID exacto.
+
+**Cuándo usás `send_product_image`:**
+- Cuando ya mostraste la galería y el cliente pidió UNA imagen específica por índice
+- Cuando el producto tiene UNA sola imagen
+
+**Recordá:**
+- En esta tienda las `variants` son TALLES (S, M, L, XL).
+- Los colores/vistas viven en la GALERÍA (mirá "galería: N imágenes" en DATOS DISPONIBLES).
+- Si el cliente pregunta por colores → llamá `send_product_gallery` y describí lo que viste
+  en los alt_text. Si los alt_text mencionan colores → decílos. Si no → "te paso las
+  opciones cargadas, contame cuál te gusta".
+- Si el producto tiene 1 sola imagen → decí "viene en color único" y usá `send_product_image`.
 
 ### CARRITO ACUMULATIVO — UPDATE_NOTEBOOK NO ES OPCIONAL
 A medida que la conversación avanza, el cliente puede mostrar interés en VARIOS
@@ -774,6 +816,9 @@ Etapa actual: **{stage}** | Mensajes: {message_count} | Moneda: {currency}
 - Email: {nb.get("customer", {}).get("email") or "❌ no registrado"}
 - Dirección: {nb.get("shipping", {}).get("address") or "❌ no registrada"}
 - Ciudad: {nb.get("shipping", {}).get("city") or "❌ no registrada"}
+- 💡 Contexto/situación: {nb.get("customer", {}).get("context_notes") or "—"}
+  ↑ Si hay contexto, USALO para personalizar — no preguntes lo que ya sabés.
+    Ej: si dice "regalo para sobrino de 13 años" → recomendá pensando en eso.
 
 ### Interés del cliente:
 - Intención: {json.dumps(nb.get("intent", {}), ensure_ascii=False) if nb.get("intent") else "❌ no detectada"}
