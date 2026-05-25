@@ -63,8 +63,9 @@ _INVENTED_URL_DOMAINS = (
 
 import re as _re_for_urls
 
-# ![alt](url) → captura todo el bloque markdown de imagen
-_MD_IMAGE_PATTERN = _re_for_urls.compile(r"!\[[^\]]*\]\([^)]+\)")
+# ![alt](url) → captura todo el bloque markdown de imagen.
+# Usamos [^)]* (cero o más) para que ![alt]() vacío TAMBIÉN matchee.
+_MD_IMAGE_PATTERN = _re_for_urls.compile(r"!\[[^\]]*\]\([^)]*\)")
 # URL plana http(s)://... (para limpiar links sueltos también)
 _PLAIN_URL_PATTERN = _re_for_urls.compile(r"https?://\S+")
 
@@ -147,8 +148,9 @@ _ROBOT_PHRASES_TO_STRIP = [
     r"\s*No\s+dudes\s+en\s+(decírmelo|consultarme|preguntarme|escribirme)[^.]{0,40}\.?\s*$",
     r"\s*Estoy\s+(aqu[íi]|a\s+(tu|su)\s+disposici[óo]n|disponible)\s+para\s+(ayudarte|asistirte)[^.]{0,40}\.?\s*$",
     r"\s*Con\s+gusto\s+(te\s+)?(ayudo|asisto)[^.]{0,40}\.?\s*$",
-    # "Bienvenido a TIENDA" se usa demasiado al saludar
-    r"\bBienvenido(/a|s)?\s+a\s+[A-ZÁÉÍÓÚÑ][\w\sÁÉÍÓÚÑáéíóúñ-]{1,30}[.!]\s*",
+    # "Bienvenido a TIENDA" se usa demasiado al saludar.
+    # No usamos \w porque caracteres tipo Ø no matchean en regex unicode.
+    r"\bBienvenido(/a|s)?\s+a\s+[^\n.!?]{1,40}[.!]\s*",
     # Frases identidad-bot
     r"\bSoy\s+parte\s+del\s+equipo[^.]{0,40}\.?\s*",
     # "¿En qué puedo ayudarte?" frase canónica de bot
@@ -163,10 +165,11 @@ def _strip_robot_phrases(text: str) -> str:
     """
     Limpia frases-robot determinísticamente del output del agente.
     Las quita en vez de pedirle al LLM que las evite (que lo ignora).
-    Si después de la limpieza el mensaje queda muy corto (<10 chars),
-    devuelve el original (preferimos algo robot a un mensaje vacío).
+    Solo devuelve el original si el resultado quedó SIN palabras reales
+    (ej: solo puntuación), no por longitud — un saludo corto y natural
+    es preferible a uno largo y robot.
     """
-    if not text or len(text) < 20:
+    if not text or len(text) < 5:
         return text
     cleaned = text
     for pattern in _ROBOT_PATTERNS:
@@ -174,8 +177,10 @@ def _strip_robot_phrases(text: str) -> str:
     # Limpiar espacios sobrantes
     cleaned = _re_for_urls.sub(r"\n{3,}", "\n\n", cleaned)
     cleaned = _re_for_urls.sub(r" {2,}", " ", cleaned).strip()
-    # Si quedó vacío o muy corto, devolver original
-    if len(cleaned) < 10:
+    # Si después de limpiar quedó sin contenido real (solo puntuación/espacios),
+    # devolver el original. Buscamos al menos 2 letras consecutivas como
+    # señal de palabra real (incluye unicode latino).
+    if not _re_for_urls.search(r"[A-Za-zÁÉÍÓÚÑáéíóúñü]{2,}", cleaned):
         return text
     return cleaned
 
