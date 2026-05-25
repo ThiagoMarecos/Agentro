@@ -46,7 +46,7 @@ def require_role(store: Store, user: User, min_role: RoleEnum) -> StoreMember:
 
 
 async def require_superadmin(user: User = Depends(get_current_user)) -> User:
-    """Valida que el usuario sea superadmin de Nexora."""
+    """Valida que el usuario sea superadmin de Agentro."""
     if not getattr(user, "is_superadmin", False):
         raise HTTPException(status_code=403, detail="Acceso denegado: se requiere Super Admin")
     return user

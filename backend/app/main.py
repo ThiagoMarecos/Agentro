@@ -95,7 +95,7 @@ def create_app() -> FastAPI:
     @app.get("/health")
     async def health_check():
         """Health check para load balancers y monitoreo."""
-        return {"status": "ok", "service": "nexora-api"}
+        return {"status": "ok", "service": "agentro-api"}
 
     return app
 

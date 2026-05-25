@@ -1,7 +1,7 @@
 @echo off
 setlocal enabledelayedexpansion
 cd /d "%~dp0"
-title Nexora - Servidor
+title Agentro - Servidor
 
 REM === Agregar Node.js al PATH ===
 if exist "C:\Program Files\nodejs" set "PATH=C:\Program Files\nodejs;%PATH%"
@@ -10,7 +10,7 @@ if exist "%APPDATA%\npm" set "PATH=%APPDATA%\npm;%PATH%"
 
 echo.
 echo ========================================
-echo   Nexora - Iniciando proyecto
+echo   Agentro - Iniciando proyecto
 echo ========================================
 echo.
 
@@ -89,7 +89,7 @@ timeout /t 4 /nobreak > nul
 echo   [5/5] Iniciando frontend...
 echo.
 echo ========================================
-echo   Nexora corriendo!
+echo   Agentro corriendo!
 echo ========================================
 echo.
 echo   Local:    http://localhost:5000
@@ -111,6 +111,6 @@ cd /d "%~dp0frontend"
 call npm run dev -- -p 5000 -H 0.0.0.0
 
 echo.
-echo   Nexora se detuvo.
+echo   Agentro se detuvo.
 pause
 exit /b 0

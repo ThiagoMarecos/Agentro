@@ -322,7 +322,7 @@ def import_design(
 
 
 def _build_sections(sections: list[dict], store_id: str) -> list[dict]:
-    """Convert scraped sections into Nexora section config format."""
+    """Convert scraped sections into Agentro section config format."""
     result = []
     order = 0
 

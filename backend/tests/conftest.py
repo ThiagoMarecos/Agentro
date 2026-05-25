@@ -1,5 +1,5 @@
 """
-Test configuration and shared fixtures for Nexora security test suite.
+Test configuration and shared fixtures for Agentro security test suite.
 Uses SQLite in-memory database to avoid requiring a live PostgreSQL instance.
 """
 
@@ -184,7 +184,7 @@ def make_channel(
         store_id=store.id,
         channel_type=channel_type,
         is_active=True,
-        instance_name=f"nexora-{store.slug}",
+        instance_name=f"agentro-{store.slug}",
         webhook_secret=webhook_secret,
     )
     db.add(channel)

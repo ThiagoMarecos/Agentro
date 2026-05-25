@@ -1,5 +1,5 @@
 """
-Tareas Celery de Nexora.
+Tareas Celery de Agentro.
 Estructura preparada para: envío de emails, procesamiento de pedidos, etc.
 """
 

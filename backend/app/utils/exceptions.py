@@ -1,5 +1,5 @@
 """
-Excepciones personalizadas para Nexora.
+Excepciones personalizadas para Agentro.
 Base para manejo consistente de errores en la API.
 """
 
@@ -7,7 +7,7 @@ from typing import Any, Optional
 
 
 class NexoraException(Exception):
-    """Excepción base de Nexora."""
+    """Excepción base de Agentro."""
 
     def __init__(
         self,

@@ -1,4 +1,4 @@
-# Nexora
+# Agentro
 
 **Build stores. Let AI sell.**
 
@@ -13,7 +13,7 @@ SaaS multi-tenant de e-commerce con inteligencia artificial para ventas.
 ## Estructura
 
 ```
-nexora/
+agentro/
 ├── backend/       # API FastAPI
 ├── frontend/      # Next.js
 ├── docs/          # Documentación
@@ -73,7 +73,7 @@ npm run dev
 
 ### Datos demo (seed)
 
-- User: `demo@nexora.dev` / `demo123`
+- User: `demo@agentro.dev` / `demo123`
 - Storefront: http://localhost:3000/store/demo-store
 
 ## Flujo Auth y Onboarding

@@ -68,7 +68,7 @@ async def get_whatsapp_status(
         AIChannel.channel_type == "whatsapp",
     ).first()
 
-    instance_name = f"nexora-{store.slug}"
+    instance_name = f"agentro-{store.slug}"
 
     if channel and channel.instance_name and channel.connection_status != "connected":
         try:
@@ -141,7 +141,7 @@ async def connect_whatsapp(
     3. Genera QR code para escanear
     """
     settings = get_settings()
-    instance_name = f"nexora-{store.slug}"
+    instance_name = f"agentro-{store.slug}"
     webhook_secret = secrets.token_urlsafe(32)
     webhook_url = f"{settings.backend_url}/api/v1/whatsapp-webhook/webhook/whatsapp"
 

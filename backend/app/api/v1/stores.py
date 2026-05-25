@@ -331,7 +331,7 @@ def verify_domain(
     if not domain:
         raise HTTPException(status_code=400, detail="No hay dominio configurado")
 
-    target = "nexora-stores.vercel.app"
+    target = "agentro-stores.vercel.app"
     verified = False
     dns_result = None
 
@@ -394,7 +394,7 @@ def remove_custom_domain(
 
 def _build_domain_status(store: Store) -> DomainStatusResponse:
     domain = getattr(store, "custom_domain", None)
-    target = "nexora-stores.vercel.app"
+    target = "agentro-stores.vercel.app"
     records = []
     if domain:
         records.append({
@@ -406,7 +406,7 @@ def _build_domain_status(store: Store) -> DomainStatusResponse:
     return DomainStatusResponse(
         custom_domain=domain,
         domain_verified=getattr(store, "domain_verified", False),
-        nexora_subdomain=f"{store.slug}.nexora.app",
+        nexora_subdomain=f"{store.slug}.agentro.app",
         dns_target=target,
         required_records=records,
     )

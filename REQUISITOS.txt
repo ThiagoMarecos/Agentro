@@ -1,5 +1,5 @@
 ========================================
-  Nexora - Requisitos para ejecutar
+  Agentro - Requisitos para ejecutar
 ========================================
 
 Para que iniciar.bat funcione correctamente, necesitas:

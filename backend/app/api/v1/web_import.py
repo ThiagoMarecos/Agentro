@@ -41,11 +41,11 @@ router = APIRouter()
 IMPORT_LEGAL_TEXT = """
 TÉRMINOS Y CONDICIONES DE USO — HERRAMIENTA DE IMPORTACIÓN DE PRODUCTOS
 
-Al utilizar la herramienta de importación desde URL de Nexora, el propietario de la cuenta declara y acepta que:
+Al utilizar la herramienta de importación desde URL de Agentro, el propietario de la cuenta declara y acepta que:
 
 1. Todo el contenido importado (imágenes, textos, precios, descripciones) pertenece a sus respectivos propietarios y está protegido por derechos de autor.
 
-2. El uso de esta herramienta se realiza bajo la exclusiva responsabilidad del propietario de la cuenta. Nexora actúa únicamente como intermediario tecnológico y no se hace responsable por el uso que se le dé a los datos importados.
+2. El uso de esta herramienta se realiza bajo la exclusiva responsabilidad del propietario de la cuenta. Agentro actúa únicamente como intermediario tecnológico y no se hace responsable por el uso que se le dé a los datos importados.
 
 3. El propietario de la cuenta es el único responsable de verificar que el uso del contenido importado cumple con las leyes de propiedad intelectual, competencia desleal y protección de datos aplicables en su jurisdicción.
 
@@ -53,7 +53,7 @@ Al utilizar la herramienta de importación desde URL de Nexora, el propietario d
 
 5. Queda prohibido utilizar esta función para copiar catálogos completos de competidores con fines de competencia desleal.
 
-6. Nexora se reserva el derecho de suspender el acceso a esta funcionalidad si detecta uso indebido o abusivo.
+6. Agentro se reserva el derecho de suspender el acceso a esta funcionalidad si detecta uso indebido o abusivo.
 
 7. Al aceptar estas condiciones, se genera un registro de auditoría con validez de documento legal que incluye: identidad del usuario, fecha y hora, IP, y URL analizada.
 """.strip()
@@ -255,7 +255,7 @@ def accept_import_legal(
             "legal_text_hash": str(hash(IMPORT_LEGAL_TEXT)),
             "terms_summary": (
                 "El propietario de la cuenta acepta total responsabilidad "
-                "sobre el contenido importado. Nexora actúa como intermediario "
+                "sobre el contenido importado. Agentro actúa como intermediario "
                 "tecnológico sin responsabilidad sobre el uso de los datos."
             ),
         },

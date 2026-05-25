@@ -1,6 +1,6 @@
-# Nexora Backend
+# Agentro Backend
 
-API FastAPI del SaaS Nexora.
+API FastAPI del SaaS Agentro.
 
 ## Módulos
 

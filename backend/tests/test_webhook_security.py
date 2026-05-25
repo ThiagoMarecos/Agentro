@@ -27,7 +27,7 @@ from app.models.ai import AIChannel
 WEBHOOK_URL = "/api/v1/whatsapp-webhook/webhook/whatsapp"
 
 
-def webhook_payload(event: str = "MESSAGES_UPSERT", instance: str = "nexora-test-store") -> dict:
+def webhook_payload(event: str = "MESSAGES_UPSERT", instance: str = "agentro-test-store") -> dict:
     """Standard Evolution API webhook payload."""
     return {
         "event": event,
@@ -138,7 +138,7 @@ class TestC1WebhookSecretBypass:
         resp = client.post(
             WEBHOOK_URL,
             headers={"x-webhook-secret": "some-secret"},
-            json=webhook_payload(instance="nexora-nonexistent-instance"),
+            json=webhook_payload(instance="agentro-nonexistent-instance"),
         )
         assert resp.status_code in (400, 404), (
             f"FAIL [C1]: Unknown instance caused status={resp.status_code}. "

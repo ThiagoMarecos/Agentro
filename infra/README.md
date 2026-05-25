@@ -1,4 +1,4 @@
-# Nexora - Infraestructura
+# Agentro - Infraestructura
 
 Carpeta reservada para:
 - Configuraciones de despliegue (Kubernetes, ECS, etc.)

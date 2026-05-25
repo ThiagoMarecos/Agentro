@@ -19,7 +19,7 @@ Si es la primera vez:
 
 - **Create Credentials** > **OAuth client ID**
 - Application type: **Web application**
-- Name: Nexora (o el que quieras)
+- Name: Agentro (o el que quieras)
 - **Authorized redirect URIs**: añade:
   ```
   http://localhost:8000/api/v1/auth/google/callback

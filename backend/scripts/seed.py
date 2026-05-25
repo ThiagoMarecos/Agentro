@@ -23,10 +23,10 @@ def seed():
     db = SessionLocal()
     try:
         # User demo
-        user = db.query(User).filter(User.email == "demo@nexora.dev").first()
+        user = db.query(User).filter(User.email == "demo@agentro.dev").first()
         if not user:
             user = User(
-                email="demo@nexora.dev",
+                email="demo@agentro.dev",
                 hashed_password=get_password_hash("demo123"),
                 full_name="Demo User",
                 is_verified=True,
@@ -34,7 +34,7 @@ def seed():
             db.add(user)
             db.commit()
             db.refresh(user)
-            print("Created user: demo@nexora.dev / demo123")
+            print("Created user: demo@agentro.dev / demo123")
         else:
             print("User demo already exists")
 

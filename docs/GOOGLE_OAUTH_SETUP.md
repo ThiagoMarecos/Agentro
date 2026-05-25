@@ -1,4 +1,4 @@
-# Configuración de Google OAuth para Nexora
+# Configuración de Google OAuth para Agentro
 
 ## Error: redirect_uri_mismatch
 

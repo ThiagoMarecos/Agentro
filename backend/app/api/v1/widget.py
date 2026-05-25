@@ -23,21 +23,21 @@ def get_widget_script(
     store = db.query(Store).filter(Store.id == store_id).first()
     if not store:
         return Response(
-            content="/* Nexora: tienda no encontrada */",
+            content="/* Agentro: tienda no encontrada */",
             media_type="application/javascript",
             status_code=404,
         )
 
     if not store.is_active:
         return Response(
-            content="/* Nexora: tienda suspendida */",
+            content="/* Agentro: tienda suspendida */",
             media_type="application/javascript",
             status_code=403,
         )
 
     settings = get_settings()
     # In production, use actual domain. In dev, use localhost:5000
-    base_url = f"http://localhost:5000" if settings.debug else "https://nexora.app"
+    base_url = f"http://localhost:5000" if settings.debug else "https://agentro.app"
     chat_url = f"{base_url}/chat/{store.slug}"
 
     js = _build_widget_js(store_id, store.slug, store.name, chat_url)
@@ -67,7 +67,7 @@ def _build_widget_js(store_id: str, slug: str, name: str, chat_url: str) -> str:
   // Styles
   var style = document.createElement('style');
   style.textContent = `
-    #nexora-widget-btn {{
+    #agentro-widget-btn {{
       position: fixed;
       bottom: 24px;
       right: 24px;
@@ -85,11 +85,11 @@ def _build_widget_js(store_id: str, slug: str, name: str, chat_url: str) -> str:
       z-index: 99999;
       transition: transform 0.2s, box-shadow 0.2s;
     }}
-    #nexora-widget-btn:hover {{
+    #agentro-widget-btn:hover {{
       transform: scale(1.05);
       box-shadow: 0 6px 24px rgba(99,102,241,0.5);
     }}
-    #nexora-widget-btn svg {{
+    #agentro-widget-btn svg {{
       width: 24px;
       height: 24px;
       fill: none;
@@ -98,7 +98,7 @@ def _build_widget_js(store_id: str, slug: str, name: str, chat_url: str) -> str:
       stroke-linecap: round;
       stroke-linejoin: round;
     }}
-    #nexora-widget-frame {{
+    #agentro-widget-frame {{
       position: fixed;
       bottom: 96px;
       right: 24px;
@@ -114,7 +114,7 @@ def _build_widget_js(store_id: str, slug: str, name: str, chat_url: str) -> str:
       background: white;
     }}
     @media (max-width: 480px) {{
-      #nexora-widget-frame {{
+      #agentro-widget-frame {{
         bottom: 0;
         right: 0;
         width: 100vw;
@@ -123,7 +123,7 @@ def _build_widget_js(store_id: str, slug: str, name: str, chat_url: str) -> str:
         max-height: 100vh;
         border-radius: 0;
       }}
-      #nexora-widget-btn {{
+      #agentro-widget-btn {{
         bottom: 16px;
         right: 16px;
       }}
@@ -137,14 +137,14 @@ def _build_widget_js(store_id: str, slug: str, name: str, chat_url: str) -> str:
 
   // Button
   var btn = document.createElement('button');
-  btn.id = 'nexora-widget-btn';
+  btn.id = 'agentro-widget-btn';
   btn.innerHTML = chatIcon;
   btn.title = 'Chat con ' + STORE_NAME;
   document.body.appendChild(btn);
 
   // Iframe
   var frame = document.createElement('iframe');
-  frame.id = 'nexora-widget-frame';
+  frame.id = 'agentro-widget-frame';
   frame.title = 'Chat con ' + STORE_NAME;
   frame.allow = 'clipboard-write';
   document.body.appendChild(frame);

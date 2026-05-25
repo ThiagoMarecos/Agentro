@@ -1,5 +1,5 @@
 import os
-os.chdir(r'C:\Users\userp\Desktop\nexora\backend')
+os.chdir(r'C:\Users\userp\Desktop\agentro\backend')
 
 from app.services.import_ai_service import (
     detect_source_currency,

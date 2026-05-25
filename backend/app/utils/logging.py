@@ -1,5 +1,5 @@
 """
-Configuración de logging para Nexora.
+Configuración de logging para Agentro.
 Base para logs estructurados y auditoría.
 """
 

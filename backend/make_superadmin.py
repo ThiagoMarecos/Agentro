@@ -1,5 +1,5 @@
 """
-Script para marcar un usuario como Super Admin de Nexora.
+Script para marcar un usuario como Super Admin de Agentro.
 Uso: python make_superadmin.py <email>
 """
 import sys

@@ -1,4 +1,4 @@
-# Nexora Frontend
+# Agentro Frontend
 
 Next.js 14 + TypeScript + Tailwind.
 

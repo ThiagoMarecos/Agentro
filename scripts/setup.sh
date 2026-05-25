@@ -1,10 +1,10 @@
 #!/bin/bash
-# Script de configuración inicial para Nexora
+# Script de configuración inicial para Agentro
 # Ejecutar desde la raíz del proyecto
 
 set -e
 
-echo "=== Nexora Setup ==="
+echo "=== Agentro Setup ==="
 
 # Crear .env si no existe
 if [ ! -f .env ]; then

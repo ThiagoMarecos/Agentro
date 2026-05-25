@@ -19,7 +19,7 @@ REM Configurar CORS para LAN
 set "CORS_ORIGINS=http://localhost:5000,http://localhost:3000,http://127.0.0.1:5000,http://127.0.0.1:3000,http://%LAN_IP%:5000,http://%LAN_IP%:3000"
 
 echo.
-echo Backend Nexora
+echo Backend Agentro
 echo   Local:   http://localhost:8000
 echo   Red LAN: http://%LAN_IP%:8000
 echo.

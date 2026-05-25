@@ -1,4 +1,4 @@
-# Nexora Backend - Dependencies
+# Agentro Backend - Dependencies
 # Python 3.11+
 
 # Framework

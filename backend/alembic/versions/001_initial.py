@@ -1,4 +1,4 @@
-"""Initial schema - Nexora base tables
+"""Initial schema - Agentro base tables
 
 Revision ID: 001
 Revises: 

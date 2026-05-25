@@ -46,7 +46,7 @@ def tool_create_payment_link(db: Session, session: SalesSession, **params) -> st
     method = params.get("method", "link")
 
     payment_id = str(uuid4())[:8]
-    link = f"https://pay.nexora.app/{payment_id}"
+    link = f"https://pay.agentro.app/{payment_id}"
 
     nb = session.get_notebook()
     nb["payment"]["method"] = method

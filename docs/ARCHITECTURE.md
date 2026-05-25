@@ -1,8 +1,8 @@
-# Nexora - Arquitectura del Sistema
+# Agentro - Arquitectura del Sistema
 
 ## Visión General
 
-Nexora es un SaaS multi-tenant de e-commerce con inteligencia artificial para ventas.
+Agentro es un SaaS multi-tenant de e-commerce con inteligencia artificial para ventas.
 
 ## Superficies Principales
 
@@ -19,7 +19,7 @@ Nexora es un SaaS multi-tenant de e-commerce con inteligencia artificial para ve
 ## Estructura del Monorepo
 
 ```
-nexora/
+agentro/
 ├── backend/     # API FastAPI
 ├── frontend/    # Next.js
 ├── docs/        # Documentación

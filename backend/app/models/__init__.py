@@ -1,5 +1,5 @@
 """
-Modelos SQLAlchemy de Nexora.
+Modelos SQLAlchemy de Agentro.
 Importar todos los modelos aquí para que Alembic los detecte.
 """
 
