@@ -96,12 +96,12 @@ def _strip_invented_urls(text: str) -> str:
         # Dominios conocidos basura
         if any(d in low for d in _INVENTED_URL_DOMAINS):
             return True
-        # Markdown de imagen apuntando a algo MUY corto que no es URL real
+        # REGLA DURA: cualquier markdown de imagen ![...]() que NO contenga
+        # http:// o https:// es invento — las imágenes REALES nunca se mandan
+        # como texto, van por pending_media via tool. Si aparece en el texto,
+        # es siempre invento del LLM.
         if low.startswith("!["):
-            # extraer URL del paréntesis si existe
-            import re
-            m = re.search(r"\((.*?)\)$", low)
-            if m and len(m.group(1).strip()) < 10:
+            if "http://" not in low and "https://" not in low:
                 return True
         return False
 
@@ -123,7 +123,10 @@ def _strip_invented_urls(text: str) -> str:
 
     cleaned = _PLAIN_URL_PATTERN.sub(_replace_plain, cleaned)
 
-    # 3) Limpiar artefactos: dobles espacios, líneas vacías por borrado
+    # 3) Limpiar artefactos:
+    #    - líneas que quedaron con solo "-" o "*" (bullet huérfano sin contenido)
+    cleaned = _re_for_urls.sub(r"(?m)^\s*[-*•]\s*$\n?", "", cleaned)
+    # dobles espacios y saltos de línea excesivos
     cleaned = _re_for_urls.sub(r" {2,}", " ", cleaned)
     cleaned = _re_for_urls.sub(r"\n{3,}", "\n\n", cleaned)
     return cleaned.strip()
