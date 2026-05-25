@@ -152,10 +152,9 @@ _ROBOT_PHRASES_TO_STRIP = [
     # "Estoy aquí para ayudarte" — frase plantilla típica, en cualquier posición
     r"\s*Estoy\s+(aqu[íi]|a\s+(tu|su)\s+disposici[óo]n|disponible)\s+para\s+(ayudarte|asistirte)[^.]{0,40}\.?\s*",
     r"\s*Con\s+gusto\s+(te\s+)?(ayudo|asisto)[^.]{0,40}\.?\s*$",
-    # "Bienvenido a TIENDA" plantilla típica — solo borrar si está al PRINCIPIO
-    # del mensaje (los mensajes naturales no arrancan así).
-    r"^\s*¡?\s*Hola\s*!?\s*Bienvenido(/a|s)?\s+a\s+[^\n.!?]{1,40}[.!]\s*",
-    r"^\s*Bienvenido(/a|s)?\s+a\s+[^\n.!?]{1,40}[.!]\s*",
+    # "Bienvenido a TIENDA" plantilla típica — borrar en cualquier posición.
+    # Cubre: "Bienvenido a X", "Hola, bienvenido a X", "Hola! Bienvenido a X", etc.
+    r"(¡?\s*Hola[,!\s]+)?[Bb]ienvenid[oa]s?\s+a\s+[^\n.!?]{1,40}[.!]\s*",
     # Frases identidad-bot
     r"\bSoy\s+parte\s+del\s+equipo[^.]{0,40}\.?\s*",
     # "¿En qué puedo ayudarte?" frase canónica de bot — solo si va sola al final

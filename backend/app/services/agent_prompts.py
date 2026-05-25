@@ -238,9 +238,26 @@ def _build_next_action(
     # ── FASE 1: INCOMING / DISCOVERY ──
     if stage == "incoming":
         if is_first_message:
+            import random
             display_name = (cc.get("display_name") or customer.get("name") or "").strip()
             tod = cc.get("time_of_day", "")  # "mañana" / "tarde" / "noche"
-            tod_hint = f"Es de {tod}." if tod else ""
+            tod_hint = (
+                f"Hora del día (Asunción): {tod}. Si el cliente mencionó otra ('buenas noches', "
+                f"'buen día'), respetá lo que él dijo — puede estar en otra zona horaria."
+            ) if tod else ""
+
+            # Flavor aleatorio para forzar variedad entre conversaciones.
+            # El LLM con la misma instrucción tiende a repetir frases idénticas.
+            # Le damos un "ángulo" distinto cada vez para que el saludo sea único.
+            flavors = [
+                "Hacé el saludo con energía relajada — como un vendedor experimentado que ya vio mil clientes pero genuinamente disfruta atender.",
+                "Hacé el saludo con un toque de curiosidad — como si te interesara genuinamente qué necesita esta persona.",
+                "Hacé el saludo cálido pero directo — sin rodeos, ir al grano con buena onda.",
+                "Hacé el saludo amistoso y casual — como si le hablaras a un conocido por WhatsApp.",
+                "Hacé el saludo con cortesía clara — profesional sin ser frío.",
+                "Hacé el saludo natural y breve — sin excesos, como una persona sin tiempo pero buena onda.",
+            ]
+            flavor_hint = random.choice(flavors)
 
             # Contexto del cliente para personalizar (sin dar frases para copiar)
             if cc.get("has_prior_orders") and display_name:
@@ -265,7 +282,8 @@ def _build_next_action(
             return (
                 "▶ PRIMER MENSAJE DE LA CONVERSACIÓN — generá un saludo de bienvenida.\n\n"
                 f"CONTEXTO: {kind_line}\n"
-                f"{tod_hint}\n\n"
+                f"{tod_hint}\n"
+                f"\n🎭 TONO DE ESTE SALUDO: {flavor_hint}\n\n"
                 "════════════════════════════════════════════════════════════\n"
                 "🚨 ESTRUCTURA OBLIGATORIA — 3 PARTES, NO 2 NI 1\n"
                 "════════════════════════════════════════════════════════════\n"
