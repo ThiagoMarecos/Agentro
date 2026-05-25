@@ -152,9 +152,16 @@ _ROBOT_PHRASES_TO_STRIP = [
     # "Estoy aquí para ayudarte" — frase plantilla típica, en cualquier posición
     r"\s*Estoy\s+(aqu[íi]|a\s+(tu|su)\s+disposici[óo]n|disponible)\s+para\s+(ayudarte|asistirte)[^.]{0,40}\.?\s*",
     r"\s*Con\s+gusto\s+(te\s+)?(ayudo|asisto)[^.]{0,40}\.?\s*$",
-    # "Bienvenido a TIENDA" plantilla típica — borrar en cualquier posición.
-    # Cubre: "Bienvenido a X", "Hola, bienvenido a X", "Hola! Bienvenido a X", etc.
-    r"(¡?\s*Hola[,!\s]+)?[Bb]ienvenid[oa]s?\s+a\s+[^\n.!?]{1,40}[.!]\s*",
+    # "Bienvenido/a a TIENDA" — frase canónica de bot. La quitamos siempre,
+    # tanto al inicio como en medio. El nombre de la tienda lo menciona el
+    # LLM de otras formas más naturales si lo necesita.
+    r"\b[Bb]ienvenid[oa]s?\s+a\s+[^\n.!?]{1,40}[.!]\s*",
+    # "Hola!" suelto justo antes de un punto sobrante (artefacto post-strip)
+    r"^\s*¡?\s*Hola\s*!?\s*[.,]?\s*(?=¿|¡)",
+    # "Espero que estés teniendo una (buena|linda|...) (mañana|tarde|noche|día)"
+    # — el LLM la repite literal en cada saludo, se vuelve plantilla aunque
+    # parezca cálida. La quitamos para forzar variedad.
+    r"\s*Espero\s+que\s+est[eé]s\s+teniendo\s+(una|un)\s+\w+\s+\w+[.!]?\s*",
     # Frases identidad-bot
     r"\bSoy\s+parte\s+del\s+equipo[^.]{0,40}\.?\s*",
     # "¿En qué puedo ayudarte?" frase canónica de bot — solo si va sola al final
