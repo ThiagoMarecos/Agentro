@@ -132,6 +132,23 @@ def _strip_invented_urls(text: str) -> str:
     return cleaned.strip()
 
 
+def _fix_post_strip_artifacts(text: str) -> str:
+    """
+    Limpia artefactos de espaciado/puntuación que quedan después de borrar
+    frases del medio del texto. Por ejemplo: 'SØLACE.¿Qué...' → 'SØLACE. ¿Qué...'
+    """
+    if not text:
+        return text
+    # Después de . ! ? : debe haber espacio antes de letra/símbolo de apertura
+    text = _re_for_urls.sub(r"([.!?:])([¿¡A-ZÁÉÍÓÚÑa-záéíóúñ])", r"\1 \2", text)
+    # Doble puntuación seguida (".." → ".", "?." → "?")
+    text = _re_for_urls.sub(r"\.{2,}", ".", text)
+    text = _re_for_urls.sub(r"([?!])\.", r"\1", text)
+    # Múltiples espacios
+    text = _re_for_urls.sub(r" {2,}", " ", text)
+    return text.strip()
+
+
 # ════════════════════════════════════════════════════════════════════
 #  Anti-robot post-processor: limpia frases robot determinísticamente
 # ════════════════════════════════════════════════════════════════════
@@ -883,9 +900,10 @@ def process_message(
     # ── 6.4. Guards determinísticos antes de enviar al cliente ──
     # (a) URL-guard: quita markdown de imagen vacío/fake y URLs basura
     # (b) Anti-robot: quita frases-robot que el LLM usa aunque el prompt las prohíbe
-    # Ambas son red de seguridad: si fallan, el cliente recibe ruido.
+    # (c) Fix-artifacts: corrige espaciado/puntuación que quedó mal post-strip
     assistant_content = _strip_invented_urls(assistant_content)
     assistant_content = _strip_robot_phrases(assistant_content)
+    assistant_content = _fix_post_strip_artifacts(assistant_content)
 
     # ── 6.5. Stock-guard (red de seguridad — modo solo-log) ──
     # En la arquitectura Context-First, los datos de stock ya vienen en el
