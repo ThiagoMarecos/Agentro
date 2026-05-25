@@ -1,5 +1,5 @@
 """
-Configuración centralizada de Nexora.
+Configuración centralizada de Agentro.
 Carga variables de entorno y define settings por entorno.
 """
 
@@ -31,7 +31,7 @@ class Settings(BaseSettings):
     )
 
     # App
-    app_name: str = "Nexora"
+    app_name: str = "Agentro"
     environment: str = "development"
     debug: bool = True
 

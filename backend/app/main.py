@@ -1,5 +1,5 @@
 """
-Nexora - Entrypoint principal de la API FastAPI.
+Agentro - Entrypoint principal de la API FastAPI.
 """
 
 from contextlib import asynccontextmanager
@@ -39,9 +39,9 @@ async def lifespan(app: FastAPI):
             "Google OAuth no configurado. Configure GOOGLE_CLIENT_ID y GOOGLE_CLIENT_SECRET en .env "
             "para habilitar 'Iniciar con Google'."
         )
-    logger.info("Iniciando Nexora API")
+    logger.info("Iniciando Agentro API")
     yield
-    logger.info("Cerrando Nexora API")
+    logger.info("Cerrando Agentro API")
 
 
 def create_app() -> FastAPI:
@@ -49,8 +49,8 @@ def create_app() -> FastAPI:
     settings = get_settings()
 
     app = FastAPI(
-        title="Nexora API",
-        description="SaaS multi-tenant e-commerce con IA",
+        title="Agentro API",
+        description="Agentro — SaaS multi-tenant de e-commerce con agentes de IA que venden por WhatsApp y POS.",
         version="0.1.0",
         docs_url="/docs" if settings.debug else None,
         redoc_url="/redoc" if settings.debug else None,
