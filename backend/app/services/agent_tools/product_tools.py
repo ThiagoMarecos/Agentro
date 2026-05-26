@@ -485,6 +485,58 @@ def _resolve_canonical_caption(product_name: str, extra_caption: str | None) -> 
     return product_name
 
 
+def _fuzzy_resolve_product(
+    db: Session, store_id: str, hint_text: str
+) -> Product | None:
+    """
+    Fallback cuando el LLM manda un UUID inventado: intenta resolver el
+    producto a partir del texto del caption/nombre que el LLM escribió.
+
+    Estrategia:
+      1. Tokenizar el hint (lowercase, sin tildes)
+      2. Buscar productos cuyo nombre/SKU matcheen ALL los tokens significativos
+      3. Si hay 1 match claro → usarlo. Si hay varios → preferir el más corto
+         (más probable que sea el nombre canónico, no una variación).
+    """
+    if not hint_text or len(hint_text) < 3:
+        return None
+    import re, unicodedata
+
+    def _norm(s: str) -> str:
+        s = unicodedata.normalize("NFKD", s.lower()).encode("ascii", "ignore").decode("ascii")
+        return re.sub(r"[^a-z0-9\s-]", " ", s)
+
+    hint_norm = _norm(hint_text)
+    # Tomar tokens con al menos 3 chars o que parezcan códigos (ej: "01")
+    tokens = [t for t in hint_norm.split() if len(t) >= 3 or re.match(r"^\d+$", t)]
+    # Quitar palabras genéricas que no ayudan a discriminar
+    GENERIC = {"jogger", "joggers", "tee", "shorts", "short", "hoodie", "hoodies",
+               "pants", "pant", "remera", "camiseta", "producto", "imagen",
+               "imágenes", "imagenes", "del", "los", "las", "para", "color",
+               "talle", "estos", "estas", "este", "esta"}
+    significant = [t for t in tokens if t not in GENERIC]
+    if not significant:
+        significant = tokens
+    if not significant:
+        return None
+
+    products = db.query(Product).filter(
+        Product.store_id == store_id,
+        Product.is_active == True,
+    ).all()
+
+    best: tuple[int, int, Product] | None = None  # (matches, -name_len, product)
+    for p in products:
+        haystack = _norm(f"{p.name} {p.sku or ''}")
+        matches = sum(1 for t in significant if t in haystack)
+        if matches == 0:
+            continue
+        score = (matches, -len(p.name or ""), p)
+        if best is None or score[:2] > best[:2]:
+            best = score
+    return best[2] if best else None
+
+
 def tool_send_product_image(db: Session, session: SalesSession, **params) -> str:
     """
     Manda UNA imagen específica de un producto al cliente.
@@ -506,6 +558,16 @@ def tool_send_product_image(db: Session, session: SalesSession, **params) -> str
         Product.store_id == session.store_id,
         Product.is_active == True,
     ).first()
+
+    # Fallback: si el LLM inventó el UUID, intentar resolver por el caption
+    if not product and extra_caption:
+        product = _fuzzy_resolve_product(db, session.store_id, extra_caption)
+        if product:
+            import logging
+            logging.getLogger(__name__).info(
+                f"[send_product_image] UUID inventado '{product_id}' "
+                f"resuelto por fuzzy a producto real: {product.name}"
+            )
 
     if not product:
         return json.dumps({
@@ -559,6 +621,7 @@ def tool_send_product_gallery(db: Session, session: SalesSession, **params) -> s
     cada imagen como un mensaje separado con su alt_text si lo tiene.
     """
     product_id = params.get("product_id", "")
+    hint_text = (params.get("caption") or params.get("name") or "").strip()
     pending_media: list | None = params.get("_pending_media")
 
     product = db.query(Product).filter(
@@ -566,6 +629,17 @@ def tool_send_product_gallery(db: Session, session: SalesSession, **params) -> s
         Product.store_id == session.store_id,
         Product.is_active == True,
     ).first()
+
+    # Fallback: si el UUID es inventado, intentar resolver por el hint (caption/name)
+    if not product and hint_text:
+        product = _fuzzy_resolve_product(db, session.store_id, hint_text)
+        if product:
+            import logging
+            logging.getLogger(__name__).info(
+                f"[send_product_gallery] UUID inventado '{product_id}' "
+                f"resuelto por fuzzy a producto real: {product.name}"
+            )
+
     if not product:
         return json.dumps({
             "sent": False,
@@ -727,6 +801,10 @@ PRODUCT_TOOL_DEFINITIONS = [
                 "type": "object",
                 "properties": {
                     "product_id": {"type": "string", "description": "UUID exacto del producto (copiar de DATOS DISPONIBLES)"},
+                    "name": {
+                        "type": "string",
+                        "description": "Nombre del producto como respaldo. Si por alguna razón el UUID no resuelve, el sistema usa este nombre para encontrarlo. Ej: 'FLOW-01 Joggers'.",
+                    },
                 },
                 "required": ["product_id"],
             },

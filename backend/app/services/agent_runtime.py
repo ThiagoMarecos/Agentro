@@ -146,6 +146,14 @@ def _fix_post_strip_artifacts(text: str) -> str:
     text = _re_for_urls.sub(r"([?!])\.", r"\1", text)
     # Múltiples espacios
     text = _re_for_urls.sub(r" {2,}", " ", text)
+    # Comas/puntos/punto-y-coma huérfanos al final (típico cuando el stripper
+    # cortó la última frase): "Espero que decidas," → "Espero que decidas."
+    # Si el texto termina en coma + espacio o solo coma → reemplazar por punto
+    text = _re_for_urls.sub(r"\s*[,;]\s*$", ".", text.rstrip())
+    # Espacios + puntuación huérfana al final tipo "texto . ." → "texto."
+    text = _re_for_urls.sub(r"\s+([.!?])\s*$", r"\1", text)
+    # Si quedó terminando en preposición + nada (ej: "necesitas más información,")
+    # ya cubierto arriba con el reemplazo a punto.
     return text.strip()
 
 

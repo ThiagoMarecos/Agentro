@@ -367,7 +367,17 @@ def _build_next_action(
             "  • Si el cliente pidió algo ABIERTO ('recomendame algo', 'qué tenés para gym', 'busco un regalo')\n"
             "    → ofrecé 2-3 opciones distintas para que pueda elegir, NO una sola.\n"
             "  • Si el contexto sugiere COMBO (regalo, conjunto, look completo) → pensá complementos\n"
-            "    (remera + short, jogger + hoodie, etc) — un vendedor real piensa en propuesta completa."
+            "    (remera + short, jogger + hoodie, etc) — un vendedor real piensa en propuesta completa.\n"
+            "  • **DEPORTE / ACTIVIDAD ESPECÍFICA**: si el cliente menciona un deporte concreto\n"
+            "    (MMA, crossfit, running, básquet, gym, yoga, fútbol...), filtrá las descripciones\n"
+            "    de los productos buscando coherencia con ese deporte. Una remera de COMPRESIÓN\n"
+            "    técnica le sirve a alguien de MMA; un jogger PREMIUM LIFESTYLE no tanto. Si tu\n"
+            "    catálogo NO tiene productos específicos para ese deporte, decílo honestamente\n"
+            "    en vez de empujar productos genéricos.\n"
+            "  • **'LOS X' del catálogo** (cuando el cliente dice 'mostrame los joggers' después\n"
+            "    de que ya mencionaste UN jogger específico en el combo): por defecto asumí que\n"
+            "    se refiere AL jogger que ya estás charlando, NO a todos los joggers del catálogo.\n"
+            "    Solo mostrá múltiples opciones si el cliente lo aclara ('mostrame todos los joggers')."
         )
 
     # ── FASE 2: VALIDACIÓN ──
