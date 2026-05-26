@@ -47,7 +47,11 @@ def _get_openai_client() -> OpenAI:
     api_key = get_dynamic_setting("openai_api_key")
     if not api_key:
         raise ValueError("OPENAI_API_KEY no configurada en el servidor.")
-    return OpenAI(api_key=api_key)
+    # max_retries=4: el cliente OpenAI hace retry automático con backoff
+    # exponencial cuando recibe 429 (rate limit), 408 (request timeout),
+    # 500/502/503/504 (errores transitorios del server). Backoff: 1s, 2s, 4s, 8s.
+    # timeout=45s: por si OpenAI tarda bajo demanda con gpt-4o + tools.
+    return OpenAI(api_key=api_key, max_retries=4, timeout=45.0)
 
 
 # Dominios "basura" típicos que el LLM inventa cuando no consigue una imagen real.
@@ -902,8 +906,21 @@ def process_message(
         assistant_content = response_message.content or "Lo siento, no pude procesar tu solicitud."
 
     except Exception as e:
-        logger.error(f"Error calling OpenAI: {e}", exc_info=True)
-        assistant_content = "Disculpa, tuve un problema procesando tu mensaje. ¿Podrías intentarlo de nuevo?"
+        # Log MUY detallado para poder diagnosticar bajo carga (rate limit / timeout / etc).
+        err_type = type(e).__name__
+        err_msg = str(e)[:300]
+        logger.error(
+            f"[openai-fail] conv={conversation.id[:8]} iter={iterations} "
+            f"type={err_type} msg={err_msg}",
+            exc_info=True,
+        )
+        # Mensaje al cliente más contextual según tipo de error
+        if "rate" in err_type.lower() or "429" in err_msg:
+            assistant_content = "Recibí tu mensaje pero estoy con muchas consultas ahora mismo. Dame un segundito y volvé a escribirme 🙏"
+        elif "timeout" in err_type.lower():
+            assistant_content = "Me quedé pensando demasiado, ¿me lo repetís? 😅"
+        else:
+            assistant_content = "Disculpa, tuve un problema procesando tu mensaje. ¿Podrías intentarlo de nuevo?"
 
     # ── 6.4. Guards determinísticos antes de enviar al cliente ──
     # (a) URL-guard: quita markdown de imagen vacío/fake y URLs basura
