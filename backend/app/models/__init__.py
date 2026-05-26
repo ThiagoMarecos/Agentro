@@ -17,6 +17,7 @@ from app.models.settings import Setting
 from app.models.supplier import Supplier
 from app.models.team import TeamInvitation
 from app.models.payment import PaymentMethod, CashRegister, Refund
+from app.models.invitation_request import InvitationRequest
 
 __all__ = [
     "User",
@@ -47,4 +48,5 @@ __all__ = [
     "PaymentMethod",
     "CashRegister",
     "Refund",
+    "InvitationRequest",
 ]

@@ -198,3 +198,151 @@ def send_chat_assignment_notification(
         "subject": f"Nueva asignación: {customer_name} ({priority_label}) — {store_name}",
         "html": html,
     })
+
+
+# ════════════════════════════════════════════════════════════════════
+#  Invitation requests (formulario público de pedir invitación a la beta)
+# ════════════════════════════════════════════════════════════════════
+
+def send_invitation_request_confirmation(
+    *, to_email: str, full_name: str, business_name: str
+) -> bool:
+    """Email de confirmación al solicitante después de llenar el formulario."""
+    first_name = (full_name or "").split()[0] if full_name else ""
+    greeting = f"Hola{', ' + first_name if first_name else ''}!"
+
+    html = f"""<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"></head>
+<body style="margin:0;padding:0;background:#05060f;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#fff;">
+  <div style="max-width:560px;margin:0 auto;padding:48px 32px;">
+    <div style="text-align:center;margin-bottom:32px;">
+      <div style="display:inline-block;width:32px;height:32px;background:#fff;transform:rotate(45deg);border-radius:6px;"></div>
+      <div style="margin-top:14px;font-size:14px;font-family:'JetBrains Mono',monospace;letter-spacing:0.06em;color:#9ba0c0;text-transform:uppercase;">Agentro</div>
+    </div>
+
+    <div style="background:rgba(10,11,26,0.78);border:1px solid rgba(255,255,255,0.18);border-radius:22px;padding:36px 32px;">
+      <h1 style="font-size:24px;font-weight:600;margin:0 0 16px 0;letter-spacing:-0.02em;line-height:1.25;">{greeting}</h1>
+
+      <p style="font-size:15px;line-height:1.6;color:#9ba0c0;margin:0 0 18px 0;">
+        Recibimos tu pedido de invitación para <strong style="color:#fff;">{business_name}</strong>. Te confirmamos que ya está en nuestra lista.
+      </p>
+      <p style="font-size:15px;line-height:1.6;color:#9ba0c0;margin:0 0 18px 0;">
+        En las próximas <strong style="color:#fff;">24 horas</strong> te respondemos por este mismo mail con uno de estos dos caminos:
+      </p>
+
+      <ul style="font-size:14px;line-height:1.6;color:#9ba0c0;margin:0 0 24px 0;padding-left:20px;">
+        <li style="margin-bottom:6px;">El link para entrar y armar tu tienda</li>
+        <li>Algunas preguntas más sobre tu negocio (si necesitamos contexto)</li>
+      </ul>
+
+      <p style="font-size:14px;line-height:1.6;color:#9ba0c0;margin:0 0 24px 0;">
+        Mientras tanto, si tenés algo para contarnos o una pregunta puntual, respondé este mismo mail y te leemos.
+      </p>
+
+      <div style="border-top:1px solid rgba(255,255,255,0.08);padding-top:20px;margin-top:24px;">
+        <p style="font-size:12px;color:#5d6285;font-family:'JetBrains Mono',monospace;letter-spacing:0.05em;text-transform:uppercase;margin:0;">
+          Mientras tanto · Beta cerrada · Sin tarjeta · Sin compromiso
+        </p>
+      </div>
+    </div>
+
+    <div style="text-align:center;margin-top:24px;">
+      <p style="font-size:12px;color:#5d6285;margin:0;">
+        Agentro · La IA vende. Vos cerrás.<br>
+        <a href="https://getagentro.com" style="color:#b39bff;text-decoration:none;">getagentro.com</a>
+      </p>
+    </div>
+  </div>
+</body>
+</html>"""
+
+    return _send({
+        "from": _get_from_address(),
+        "to": to_email,
+        "subject": "Recibimos tu pedido — Agentro",
+        "html": html,
+    })
+
+
+def send_invitation_request_admin_notification(req) -> bool:
+    """
+    Email al admin avisando que hay un nuevo pedido de invitación.
+    El destinatario es el dueño del producto (vos). Por ahora lo mandamos
+    a un email configurable; si no está seteado, no se envía nada.
+    """
+    admin_email = get_dynamic_setting("admin_notification_email") or get_dynamic_setting("email_from_address")
+    if not admin_email:
+        logger.info("[email] admin_notification_email no configurado — skip notificacion admin")
+        return False
+
+    # Si email_from_address tiene formato 'Nombre <correo@dom.com>', extraer solo el correo
+    import re
+    m = re.search(r"<([^>]+)>", admin_email)
+    if m:
+        admin_email = m.group(1)
+
+    referral_label = {
+        "google": "Google",
+        "ai": "Sugerencia de IA (ChatGPT/Claude/etc)",
+        "recommendation": "Recomendación de alguien",
+        "social": "Redes sociales",
+        "ad": "Publicidad",
+        "press": "Prensa / blog",
+        "event": "Evento",
+        "other": "Otro",
+    }.get(req.referral_source or "", req.referral_source or "—")
+
+    biz_label = {
+        "retail": "Retail / Moda",
+        "gastro": "Gastronomía",
+        "services": "Servicios",
+        "ecommerce": "E-commerce",
+        "other": "Otro",
+    }.get(req.business_type, req.business_type)
+
+    expectations_block = (
+        f'<p style="font-size:13px;color:#9ba0c0;margin:8px 0 0 0;line-height:1.5;"><em>"{req.expectations}"</em></p>'
+        if req.expectations else ""
+    )
+    referral_detail_block = (
+        f'<div style="font-size:12px;color:#9ba0c0;margin-top:4px;">Detalle: {req.referral_detail}</div>'
+        if req.referral_detail else ""
+    )
+
+    html = f"""<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"></head>
+<body style="margin:0;padding:0;background:#05060f;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#fff;">
+  <div style="max-width:600px;margin:0 auto;padding:32px 24px;">
+    <h2 style="font-size:18px;margin:0 0 8px 0;letter-spacing:-0.01em;">📥 Nuevo pedido de invitación</h2>
+    <p style="font-size:13px;color:#9ba0c0;margin:0 0 24px 0;">Acaba de llegar una nueva solicitud al formulario de la landing.</p>
+
+    <div style="background:rgba(10,11,26,0.78);border:1px solid rgba(255,255,255,0.18);border-radius:14px;padding:24px;">
+      <table style="width:100%;font-size:14px;color:#fff;">
+        <tr><td style="padding:6px 0;color:#5d6285;width:140px;">Nombre</td><td style="padding:6px 0;"><strong>{req.full_name}</strong></td></tr>
+        <tr><td style="padding:6px 0;color:#5d6285;">Email</td><td style="padding:6px 0;"><a href="mailto:{req.email}" style="color:#b39bff;">{req.email}</a></td></tr>
+        <tr><td style="padding:6px 0;color:#5d6285;">Negocio</td><td style="padding:6px 0;"><strong>{req.business_name}</strong></td></tr>
+        <tr><td style="padding:6px 0;color:#5d6285;">Tipo</td><td style="padding:6px 0;">{biz_label}</td></tr>
+        {f'<tr><td style="padding:6px 0;color:#5d6285;">WhatsApp</td><td style="padding:6px 0;">{req.whatsapp}</td></tr>' if req.whatsapp else ''}
+        {f'<tr><td style="padding:6px 0;color:#5d6285;">País</td><td style="padding:6px 0;">{req.country}</td></tr>' if req.country else ''}
+        <tr><td style="padding:6px 0;color:#5d6285;">Cómo llegó</td><td style="padding:6px 0;">{referral_label}{referral_detail_block}</td></tr>
+      </table>
+
+      {f'<div style="margin-top:18px;padding-top:18px;border-top:1px solid rgba(255,255,255,0.08);"><div style="font-size:11px;color:#5d6285;text-transform:uppercase;letter-spacing:0.08em;font-family:JetBrains Mono,monospace;">Qué espera</div>{expectations_block}</div>' if req.expectations else ''}
+    </div>
+
+    <p style="margin-top:24px;font-size:12px;color:#5d6285;">
+      Para responder, escribile a <a href="mailto:{req.email}" style="color:#b39bff;">{req.email}</a>.<br>
+      También podés gestionarlo desde el panel super admin → Invitaciones.
+    </p>
+  </div>
+</body>
+</html>"""
+
+    return _send({
+        "from": _get_from_address(),
+        "to": admin_email,
+        "subject": f"📥 Nuevo pedido de invitación · {req.full_name} · {req.business_name}",
+        "html": html,
+    })

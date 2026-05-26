@@ -40,6 +40,7 @@ from app.api.v1 import (
     pages,
     web_import,
     platform_settings,
+    invitation_requests,
 )
 
 api_router = APIRouter()
@@ -99,3 +100,6 @@ api_router.include_router(widget.router, prefix="/widget", tags=["widget"])
 
 # Storefront público (sin auth)
 api_router.include_router(storefront.router, prefix="/storefront", tags=["storefront"])
+
+# Invitation requests — POST público + GET admin
+api_router.include_router(invitation_requests.router, tags=["invitation-requests"])

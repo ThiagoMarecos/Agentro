@@ -470,7 +470,7 @@ export default function LandingPage() {
   };
 
   const signupHref = getGoogleAuthUrl();
-  const inviteHref = "#precios";
+  const inviteHref = "/request-invite";
 
   const kickerStyle: CSSProperties = { opacity: 0, animation: "lp-rise .7s .1s cubic-bezier(.2,.8,.2,1) forwards" };
 
@@ -659,9 +659,9 @@ export default function LandingPage() {
                 <li><Icon name="check" size={14} /> Catálogo con variantes y stock</li>
                 <li><Icon name="check" size={14} /> Soporte directo con el equipo</li>
               </ul>
-              <a href={signupHref} className="beta-cta">
+              <Link href="/request-invite" className="beta-cta">
                 Pedir invitación <Icon name="arrow" size={14} className="arrow" />
-              </a>
+              </Link>
             </div>
           </div>
         </div>
@@ -677,9 +677,9 @@ export default function LandingPage() {
           </span>
           <h2 className="reveal">El agente trabaja siempre.<br />Vos te despertás con plata en el aire.</h2>
           <p className="reveal delay-1">Conectá WhatsApp, cargá tu catálogo y pasá a pensar el negocio, no en contestar mensajes. Gratis durante la beta — sin tarjeta, sin compromiso.</p>
-          <a href={signupHref} className="btn btn-primary btn-lg reveal delay-2">
+          <Link href="/request-invite" className="btn btn-primary btn-lg reveal delay-2">
             Pedir invitación a la beta <Icon name="arrow" size={16} className="arrow" />
-          </a>
+          </Link>
         </div>
       </section>
 
