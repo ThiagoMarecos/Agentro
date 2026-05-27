@@ -1,20 +1,32 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/app/providers/AuthProvider";
 import { getOnboardingStatus } from "@/lib/api/onboarding";
 import { getGoogleAuthUrl } from "@/lib/auth";
 
 export default function SignupPage() {
+  const searchParams = useSearchParams();
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [fromInvite, setFromInvite] = useState(false);
   const { register } = useAuth();
   const router = useRouter();
+
+  // Pre-cargar email y nombre si vienen de un link de invitacion aprobada
+  useEffect(() => {
+    const e = searchParams.get("email");
+    const n = searchParams.get("name");
+    const src = searchParams.get("src");
+    if (e) setEmail(e);
+    if (n) setFullName(n);
+    if (src === "invite") setFromInvite(true);
+  }, [searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,9 +49,16 @@ export default function SignupPage() {
         <Link href="/" className="inline-block mb-6 hover:opacity-90 transition-opacity">
           <img src="/logo-white.png" alt="Agentro" className="h-6 w-auto" />
         </Link>
-        <h1 className="heading-page text-2xl mb-2">Crear cuenta</h1>
+        {fromInvite && (
+          <div className="mb-5 p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-sm">
+            🎉 ¡Tu invitación fue aprobada! Crea tu cuenta para empezar a usar Agentro.
+          </div>
+        )}
+        <h1 className="heading-page text-2xl mb-2">
+          {fromInvite ? "Bienvenido a Agentro" : "Crear cuenta"}
+        </h1>
         <p className="text-text-muted text-sm mb-6">
-          Comienza a vender con Agentro
+          {fromInvite ? "Solo te falta poner una contraseña y ya estás dentro." : "Comienza a vender con Agentro"}
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-4">

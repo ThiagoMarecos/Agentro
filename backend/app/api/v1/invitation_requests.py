@@ -188,20 +188,31 @@ def update_invitation_request_admin(
     db: Session = Depends(get_db),
     admin: User = Depends(require_superadmin),
 ):
-    """Update de status + notes (solo superadmin)."""
+    """
+    Update de status + notes (solo superadmin).
+    Si el status cambia a 'approved' o 'rejected', dispara email automático al user.
+    """
     req = db.query(InvitationRequest).filter(InvitationRequest.id == request_id).first()
     if not req:
         raise HTTPException(404, "Solicitud no encontrada")
 
     changes = {}
+    status_transition: Optional[str] = None  # 'approved' | 'rejected' si cambio
     if payload.status is not None and payload.status in VALID_STATUSES:
         if payload.status != req.status:
             changes["status"] = {"from": req.status, "to": payload.status}
+            previous_status = req.status
             req.status = payload.status
             if payload.status == "approved" and not req.approved_at:
                 from datetime import datetime, timezone
                 req.approved_at = datetime.now(timezone.utc)
                 req.approved_by_user_id = admin.id
+            # Solo notificar la PRIMERA vez que se aprueba o rechaza,
+            # no en idas y vueltas (ej: rejected → pending → rejected de nuevo).
+            if payload.status == "approved" and previous_status != "approved":
+                status_transition = "approved"
+            elif payload.status == "rejected" and previous_status != "rejected":
+                status_transition = "rejected"
 
     if payload.notes is not None:
         req.notes = payload.notes
@@ -219,4 +230,22 @@ def update_invitation_request_admin(
             resource_id=req.id,
             details=changes,
         )
+
+        # Dispara email al user si hubo transicion de status relevante.
+        # No bloqueamos el response si el email falla.
+        if status_transition:
+            try:
+                from app.services.email_service import (
+                    send_invitation_request_approved,
+                    send_invitation_request_rejected,
+                )
+                if status_transition == "approved":
+                    send_invitation_request_approved(req)
+                    logger.info(f"[invite-request] email aprobacion enviado a {req.email}")
+                elif status_transition == "rejected":
+                    send_invitation_request_rejected(req)
+                    logger.info(f"[invite-request] email rechazo enviado a {req.email}")
+            except Exception as exc:
+                logger.warning(f"[invite-request] no se pudo enviar email de {status_transition}: {exc}")
+
     return req

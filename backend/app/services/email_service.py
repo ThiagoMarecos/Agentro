@@ -348,3 +348,146 @@ def send_invitation_request_admin_notification(req) -> bool:
         "subject": f"📥 Nuevo pedido de invitación · {req.full_name} · {req.business_name}",
         "html": html,
     })
+
+
+def _frontend_base_url() -> str:
+    """URL pública del frontend, configurable via platform_settings."""
+    base = get_dynamic_setting("frontend_base_url") or "https://getagentro.com"
+    return base.rstrip("/")
+
+
+def send_invitation_request_approved(req) -> bool:
+    """
+    Email al user cuando su pedido de invitación es APROBADO desde el panel admin.
+    Le manda un link a /signup con email y nombre pre-cargados.
+    """
+    from urllib.parse import quote
+    first_name = (req.full_name or "").split()[0] if req.full_name else ""
+    greeting = f"Hola{', ' + first_name if first_name else ''}!"
+
+    signup_url = (
+        f"{_frontend_base_url()}/signup"
+        f"?email={quote(req.email)}&name={quote(req.full_name or '')}&src=invite"
+    )
+
+    html = f"""<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"></head>
+<body style="margin:0;padding:0;background:#05060f;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#fff;">
+  <div style="max-width:560px;margin:0 auto;padding:48px 32px;">
+    <div style="text-align:center;margin-bottom:32px;">
+      <img src="https://getagentro.com/agentro-white.png" alt="Agentro" height="32" style="height:32px;width:auto;display:inline-block;" />
+    </div>
+
+    <div style="background:rgba(10,11,26,0.78);border:1px solid rgba(255,255,255,0.18);border-radius:22px;padding:36px 32px;">
+      <div style="display:inline-block;padding:5px 12px;background:rgba(110,231,183,0.12);border:1px solid rgba(110,231,183,0.3);border-radius:100px;font-family:'JetBrains Mono',monospace;font-size:11px;color:#6ee7b7;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:18px;">
+        ✓ Pedido aprobado
+      </div>
+      <h1 style="font-size:26px;font-weight:600;margin:0 0 14px 0;letter-spacing:-0.02em;line-height:1.2;">
+        {greeting} Estás dentro 🎉
+      </h1>
+      <p style="font-size:15px;line-height:1.6;color:#9ba0c0;margin:0 0 20px 0;">
+        Aprobamos tu pedido de invitación para <strong style="color:#fff;">{req.business_name}</strong>. Ya podés crear tu cuenta y empezar a armar tu tienda con Agentro.
+      </p>
+
+      <div style="text-align:center;margin:28px 0 24px;">
+        <a href="{signup_url}" style="display:inline-block;padding:14px 28px;background:linear-gradient(135deg,#8b6fff,#b39bff);color:#fff;text-decoration:none;font-weight:600;font-size:15px;border-radius:12px;box-shadow:0 0 24px rgba(139,111,255,0.4);">
+          Crear mi cuenta →
+        </a>
+      </div>
+
+      <p style="font-size:13px;line-height:1.6;color:#9ba0c0;margin:0 0 8px 0;">
+        Si el botón no funciona, copiá este link en el navegador:
+      </p>
+      <p style="font-size:12px;line-height:1.5;color:#b39bff;margin:0 0 24px 0;word-break:break-all;font-family:'JetBrains Mono',monospace;">
+        {signup_url}
+      </p>
+
+      <div style="border-top:1px solid rgba(255,255,255,0.08);padding-top:18px;margin-top:24px;">
+        <p style="font-size:13px;line-height:1.55;color:#9ba0c0;margin:0;">
+          <strong style="color:#fff;">Qué viene ahora:</strong> después de crear tu cuenta, te lleva a un wizard rápido para armar tu tienda (nombre, colores, primeros productos). En 15 minutos podés estar vendiendo.
+        </p>
+      </div>
+    </div>
+
+    <div style="text-align:center;margin-top:24px;">
+      <p style="font-size:12px;color:#5d6285;margin:0;">
+        Agentro · La IA vende. Vos cerrás.<br>
+        <a href="https://getagentro.com" style="color:#b39bff;text-decoration:none;">getagentro.com</a>
+      </p>
+    </div>
+  </div>
+</body>
+</html>"""
+
+    return _send({
+        "from": _get_from_address(),
+        "to": req.email,
+        "subject": f"🎉 ¡Estás dentro! Tu invitación a Agentro está lista",
+        "html": html,
+    })
+
+
+def send_invitation_request_rejected(req) -> bool:
+    """
+    Email cortés al user cuando se rechaza su pedido. No es agresivo —
+    deja la puerta abierta para más adelante.
+    """
+    first_name = (req.full_name or "").split()[0] if req.full_name else ""
+    greeting = f"Hola{', ' + first_name if first_name else ''}!"
+
+    note_block = ""
+    if req.notes:
+        note_block = f"""
+      <div style="background:rgba(255,255,255,0.03);border-left:2px solid rgba(139,111,255,0.4);padding:12px 16px;margin:18px 0;border-radius:6px;">
+        <p style="font-size:13px;line-height:1.55;color:#9ba0c0;margin:0;font-style:italic;">{req.notes}</p>
+      </div>
+        """
+
+    html = f"""<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"></head>
+<body style="margin:0;padding:0;background:#05060f;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#fff;">
+  <div style="max-width:560px;margin:0 auto;padding:48px 32px;">
+    <div style="text-align:center;margin-bottom:32px;">
+      <img src="https://getagentro.com/agentro-white.png" alt="Agentro" height="32" style="height:32px;width:auto;display:inline-block;" />
+    </div>
+
+    <div style="background:rgba(10,11,26,0.78);border:1px solid rgba(255,255,255,0.18);border-radius:22px;padding:36px 32px;">
+      <h1 style="font-size:22px;font-weight:600;margin:0 0 14px 0;letter-spacing:-0.02em;line-height:1.25;">
+        {greeting}
+      </h1>
+      <p style="font-size:15px;line-height:1.6;color:#9ba0c0;margin:0 0 16px 0;">
+        Gracias por interesarte en Agentro y tomarte el tiempo de contarnos sobre <strong style="color:#fff;">{req.business_name}</strong>.
+      </p>
+      <p style="font-size:15px;line-height:1.6;color:#9ba0c0;margin:0 0 16px 0;">
+        Por ahora no vamos a poder sumarte a esta etapa de la beta cerrada. Estamos validando con un grupo chico de negocios y todavía no es el momento adecuado para nosotros — pero no te queremos perder de vista.
+      </p>
+      {note_block}
+      <p style="font-size:15px;line-height:1.6;color:#9ba0c0;margin:0 0 16px 0;">
+        Cuando abramos la inscripción general te vamos a avisar a este mismo mail. Mientras tanto, si querés contarnos algo más sobre tu negocio, respondé este mail.
+      </p>
+
+      <div style="border-top:1px solid rgba(255,255,255,0.08);padding-top:18px;margin-top:24px;">
+        <p style="font-size:12px;color:#5d6285;font-family:'JetBrains Mono',monospace;letter-spacing:0.05em;text-transform:uppercase;margin:0;">
+          Beta cerrada · Cupos limitados · Vuelta pronto
+        </p>
+      </div>
+    </div>
+
+    <div style="text-align:center;margin-top:24px;">
+      <p style="font-size:12px;color:#5d6285;margin:0;">
+        Agentro · La IA vende. Vos cerrás.<br>
+        <a href="https://getagentro.com" style="color:#b39bff;text-decoration:none;">getagentro.com</a>
+      </p>
+    </div>
+  </div>
+</body>
+</html>"""
+
+    return _send({
+        "from": _get_from_address(),
+        "to": req.email,
+        "subject": "Sobre tu pedido a Agentro",
+        "html": html,
+    })
