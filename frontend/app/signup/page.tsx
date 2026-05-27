@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/app/providers/AuthProvider";
 import { getOnboardingStatus } from "@/lib/api/onboarding";
 import { getGoogleAuthUrl } from "@/lib/auth";
 
-export default function SignupPage() {
+function SignupContent() {
   const searchParams = useSearchParams();
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -132,5 +132,23 @@ export default function SignupPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+function SignupFallback() {
+  return (
+    <div className="min-h-screen bg-background landing-bg flex items-center justify-center">
+      <div className="w-full max-w-md p-8 rounded-2xl glass">
+        <div className="animate-pulse text-text-muted text-sm">Cargando...</div>
+      </div>
+    </div>
+  );
+}
+
+export default function SignupPage() {
+  return (
+    <Suspense fallback={<SignupFallback />}>
+      <SignupContent />
+    </Suspense>
   );
 }
