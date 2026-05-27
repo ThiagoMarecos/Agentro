@@ -217,8 +217,7 @@ def send_invitation_request_confirmation(
 <body style="margin:0;padding:0;background:#05060f;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#fff;">
   <div style="max-width:560px;margin:0 auto;padding:48px 32px;">
     <div style="text-align:center;margin-bottom:32px;">
-      <div style="display:inline-block;width:32px;height:32px;background:#fff;transform:rotate(45deg);border-radius:6px;"></div>
-      <div style="margin-top:14px;font-size:14px;font-family:'JetBrains Mono',monospace;letter-spacing:0.06em;color:#9ba0c0;text-transform:uppercase;">Agentro</div>
+      <img src="https://getagentro.com/agentro-white.png" alt="Agentro" height="32" style="height:32px;width:auto;display:inline-block;" />
     </div>
 
     <div style="background:rgba(10,11,26,0.78);border:1px solid rgba(255,255,255,0.18);border-radius:22px;padding:36px 32px;">
@@ -315,6 +314,9 @@ def send_invitation_request_admin_notification(req) -> bool:
 <head><meta charset="utf-8"></head>
 <body style="margin:0;padding:0;background:#05060f;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#fff;">
   <div style="max-width:600px;margin:0 auto;padding:32px 24px;">
+    <div style="text-align:center;margin-bottom:24px;">
+      <img src="https://getagentro.com/agentro-white.png" alt="Agentro" height="28" style="height:28px;width:auto;display:inline-block;" />
+    </div>
     <h2 style="font-size:18px;margin:0 0 8px 0;letter-spacing:-0.01em;">📥 Nuevo pedido de invitación</h2>
     <p style="font-size:13px;color:#9ba0c0;margin:0 0 24px 0;">Acaba de llegar una nueva solicitud al formulario de la landing.</p>
 

@@ -16,11 +16,15 @@ import {
   Shield,
   Bot,
   Sparkles,
+  Inbox,
 } from "lucide-react";
+import { useEffect } from "react";
+import { listInvitationRequests } from "@/lib/api/invitations-admin";
 import { useAuth } from "@/app/providers/AuthProvider";
 
 const navItems = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/admin/invitations", label: "Invitaciones", icon: Inbox, badge: "pending" as const },
   { href: "/admin/stores", label: "Tiendas", icon: Building2 },
   { href: "/admin/users", label: "Usuarios", icon: Users },
   { href: "/admin/ai-agents", label: "Agentes IA", icon: Bot },
@@ -57,6 +61,25 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { user, logout } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
+  const [pendingInvites, setPendingInvites] = useState<number>(0);
+
+  // Carga contador de invitaciones pendientes (cada 60s)
+  useEffect(() => {
+    let cancelled = false;
+    const load = () => {
+      listInvitationRequests({ status: "pending", limit: 200 })
+        .then((items) => {
+          if (!cancelled) setPendingInvites(items.length);
+        })
+        .catch(() => {});
+    };
+    load();
+    const t = setInterval(load, 60_000);
+    return () => {
+      cancelled = true;
+      clearInterval(t);
+    };
+  }, [pathname]);
 
   return (
     <div className="min-h-screen bg-gray-50 flex" style={{ colorScheme: "light" }}>
@@ -99,7 +122,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                 key={item.href}
                 href={item.href}
                 title={collapsed ? item.label : undefined}
-                className={`flex items-center gap-3 rounded-lg transition-all duration-200 ${
+                className={`relative flex items-center gap-3 rounded-lg transition-all duration-200 ${
                   collapsed ? "justify-center px-2 py-2.5" : "px-3 py-2.5"
                 } ${
                   active
@@ -108,7 +131,15 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                 }`}
               >
                 <Icon className="w-[18px] h-[18px] flex-shrink-0" />
-                {!collapsed && <span className="text-[13px] font-medium">{item.label}</span>}
+                {!collapsed && <span className="text-[13px] font-medium flex-1">{item.label}</span>}
+                {!collapsed && "badge" in item && item.badge === "pending" && pendingInvites > 0 && (
+                  <span className="ml-auto text-[10px] font-semibold bg-violet-600 text-white px-1.5 py-0.5 rounded-md min-w-[18px] text-center">
+                    {pendingInvites > 99 ? "99+" : pendingInvites}
+                  </span>
+                )}
+                {collapsed && "badge" in item && item.badge === "pending" && pendingInvites > 0 && (
+                  <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-violet-600" />
+                )}
               </Link>
             );
           })}
