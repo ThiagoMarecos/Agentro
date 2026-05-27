@@ -9,6 +9,142 @@ import {
 } from "@/lib/api/invitations-public";
 import styles from "./request-invite.module.css";
 
+/* ── Dropdown custom (glass + accent, sin el <select> feo del browser) ── */
+function CustomSelect<T extends string>({
+  value,
+  onChange,
+  options,
+  placeholder,
+  ariaLabel,
+}: {
+  value: T | "";
+  onChange: (v: T) => void;
+  options: { v: T; label: string }[];
+  placeholder?: string;
+  ariaLabel?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const [highlight, setHighlight] = useState<number>(-1);
+  const wrapRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDoc = (e: MouseEvent) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("mousedown", onDoc);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDoc);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  const selected = options.find((o) => o.v === value);
+
+  const onTriggerKey = (e: React.KeyboardEvent) => {
+    if (e.key === "ArrowDown" || e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      setOpen(true);
+      setHighlight(Math.max(0, options.findIndex((o) => o.v === value)));
+    }
+  };
+
+  const onListKey = (e: React.KeyboardEvent) => {
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setHighlight((h) => (h + 1) % options.length);
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setHighlight((h) => (h - 1 + options.length) % options.length);
+    } else if (e.key === "Enter") {
+      e.preventDefault();
+      if (highlight >= 0) {
+        onChange(options[highlight].v);
+        setOpen(false);
+      }
+    }
+  };
+
+  return (
+    <div className={styles.selectWrap} ref={wrapRef}>
+      <button
+        type="button"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-label={ariaLabel}
+        onKeyDown={onTriggerKey}
+        className={`${styles.selectBtn}${open ? ` ${styles.selectBtnOpen}` : ""}${
+          selected ? "" : ` ${styles.selectBtnEmpty}`
+        }`}
+        onClick={() => setOpen((o) => !o)}
+      >
+        <span className={styles.selectValue}>
+          {selected ? selected.label : placeholder || "Elegí una opción..."}
+        </span>
+        <svg
+          className={`${styles.selectChevron}${open ? ` ${styles.selectChevronOpen}` : ""}`}
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <polyline points="6 9 12 15 18 9" />
+        </svg>
+      </button>
+      {open && (
+        <div className={styles.selectMenu} role="listbox" tabIndex={-1} onKeyDown={onListKey}>
+          {options.map((o, i) => {
+            const isActive = o.v === value;
+            const isHl = i === highlight;
+            return (
+              <button
+                key={o.v}
+                type="button"
+                role="option"
+                aria-selected={isActive}
+                onMouseEnter={() => setHighlight(i)}
+                className={`${styles.selectOption}${isActive ? ` ${styles.selectOptionActive}` : ""}${
+                  isHl ? ` ${styles.selectOptionHl}` : ""
+                }`}
+                onClick={() => {
+                  onChange(o.v);
+                  setOpen(false);
+                }}
+              >
+                <span>{o.label}</span>
+                {isActive && (
+                  <svg
+                    width="13"
+                    height="13"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.8"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ── WebGL smoke (mismo shader que login / team-invite) ── */
 function SmokeCanvas() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -118,6 +254,7 @@ export default function RequestInvitePage() {
   const [fullName, setFullName] = useState("");
   const [businessName, setBusinessName] = useState("");
   const [businessType, setBusinessType] = useState<BusinessType>("retail");
+  const [businessTypeOther, setBusinessTypeOther] = useState("");
   const [whatsapp, setWhatsapp] = useState("");
   const [country, setCountry] = useState("");
   const [referralSource, setReferralSource] = useState<ReferralSource | "">("");
@@ -162,6 +299,16 @@ export default function RequestInvitePage() {
 
     setSubmitting(true);
     try {
+      // Si eligió "Otro" como rubro y nos contó cuál, lo metemos en expectations
+      // para que no se pierda (el backend solo acepta el enum).
+      const otherRubroNote =
+        businessType === "other" && businessTypeOther.trim()
+          ? `[Rubro: ${businessTypeOther.trim()}]`
+          : "";
+      const finalExpectations = [otherRubroNote, expectations.trim()]
+        .filter(Boolean)
+        .join("\n\n");
+
       const res = await createInvitationRequest({
         email: email.trim(),
         full_name: fullName.trim(),
@@ -171,7 +318,7 @@ export default function RequestInvitePage() {
         country: country.trim() || undefined,
         referral_source: referralSource || undefined,
         referral_detail: referralDetail.trim() || undefined,
-        expectations: expectations.trim() || undefined,
+        expectations: finalExpectations || undefined,
         accepts_contact: acceptsContact,
       });
       setSuccess({ message: res.message });
@@ -273,17 +420,30 @@ export default function RequestInvitePage() {
                 </div>
                 <div className={styles.field}>
                   <label className={styles.label}>Rubro</label>
-                  <select
-                    className={styles.select}
+                  <CustomSelect<BusinessType>
                     value={businessType}
-                    onChange={(e) => setBusinessType(e.target.value as BusinessType)}
-                  >
-                    {BUSINESS_TYPES.map((t) => (
-                      <option key={t.v} value={t.v}>{t.label}</option>
-                    ))}
-                  </select>
+                    onChange={(v) => setBusinessType(v)}
+                    options={BUSINESS_TYPES}
+                    ariaLabel="Rubro del negocio"
+                  />
                 </div>
               </div>
+
+              {businessType === "other" && (
+                <div className={styles.field}>
+                  <label className={styles.label}>
+                    ¿Cuál es tu rubro? <span className={styles.labelOpt}>contanos en una línea</span>
+                  </label>
+                  <input
+                    type="text"
+                    className={styles.input}
+                    value={businessTypeOther}
+                    onChange={(e) => setBusinessTypeOther(e.target.value)}
+                    placeholder="Inmobiliaria, escuela, agencia de viajes, salud..."
+                    maxLength={120}
+                  />
+                </div>
+              )}
 
               <div className={styles.field2col}>
                 <div className={styles.field}>
@@ -318,29 +478,37 @@ export default function RequestInvitePage() {
                 <label className={styles.label}>
                   ¿Cómo nos encontraste? <span className={styles.labelOpt}>opcional pero nos sirve un montón</span>
                 </label>
-                <select
-                  className={styles.select}
+                <CustomSelect<ReferralSource>
                   value={referralSource}
-                  onChange={(e) => setReferralSource(e.target.value as ReferralSource | "")}
-                >
-                  <option value="">Elegí una opción...</option>
-                  {REFERRAL_SOURCES.map((r) => (
-                    <option key={r.v} value={r.v}>{r.label}</option>
-                  ))}
-                </select>
+                  onChange={(v) => setReferralSource(v)}
+                  options={REFERRAL_SOURCES}
+                  placeholder="Elegí una opción..."
+                  ariaLabel="Cómo nos encontraste"
+                />
               </div>
 
               {referralSource && (
                 <div className={styles.field}>
                   <label className={styles.label}>
-                    Detalle <span className={styles.labelOpt}>opcional · qué buscabas, qué dijo la IA, quién te recomendó, etc.</span>
+                    {referralSource === "other"
+                      ? "Contanos cómo"
+                      : "Detalle"}{" "}
+                    <span className={styles.labelOpt}>
+                      {referralSource === "other"
+                        ? "ayudanos a entender de dónde venís"
+                        : "opcional · qué buscabas, qué dijo la IA, quién te recomendó, etc."}
+                    </span>
                   </label>
                   <input
                     type="text"
                     className={styles.input}
                     value={referralDetail}
                     onChange={(e) => setReferralDetail(e.target.value)}
-                    placeholder="ChatGPT me sugirió Agentro cuando le pedí... / Me lo recomendó..."
+                    placeholder={
+                      referralSource === "other"
+                        ? "Contanos en una línea..."
+                        : "ChatGPT me sugirió Agentro cuando le pedí... / Me lo recomendó..."
+                    }
                     maxLength={400}
                   />
                 </div>
