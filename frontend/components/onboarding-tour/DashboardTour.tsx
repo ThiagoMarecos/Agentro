@@ -8,9 +8,52 @@
  * - Se muestra UNA SOLA VEZ por usuario (localStorage)
  */
 
-import { useEffect, useState, useCallback, useLayoutEffect } from "react";
+import { useEffect, useState, useCallback, useLayoutEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { X, ArrowLeft, ArrowRight, Sparkles } from "lucide-react";
+
+/**
+ * Aplica estilos de "iluminación" al elemento target (filter + glow + z-index)
+ * y retorna un cleanup que restaura los styles originales.
+ */
+function illuminateElement(el: HTMLElement): () => void {
+  // Guardar styles originales (para restaurar)
+  const original = {
+    filter: el.style.filter,
+    boxShadow: el.style.boxShadow,
+    position: el.style.position,
+    zIndex: el.style.zIndex,
+    transition: el.style.transition,
+    borderRadius: el.style.borderRadius,
+    isolation: el.style.isolation,
+  };
+
+  const computedPos = getComputedStyle(el).position;
+  // Solo forzamos relative si está estático (para crear stacking context)
+  if (computedPos === "static") {
+    el.style.position = "relative";
+  }
+  el.style.zIndex = "10000";
+  el.style.isolation = "isolate";
+  el.style.transition =
+    "filter 0.35s cubic-bezier(0.4,0,0.2,1), box-shadow 0.35s cubic-bezier(0.4,0,0.2,1)";
+  el.style.filter = "brightness(1.18) saturate(1.18) drop-shadow(0 0 8px rgba(179,155,255,0.4))";
+  el.style.boxShadow =
+    "0 0 0 2px rgba(179,155,255,0.55), 0 0 70px 4px rgba(139,111,255,0.55), 0 0 30px rgba(179,155,255,0.65)";
+  if (!el.style.borderRadius && getComputedStyle(el).borderRadius === "0px") {
+    el.style.borderRadius = "14px";
+  }
+
+  return () => {
+    el.style.filter = original.filter;
+    el.style.boxShadow = original.boxShadow;
+    el.style.position = original.position;
+    el.style.zIndex = original.zIndex;
+    el.style.transition = original.transition;
+    el.style.borderRadius = original.borderRadius;
+    el.style.isolation = original.isolation;
+  };
+}
 
 export interface TourStep {
   /** CSS selector del elemento a iluminar. Si no se encuentra, el step se saltea. */
@@ -113,6 +156,7 @@ export function DashboardTour({
   const [rect, setRect] = useState<DOMRect | null>(null);
   const [tooltipEl, setTooltipEl] = useState<HTMLElement | null>(null);
   const [mounted, setMounted] = useState(false);
+  const illuminateCleanupRef = useRef<(() => void) | null>(null);
 
   useEffect(() => setMounted(true), []);
 
@@ -137,17 +181,24 @@ export function DashboardTour({
 
   const step = steps[idx];
 
-  // Calcular rect del target cuando cambia el step / resize / scroll
+  // Calcular rect del target + iluminarlo cuando cambia el step / resize / scroll
   const updateRect = useCallback(() => {
+    // Limpiar iluminación del step anterior antes de aplicar la nueva
+    illuminateCleanupRef.current?.();
+    illuminateCleanupRef.current = null;
+
     if (!step || step.centered || !step.selector) {
       setRect(null);
       return;
     }
-    const el = document.querySelector(step.selector);
+    const el = document.querySelector(step.selector) as HTMLElement | null;
     if (!el) {
       setRect(null);
       return;
     }
+    // Iluminar el elemento target (filter + glow + z-index)
+    illuminateCleanupRef.current = illuminateElement(el);
+
     // Scroll el target a la vista si está fuera
     const r = getBox(el);
     if (r.top < 0 || r.bottom > window.innerHeight) {
@@ -157,6 +208,14 @@ export function DashboardTour({
       setRect(r);
     }
   }, [step]);
+
+  // Cleanup: cuando se desmonta o se cierra, restaurar styles del target
+  useEffect(() => {
+    return () => {
+      illuminateCleanupRef.current?.();
+      illuminateCleanupRef.current = null;
+    };
+  }, []);
 
   useLayoutEffect(() => {
     if (!active) return;
@@ -182,6 +241,9 @@ export function DashboardTour({
 
   const close = useCallback(
     (markSeen = true) => {
+      // Restaurar styles del target antes de cerrar
+      illuminateCleanupRef.current?.();
+      illuminateCleanupRef.current = null;
       setActive(false);
       if (markSeen) {
         try {
@@ -242,7 +304,7 @@ export function DashboardTour({
       aria-modal="true"
       role="dialog"
     >
-      {/* Backdrop con cutout SVG */}
+      {/* Backdrop con cutout SVG + halo radial */}
       <svg
         className="absolute inset-0 w-full h-full"
         style={{ pointerEvents: "auto" }}
@@ -267,21 +329,50 @@ export function DashboardTour({
             )}
           </mask>
           <filter id="tour-glow">
-            <feGaussianBlur stdDeviation="4" result="blur" />
+            <feGaussianBlur stdDeviation="6" result="blur" />
             <feMerge>
               <feMergeNode in="blur" />
               <feMergeNode in="SourceGraphic" />
             </feMerge>
           </filter>
+          {spotlightR && (
+            <radialGradient
+              id="tour-halo"
+              cx={spotlightR.x + spotlightR.w / 2}
+              cy={spotlightR.y + spotlightR.h / 2}
+              r={Math.max(spotlightR.w, spotlightR.h) * 1.1}
+              gradientUnits="userSpaceOnUse"
+            >
+              <stop offset="0%" stopColor="rgba(179,155,255,0.45)" />
+              <stop offset="40%" stopColor="rgba(139,111,255,0.20)" />
+              <stop offset="100%" stopColor="rgba(139,111,255,0)" />
+            </radialGradient>
+          )}
         </defs>
+
+        {/* Backdrop oscuro con cutout */}
         <rect
           width="100%"
           height="100%"
-          fill="rgba(5, 6, 15, 0.78)"
-          style={{ backdropFilter: "blur(2px)" }}
+          fill="rgba(5, 6, 15, 0.82)"
           mask="url(#tour-mask)"
         />
-        {/* Glow ring alrededor del spotlight */}
+
+        {/* Halo radial púrpura alrededor del spotlight (efecto linterna) */}
+        {spotlightR && (
+          <rect
+            width="100%"
+            height="100%"
+            fill="url(#tour-halo)"
+            style={{
+              pointerEvents: "none",
+              mixBlendMode: "screen",
+              transition: "opacity 0.4s",
+            }}
+          />
+        )}
+
+        {/* Ring glow alrededor del spotlight */}
         {spotlightR && (
           <rect
             x={spotlightR.x}
@@ -291,12 +382,13 @@ export function DashboardTour({
             rx={14}
             ry={14}
             fill="none"
-            stroke="rgba(179, 155, 255, 0.9)"
-            strokeWidth={2}
+            stroke="rgba(195, 178, 255, 1)"
+            strokeWidth={2.5}
             filter="url(#tour-glow)"
             style={{
               transition: "x 0.4s cubic-bezier(0.4,0,0.2,1), y 0.4s cubic-bezier(0.4,0,0.2,1), width 0.4s cubic-bezier(0.4,0,0.2,1), height 0.4s cubic-bezier(0.4,0,0.2,1)",
               animation: "tourGlow 2s ease-in-out infinite",
+              pointerEvents: "none",
             }}
           />
         )}

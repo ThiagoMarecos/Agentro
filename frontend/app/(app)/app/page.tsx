@@ -33,48 +33,126 @@ const DASHBOARD_TOUR_STEPS: TourStep[] = [
   {
     centered: true,
     title: "Bienvenido a tu panel de Agentro 👋",
-    body: "Te muestro en 30 segundos lo más importante para arrancar a vender. Usá las flechas del teclado para navegar o apretá Esc para salir.",
+    body:
+      "Te voy a mostrar TODO lo que tu tienda puede hacer y cómo configurar lo importante (productos, WhatsApp, agente IA, equipo, pagos). Son ~2 minutos. Usá ←/→ del teclado para navegar, Esc para salir.",
   },
-  {
-    selector: '[data-tour="sidebar-nav"]',
-    placement: "right",
-    title: "Menú principal",
-    body: "Acá tenés acceso a todas las secciones: productos, pedidos, POS, equipo, agentes IA y mucho más. Está siempre disponible.",
-  },
+
+  // ─── Catálogo ───
   {
     selector: '[data-tour="nav-products"]',
     placement: "right",
-    title: "Empezá por Productos",
-    body: "Cargá lo que vendés con foto, precio y stock. Es el primer paso para que tu tienda esté lista al público.",
+    title: "1. Productos — el corazón de tu tienda",
+    body:
+      "Acá cargás lo que vendés con foto, precio, variantes (talles/colores), stock y descripción. Sin productos no podés vender, así que es el primer paso. Tip: podés importar varios desde Excel o desde otra web.",
+  },
+  {
+    selector: '[data-tour="nav-categories"]',
+    placement: "right",
+    title: "2. Categorías — organizá tu catálogo",
+    body:
+      "Agrupá productos en categorías (Remeras, Pantalones, Calzado, etc.) para que el cliente navegue fácil y el agente IA entienda qué tenés.",
+  },
+
+  // ─── Ventas online + presencial ───
+  {
+    selector: '[data-tour="nav-pos"]',
+    placement: "right",
+    title: "3. POS — vendé en mostrador",
+    body:
+      "Punto de Venta para cuando alguien viene al local. Cargás los productos, cobrás (efectivo, transfer, tarjeta) y descontás stock automáticamente. Tu tienda online y el POS comparten el mismo inventario.",
+  },
+  {
+    selector: '[data-tour="nav-orders"]',
+    placement: "right",
+    title: "4. Pedidos — todo lo que se vende",
+    body:
+      "Acá ves cada pedido (online + POS) con su estado: pendiente, pagado, enviado, cancelado. Click en uno para ver detalle, cliente y poder marcar el envío.",
+  },
+
+  // ─── IA + canales ───
+  {
+    selector: '[data-tour="nav-whatsapp"]',
+    placement: "right",
+    title: "5. WhatsApp — conectá tu número 🔥",
+    body:
+      "Acá conectás tu WhatsApp Business escaneando un QR. Una vez conectado, el agente IA empieza a responder a tus clientes en automático: muestra productos, responde precios, toma pedidos.",
+  },
+  {
+    selector: '[data-tour="nav-pipeline"]',
+    placement: "right",
+    title: "6. Pipeline IA — oportunidades en kanban",
+    body:
+      "El agente detecta clientes interesados y los acomoda en columnas: contactado, interesado, negociando, cerrado. Vos ves todo el embudo y tomás control cuando un cliente está caliente.",
+  },
+  {
+    selector: '[data-tour="nav-channels"]',
+    placement: "right",
+    title: "7. Canales — dónde te vendés",
+    body:
+      "Además de WhatsApp, configurás otros canales: el chat web de tu tienda (ya viene activo), Instagram DM, etc. El mismo agente IA atiende todos.",
+  },
+
+  // ─── Equipo + clientes ───
+  {
+    selector: '[data-tour="nav-team"]',
+    placement: "right",
+    title: "8. Equipo — invitá vendedores",
+    body:
+      "Invitá a tus vendedores con su email. Cada uno tiene un rol (vendedor, manager, soporte) que define qué puede ver y hacer. Cuando el agente IA escala una venta, llega a ellos.",
+  },
+  {
+    selector: '[data-tour="nav-customers"]',
+    placement: "right",
+    title: "9. Clientes — tu base CRM",
+    body:
+      "Todos los que te compran o chatean quedan registrados con contacto, historial de pedidos y conversaciones. Útil para hacer seguimiento y campañas.",
+  },
+
+  // ─── Diseño + config ───
+  {
+    selector: '[data-tour="nav-appearance"]',
+    placement: "right",
+    title: "10. Apariencia — el look de tu tienda",
+    body:
+      "Elegís plantilla, colores, tipografía, banners. Lo que el cliente ve cuando entra a tu tienda. Cambialo cuando quieras sin tocar nada técnico.",
+  },
+  {
+    selector: '[data-tour="nav-settings"]',
+    placement: "right",
+    title: "11. Configuración — pagos, envíos y datos",
+    body:
+      "Acá seteás métodos de pago (Mercado Pago, transfer, efectivo), zonas y costos de envío, datos de contacto, SEO y la voz/tono que usa el agente IA.",
+  },
+
+  // ─── Vista pública + métricas ───
+  {
+    selector: '[data-tour="storefront-link"]',
+    placement: "bottom",
+    title: "12. Mirá tu tienda en vivo",
+    body:
+      "Este botón abre tu storefront público en otra pestaña. Tenelo abierto mientras configurás para ver el resultado en tiempo real.",
   },
   {
     selector: '[data-tour="dashboard-revenue"]',
     placement: "bottom",
-    title: "Tus métricas en tiempo real",
-    body: "Acá vas a ver ventas del día, semana, mes y total histórico. Cuando arranquen los pedidos, todo se actualiza solo.",
+    title: "13. Métricas que importan",
+    body:
+      "Ingresos del día, semana, mes y total. Ticket promedio, pedidos pendientes, productos en stock bajo. Todo en vivo, sin tener que cargar nada.",
   },
   {
     selector: '[data-tour="dashboard-setup"]',
     placement: "left",
-    title: "Tu checklist de arranque",
-    body: "Te va guiando paso a paso lo que falta configurar: logo, productos, métodos de pago, canal de IA, etc. Tachalos todos y estás lista para vender.",
+    title: "14. Tu checklist de arranque",
+    body:
+      "Esta tarjeta te va diciendo qué te falta para que la tienda esté 100% lista. Tachá todos los pasos y estás operativa.",
   },
-  {
-    selector: '[data-tour="dashboard-quick-actions"]',
-    placement: "top",
-    title: "Atajos rápidos",
-    body: "Las acciones más usadas a un click: añadir producto, ver pedidos, editar el diseño y configurar tu tienda.",
-  },
-  {
-    selector: '[data-tour="storefront-link"]',
-    placement: "bottom",
-    title: "Mirá cómo te ven tus clientes",
-    body: "Este botón abre tu tienda pública en una nueva pestaña. Úsalo seguido mientras configurás para chequear cómo se ve todo.",
-  },
+
+  // ─── Cierre ───
   {
     centered: true,
-    title: "Listo! 🚀",
-    body: "Ya conocés lo esencial. Si querés repetir el tour, andá a tu cuenta y apretá 'Repetir tour del panel'. Cualquier duda, escribinos.",
+    title: "¡Listo! Ahora a vender 🚀",
+    body:
+      "Mi recomendación: empezá por Productos (cargá 5-10), después Apariencia, después conectá WhatsApp. Con eso ya estás operativa. Si te trabás, escribinos — vimos cada tienda al detalle y ayudamos en lo que necesites.",
   },
 ];
 
