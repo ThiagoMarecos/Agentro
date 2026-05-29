@@ -50,8 +50,15 @@ export function TemplateStep({
 
   return (
     <div>
-      <h1 className="heading-page text-2xl mb-1">Elegí tu plantilla</h1>
-      <p className="text-text-muted text-sm mb-6">
+      <div className="inline-flex items-center gap-2 px-3 py-1.5 mb-5 rounded-full bg-violet-500/10 border border-violet-500/25 text-violet-300 text-[11px] font-mono tracking-wider uppercase">
+        <span className="w-1.5 h-1.5 rounded-full bg-violet-400 animate-pulse" />
+        Paso 5 de 6
+      </div>
+
+      <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-white mb-2">
+        Elegí tu plantilla
+      </h1>
+      <p className="text-slate-300/80 text-sm mb-6 leading-relaxed">
         Define el estilo visual de tu tienda. Podés cambiarla después en Apariencia.
       </p>
 
@@ -63,21 +70,21 @@ export function TemplateStep({
               key={t.id}
               type="button"
               onClick={() => setTemplateId(t.id)}
-              className={`relative flex items-center gap-4 p-4 rounded-xl border text-left transition-all ${
+              className={`relative flex items-center gap-4 p-4 rounded-2xl border text-left transition-all ${
                 selected
-                  ? "border-primary bg-primary/10 ring-1 ring-primary/30"
-                  : "border-white/10 hover:border-white/20 hover:bg-white/[0.03]"
+                  ? "border-violet-400/60 bg-violet-500/10 ring-1 ring-violet-400/30 shadow-[0_0_24px_-8px_rgba(139,111,255,0.6)]"
+                  : "border-white/10 bg-white/[0.03] hover:border-violet-400/40 hover:bg-violet-500/[0.06]"
               }`}
             >
               {/* Color preview */}
               <div
-                className="flex-shrink-0 w-12 h-12 rounded-lg overflow-hidden border border-white/10 flex flex-col"
+                className="flex-shrink-0 w-14 h-14 rounded-xl overflow-hidden border border-white/10 flex flex-col"
                 style={{ backgroundColor: t.colors.bg }}
               >
                 <div className="flex-1 flex items-center justify-center">
-                  <div className="w-5 h-1.5 rounded-full" style={{ backgroundColor: t.colors.primary }} />
+                  <div className="w-6 h-1.5 rounded-full" style={{ backgroundColor: t.colors.primary }} />
                 </div>
-                <div className="h-3 flex items-center justify-center gap-1 px-1">
+                <div className="h-3.5 flex items-center justify-center gap-1 px-1">
                   <div className="w-2 h-2 rounded-sm" style={{ backgroundColor: t.colors.primary, opacity: 0.7 }} />
                   <div className="w-2 h-2 rounded-sm" style={{ backgroundColor: t.colors.accent, opacity: 0.7 }} />
                   <div className="w-2 h-2 rounded-sm" style={{ backgroundColor: t.colors.primary, opacity: 0.4 }} />
@@ -86,14 +93,14 @@ export function TemplateStep({
 
               {/* Info */}
               <div className="flex-1 min-w-0">
-                <div className="font-semibold text-sm">{t.name}</div>
-                <div className="text-xs text-text-muted mt-0.5 leading-relaxed">{t.desc}</div>
+                <div className="font-semibold text-sm text-white">{t.name}</div>
+                <div className="text-xs text-slate-300/70 mt-0.5 leading-relaxed">{t.desc}</div>
               </div>
 
               {/* Check */}
               {selected && (
-                <div className="flex-shrink-0 w-6 h-6 rounded-full bg-primary flex items-center justify-center">
-                  <Check className="w-3.5 h-3.5 text-white" />
+                <div className="flex-shrink-0 w-7 h-7 rounded-full bg-violet-500 flex items-center justify-center shadow-[0_0_14px_rgba(139,111,255,0.6)]">
+                  <Check className="w-4 h-4 text-white" />
                 </div>
               )}
             </button>
@@ -101,18 +108,18 @@ export function TemplateStep({
         })}
       </div>
 
-      <div className="mt-8 flex gap-3">
+      <div className="mt-8 flex gap-3 justify-between">
         <button
           onClick={onBack}
-          className="px-6 py-3 rounded-xl border border-white/[0.15] hover:bg-white/[0.04] transition-colors text-sm font-medium"
+          className="px-5 py-3 rounded-xl border border-white/15 text-slate-300 hover:bg-white/5 hover:border-white/25 transition text-sm font-medium"
         >
-          Atrás
+          ← Atrás
         </button>
         <button
           onClick={handleNext}
-          className="flex-1 bg-gradient-agentro px-6 py-3 rounded-xl font-semibold text-white hover:opacity-90 transition-opacity text-sm"
+          className="px-7 py-3 rounded-xl bg-white text-[#05060f] font-semibold text-sm shadow-[0_0_28px_-4px_rgba(139,111,255,0.5)] hover:bg-[#b39bff] hover:text-white transition-all"
         >
-          Siguiente
+          Siguiente →
         </button>
       </div>
     </div>

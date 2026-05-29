@@ -271,40 +271,40 @@ function SearchableSelect({
 
   return (
     <div>
-      <label className="flex items-center gap-2 text-sm font-medium mb-2 text-text-primary">
-        <Icon className="w-4 h-4 text-primary" />
+      <label className="flex items-center gap-2 text-[10px] font-mono uppercase tracking-wider text-slate-500 mb-2">
+        <Icon className="w-3.5 h-3.5 text-violet-300" />
         {label}
       </label>
       <div ref={ref} className="relative">
         <button
           type="button"
           onClick={() => { setOpen(!open); setSearch(""); }}
-          className="w-full flex items-center justify-between px-4 py-3 rounded-xl bg-white/[0.06] border border-white/[0.12] hover:border-primary/50 focus:border-primary focus:outline-none transition-colors text-left"
+          className="w-full flex items-center justify-between px-4 py-3 rounded-xl bg-white/[0.04] border border-white/15 hover:border-violet-400/60 focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-500/15 transition text-left"
         >
-          <span className="text-sm text-text-primary">
-            {selected ? renderSelected(selected) : <span className="text-text-muted">{placeholder}</span>}
+          <span className="text-sm text-white">
+            {selected ? renderSelected(selected) : <span className="text-slate-500">{placeholder}</span>}
           </span>
-          <ChevronDown className={`w-4 h-4 text-text-muted transition-transform ${open ? "rotate-180" : ""}`} />
+          <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${open ? "rotate-180" : ""}`} />
         </button>
 
         {open && (
-          <div className="absolute z-50 mt-2 w-full rounded-xl border border-white/[0.12] bg-surface shadow-2xl shadow-black/40 overflow-hidden">
+          <div className="absolute z-50 mt-2 w-full rounded-xl border border-violet-500/25 bg-[#0d0e20]/95 backdrop-blur-xl shadow-2xl shadow-black/60 overflow-hidden">
             <div className="p-2 border-b border-white/[0.08]">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
                 <input
                   ref={inputRef}
                   type="text"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder="Buscar..."
-                  className="w-full pl-9 pr-3 py-2.5 rounded-lg bg-white/[0.06] border border-white/[0.08] text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-primary/50"
+                  className="w-full pl-9 pr-3 py-2.5 rounded-lg bg-white/[0.04] border border-white/10 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-violet-400/60"
                 />
               </div>
             </div>
             <div className="max-h-56 overflow-y-auto overscroll-contain">
               {filtered.length === 0 ? (
-                <div className="px-4 py-6 text-center text-sm text-text-muted">
+                <div className="px-4 py-6 text-center text-sm text-slate-400">
                   No se encontraron resultados
                 </div>
               ) : (
@@ -313,12 +313,12 @@ function SearchableSelect({
                     key={opt.code}
                     type="button"
                     onClick={() => { onChange(opt.code); setOpen(false); setSearch(""); }}
-                    className={`w-full flex items-center justify-between px-4 py-2.5 text-sm text-left hover:bg-white/[0.06] transition-colors ${
-                      opt.code === value ? "bg-primary/10 text-primary" : "text-text-primary"
+                    className={`w-full flex items-center justify-between px-4 py-2.5 text-sm text-left hover:bg-violet-500/[0.12] transition-colors ${
+                      opt.code === value ? "bg-violet-500/[0.15] text-violet-100" : "text-slate-200"
                     }`}
                   >
                     {renderOption(opt)}
-                    {opt.code === value && <Check className="w-4 h-4 text-primary flex-shrink-0" />}
+                    {opt.code === value && <Check className="w-4 h-4 text-violet-300 flex-shrink-0" />}
                   </button>
                 ))
               )}
@@ -362,22 +362,29 @@ export function BusinessDetailsStep({
 
   return (
     <div>
-      <h1 className="heading-page text-2xl mb-1">Configuración regional</h1>
-      <p className="text-text-muted text-sm mb-8">
-        Elegí tu país y moneda para personalizar tu tienda
+      <div className="inline-flex items-center gap-2 px-3 py-1.5 mb-5 rounded-full bg-violet-500/10 border border-violet-500/25 text-violet-300 text-[11px] font-mono tracking-wider uppercase">
+        <span className="w-1.5 h-1.5 rounded-full bg-violet-400 animate-pulse" />
+        Paso 4 de 6
+      </div>
+
+      <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-white mb-2">
+        Configuración regional
+      </h1>
+      <p className="text-slate-300/80 text-sm mb-8 leading-relaxed">
+        Elegí tu país y moneda para personalizar tu tienda.
       </p>
 
       <div className="space-y-5">
         <div>
-          <label className="flex items-center gap-2 text-sm font-medium mb-2 text-text-primary">
-            <Briefcase className="w-4 h-4 text-primary" />
+          <label className="flex items-center gap-2 text-[10px] font-mono uppercase tracking-wider text-slate-500 mb-2">
+            <Briefcase className="w-3.5 h-3.5 text-violet-300" />
             Rubro / Industria
           </label>
           <input
             type="text"
             value={industry}
             onChange={(e) => setIndustry(e.target.value)}
-            className="w-full px-4 py-3 rounded-xl bg-white/[0.06] border border-white/[0.12] hover:border-primary/50 focus:border-primary focus:outline-none transition-colors text-sm"
+            className="w-full px-4 py-3 rounded-xl bg-white/[0.04] border border-white/15 text-white placeholder-slate-500 focus:border-violet-400 focus:bg-violet-500/[0.06] focus:outline-none focus:ring-2 focus:ring-violet-500/15 transition text-sm"
             placeholder="Moda, electrónica, alimentos..."
           />
         </div>
@@ -393,7 +400,7 @@ export function BusinessDetailsStep({
             <span className="flex items-center gap-3">
               <span className="text-lg leading-none">{opt.flag}</span>
               <span>{opt.name}</span>
-              <span className="text-text-muted text-xs">{opt.code}</span>
+              <span className="text-slate-500 text-xs">{opt.code}</span>
             </span>
           )}
           renderSelected={(opt) => (
@@ -413,16 +420,16 @@ export function BusinessDetailsStep({
           placeholder="Seleccioná tu moneda"
           renderOption={(opt) => (
             <span className="flex items-center gap-3">
-              <span className="w-7 text-center font-mono text-text-muted">{opt.symbol}</span>
+              <span className="w-7 text-center font-mono text-slate-400">{opt.symbol}</span>
               <span>{opt.name}</span>
-              <span className="text-text-muted text-xs">{opt.code}</span>
+              <span className="text-slate-500 text-xs">{opt.code}</span>
             </span>
           )}
           renderSelected={(opt) => (
             <span className="flex items-center gap-2">
-              <span className="font-mono text-text-muted">{opt.symbol}</span>
+              <span className="font-mono text-slate-400">{opt.symbol}</span>
               <span>{opt.name}</span>
-              <span className="text-text-muted text-xs">({opt.code})</span>
+              <span className="text-slate-500 text-xs">({opt.code})</span>
             </span>
           )}
         />
@@ -439,18 +446,18 @@ export function BusinessDetailsStep({
         />
       </div>
 
-      <div className="mt-10 flex gap-3">
+      <div className="mt-10 flex gap-3 justify-between">
         <button
           onClick={onBack}
-          className="px-6 py-3 rounded-xl border border-white/[0.15] hover:bg-white/[0.04] transition-colors text-sm font-medium"
+          className="px-5 py-3 rounded-xl border border-white/15 text-slate-300 hover:bg-white/5 hover:border-white/25 transition text-sm font-medium"
         >
-          Atrás
+          ← Atrás
         </button>
         <button
           onClick={handleNext}
-          className="flex-1 bg-gradient-agentro px-6 py-3 rounded-xl font-semibold text-white hover:opacity-90 transition-opacity text-sm"
+          className="px-7 py-3 rounded-xl bg-white text-[#05060f] font-semibold text-sm shadow-[0_0_28px_-4px_rgba(139,111,255,0.5)] hover:bg-[#b39bff] hover:text-white transition-all"
         >
-          Siguiente
+          Siguiente →
         </button>
       </div>
     </div>

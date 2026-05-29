@@ -21,11 +21,62 @@ import {
 } from "lucide-react";
 import { useStore } from "@/lib/context/StoreContext";
 import { useDashboard } from "@/lib/hooks/useDashboard";
+import { useAuth } from "@/app/providers/AuthProvider";
 import { StatCard } from "@/components/admin/StatCard";
 import { ActivityItem } from "@/components/admin/ActivityItem";
 import { SetupProgressCard } from "@/components/admin/SetupProgressCard";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { DashboardTour, type TourStep } from "@/components/onboarding-tour/DashboardTour";
 import { formatPrice } from "@/lib/utils/formatPrice";
+
+const DASHBOARD_TOUR_STEPS: TourStep[] = [
+  {
+    centered: true,
+    title: "Bienvenido a tu panel de Agentro 👋",
+    body: "Te muestro en 30 segundos lo más importante para arrancar a vender. Usá las flechas del teclado para navegar o apretá Esc para salir.",
+  },
+  {
+    selector: '[data-tour="sidebar-nav"]',
+    placement: "right",
+    title: "Menú principal",
+    body: "Acá tenés acceso a todas las secciones: productos, pedidos, POS, equipo, agentes IA y mucho más. Está siempre disponible.",
+  },
+  {
+    selector: '[data-tour="nav-products"]',
+    placement: "right",
+    title: "Empezá por Productos",
+    body: "Cargá lo que vendés con foto, precio y stock. Es el primer paso para que tu tienda esté lista al público.",
+  },
+  {
+    selector: '[data-tour="dashboard-revenue"]',
+    placement: "bottom",
+    title: "Tus métricas en tiempo real",
+    body: "Acá vas a ver ventas del día, semana, mes y total histórico. Cuando arranquen los pedidos, todo se actualiza solo.",
+  },
+  {
+    selector: '[data-tour="dashboard-setup"]',
+    placement: "left",
+    title: "Tu checklist de arranque",
+    body: "Te va guiando paso a paso lo que falta configurar: logo, productos, métodos de pago, canal de IA, etc. Tachalos todos y estás lista para vender.",
+  },
+  {
+    selector: '[data-tour="dashboard-quick-actions"]',
+    placement: "top",
+    title: "Atajos rápidos",
+    body: "Las acciones más usadas a un click: añadir producto, ver pedidos, editar el diseño y configurar tu tienda.",
+  },
+  {
+    selector: '[data-tour="storefront-link"]',
+    placement: "bottom",
+    title: "Mirá cómo te ven tus clientes",
+    body: "Este botón abre tu tienda pública en una nueva pestaña. Úsalo seguido mientras configurás para chequear cómo se ve todo.",
+  },
+  {
+    centered: true,
+    title: "Listo! 🚀",
+    body: "Ya conocés lo esencial. Si querés repetir el tour, andá a tu cuenta y apretá 'Repetir tour del panel'. Cualquier duda, escribinos.",
+  },
+];
 
 function RevenueChart({ data, currency }: { data: { date: string; revenue: number }[]; currency?: string }) {
   const max = Math.max(...data.map((d) => d.revenue), 1);
@@ -54,6 +105,7 @@ function RevenueChart({ data, currency }: { data: { date: string; revenue: numbe
 
 export default function DashboardPage() {
   const { stores, currentStore, setCurrentStore, isLoading: storesLoading } = useStore();
+  const { user } = useAuth();
   const { summary, activity, isLoading, error, refresh } = useDashboard(
     currentStore?.id ?? null
   );
@@ -182,7 +234,7 @@ export default function DashboardPage() {
       ) : (
         <>
           {/* Revenue Cards */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          <div data-tour="dashboard-revenue" className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
             <div className="p-5 rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-600 text-white shadow-lg shadow-indigo-500/20">
               <div className="flex items-center justify-between mb-1">
                 <p className="text-indigo-100 text-xs font-medium uppercase tracking-wide">Hoy</p>
@@ -288,16 +340,18 @@ export default function DashboardPage() {
 
             {/* Setup Progress */}
             {setupProgress && (
-              <SetupProgressCard
-                checks={setupProgress.checks}
-                completed={setupProgress.completed}
-                total={setupProgress.total}
-              />
+              <div data-tour="dashboard-setup">
+                <SetupProgressCard
+                  checks={setupProgress.checks}
+                  completed={setupProgress.completed}
+                  total={setupProgress.total}
+                />
+              </div>
             )}
           </div>
 
           {/* Quick actions */}
-          <div className="rounded-xl bg-white border border-gray-200/60 p-6">
+          <div data-tour="dashboard-quick-actions" className="rounded-xl bg-white border border-gray-200/60 p-6">
             <h2 className="font-display font-semibold text-gray-900 mb-4">Acciones rápidas</h2>
             <div className="flex flex-wrap gap-3">
               {[
@@ -321,6 +375,14 @@ export default function DashboardPage() {
             </div>
           </div>
         </>
+      )}
+
+      {/* Tour interactivo (solo primera vez, persistido por user) */}
+      {currentStore && user && (
+        <DashboardTour
+          steps={DASHBOARD_TOUR_STEPS}
+          storageKey={`agentro:dashboard-tour-seen:${user.id}`}
+        />
       )}
     </div>
   );
