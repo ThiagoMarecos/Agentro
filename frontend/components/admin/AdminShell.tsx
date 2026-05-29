@@ -21,6 +21,7 @@ import {
 import { useEffect } from "react";
 import { listInvitationRequests } from "@/lib/api/invitations-admin";
 import { useAuth } from "@/app/providers/AuthProvider";
+import { APP_VERSION_LABEL } from "@/lib/config/version";
 
 const navItems = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
@@ -174,6 +175,18 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                 </button>
               </div>
             )}
+          </div>
+        )}
+
+        {/* Version pill */}
+        {!collapsed && (
+          <div className="px-3 pb-3 -mt-1">
+            <div className="flex items-center justify-between text-[10px] text-gray-400 font-mono">
+              <span className="inline-flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-violet-400" />
+                Agentro Admin <span className="text-gray-500 font-semibold">{APP_VERSION_LABEL}</span>
+              </span>
+            </div>
           </div>
         )}
       </aside>

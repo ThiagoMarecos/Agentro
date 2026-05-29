@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/app/providers/AuthProvider";
 import { useStore } from "@/lib/context/StoreContext";
+import { APP_VERSION_LABEL } from "@/lib/config/version";
 
 const navItems = [
   { href: "/app", label: "Panel", icon: LayoutDashboard },
@@ -176,6 +177,18 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 </button>
               </div>
             )}
+          </div>
+        )}
+
+        {/* Version pill */}
+        {!collapsed && (
+          <div className="px-3 pb-3 -mt-1">
+            <div className="flex items-center justify-between text-[10px] text-gray-400 font-mono">
+              <span className="inline-flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-violet-400" />
+                Agentro <span className="text-gray-500 font-semibold">{APP_VERSION_LABEL}</span>
+              </span>
+            </div>
           </div>
         )}
       </aside>
