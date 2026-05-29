@@ -58,6 +58,14 @@ const STAGE_LABELS: Record<string, string> = {
   abandoned: "Abandonado",
 };
 
+// Etapas internas del agente que NO mostramos en el pipeline visible.
+// Son micro-pasos del flujo conversacional, no embudo de venta.
+const HIDDEN_STAGES = new Set([
+  "negotiation",
+  "data_collection",
+  "escalated_to_seller",
+]);
+
 const STAGE_COLORS: Record<string, string> = {
   incoming: "bg-blue-50 border-blue-200 text-blue-700",
   discovery: "bg-purple-50 border-purple-200 text-purple-700",
@@ -222,10 +230,12 @@ export default function PipelinePage() {
 
   if (!pipeline) return null;
 
-  const activeStages = pipeline.stages.filter(
+  // Filtramos las etapas internas (no son del embudo visible)
+  const visibleStages = pipeline.stages.filter((s) => !HIDDEN_STAGES.has(s.stage));
+  const activeStages = visibleStages.filter(
     (s) => !["lost", "abandoned"].includes(s.stage)
   );
-  const terminalStages = pipeline.stages.filter(
+  const terminalStages = visibleStages.filter(
     (s) => ["lost", "abandoned"].includes(s.stage)
   );
 
