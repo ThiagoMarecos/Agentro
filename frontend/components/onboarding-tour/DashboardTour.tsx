@@ -33,13 +33,15 @@ function illuminateElement(el: HTMLElement): () => void {
   if (computedPos === "static") {
     el.style.position = "relative";
   }
-  el.style.zIndex = "10000";
+  el.style.zIndex = String(SPOTLIGHT_Z);
   el.style.isolation = "isolate";
   el.style.transition =
     "filter 0.35s cubic-bezier(0.4,0,0.2,1), box-shadow 0.35s cubic-bezier(0.4,0,0.2,1)";
-  el.style.filter = "brightness(1.18) saturate(1.18) drop-shadow(0 0 8px rgba(179,155,255,0.4))";
+  // Brillo + saturación: hacen que el target se vea encendido sin desbordar
+  el.style.filter = "brightness(1.15) saturate(1.18) drop-shadow(0 0 6px rgba(179,155,255,0.45))";
+  // Box-shadow tight: solo un ring suave que cabe dentro del cutout (PADDING=12)
   el.style.boxShadow =
-    "0 0 0 2px rgba(179,155,255,0.55), 0 0 70px 4px rgba(139,111,255,0.55), 0 0 30px rgba(179,155,255,0.65)";
+    "0 0 0 2px rgba(179,155,255,0.7), 0 0 18px 2px rgba(139,111,255,0.5)";
   if (!el.style.borderRadius && getComputedStyle(el).borderRadius === "0px") {
     el.style.borderRadius = "14px";
   }
@@ -74,9 +76,12 @@ interface DashboardTourProps {
   onClose?: () => void;
 }
 
-const PADDING = 10;
-const TOOLTIP_W = 340;
-const TOOLTIP_OFFSET = 18;
+const PADDING = 12;
+const TOOLTIP_W = 360;
+const TOOLTIP_OFFSET = 20;
+// z-index del target iluminado. La tooltip debe ir SIEMPRE arriba.
+const SPOTLIGHT_Z = 10000;
+const TOOLTIP_Z = 10020;
 
 function getBox(el: Element): DOMRect {
   return el.getBoundingClientRect();
@@ -107,35 +112,50 @@ function getTooltipPosition(
 ): { top: number; left: number } {
   const vw = window.innerWidth;
   const vh = window.innerHeight;
-  const th = tooltipEl?.offsetHeight ?? 220;
+  const th = tooltipEl?.offsetHeight ?? 240;
   const tw = tooltipEl?.offsetWidth ?? TOOLTIP_W;
+  const MARGIN = 16;
 
   if (!rect || placement === "center") {
     return {
-      top: Math.max(20, (vh - th) / 2),
-      left: Math.max(20, (vw - tw) / 2),
+      top: Math.max(MARGIN, (vh - th) / 2),
+      left: Math.max(MARGIN, (vw - tw) / 2),
     };
   }
 
+  // Calcula posición ideal según placement y clampea a viewport en ambos ejes
   switch (placement) {
     case "right": {
-      const top = clamp(rect.top + rect.height / 2 - th / 2, 16, vh - th - 16);
-      const left = Math.min(rect.right + TOOLTIP_OFFSET, vw - tw - 16);
+      const top = clamp(rect.top + rect.height / 2 - th / 2, MARGIN, vh - th - MARGIN);
+      const ideal = rect.right + TOOLTIP_OFFSET;
+      // Si no entra a la derecha, fallback al lado izquierdo
+      const left = ideal + tw > vw - MARGIN
+        ? Math.max(MARGIN, rect.left - tw - TOOLTIP_OFFSET)
+        : ideal;
       return { top, left };
     }
     case "left": {
-      const top = clamp(rect.top + rect.height / 2 - th / 2, 16, vh - th - 16);
-      const left = Math.max(16, rect.left - tw - TOOLTIP_OFFSET);
+      const top = clamp(rect.top + rect.height / 2 - th / 2, MARGIN, vh - th - MARGIN);
+      const ideal = rect.left - tw - TOOLTIP_OFFSET;
+      const left = ideal < MARGIN
+        ? Math.min(vw - tw - MARGIN, rect.right + TOOLTIP_OFFSET)
+        : ideal;
       return { top, left };
     }
     case "bottom": {
-      const top = Math.min(rect.bottom + TOOLTIP_OFFSET, vh - th - 16);
-      const left = clamp(rect.left + rect.width / 2 - tw / 2, 16, vw - tw - 16);
+      const ideal = rect.bottom + TOOLTIP_OFFSET;
+      const top = ideal + th > vh - MARGIN
+        ? Math.max(MARGIN, rect.top - th - TOOLTIP_OFFSET)
+        : ideal;
+      const left = clamp(rect.left + rect.width / 2 - tw / 2, MARGIN, vw - tw - MARGIN);
       return { top, left };
     }
     case "top": {
-      const top = Math.max(16, rect.top - th - TOOLTIP_OFFSET);
-      const left = clamp(rect.left + rect.width / 2 - tw / 2, 16, vw - tw - 16);
+      const ideal = rect.top - th - TOOLTIP_OFFSET;
+      const top = ideal < MARGIN
+        ? Math.min(vh - th - MARGIN, rect.bottom + TOOLTIP_OFFSET)
+        : ideal;
+      const left = clamp(rect.left + rect.width / 2 - tw / 2, MARGIN, vw - tw - MARGIN);
       return { top, left };
     }
   }
@@ -394,7 +414,7 @@ export function DashboardTour({
         )}
       </svg>
 
-      {/* Tooltip */}
+      {/* Tooltip — z-index alto para que SIEMPRE quede arriba del target iluminado */}
       <div
         ref={setTooltipEl}
         className="absolute"
@@ -403,6 +423,8 @@ export function DashboardTour({
           left: tt.left,
           width: TOOLTIP_W,
           maxWidth: "calc(100vw - 32px)",
+          zIndex: TOOLTIP_Z,
+          isolation: "isolate",
           transition: "top 0.35s cubic-bezier(0.4,0,0.2,1), left 0.35s cubic-bezier(0.4,0,0.2,1)",
           pointerEvents: "auto",
         }}

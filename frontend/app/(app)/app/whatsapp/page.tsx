@@ -235,14 +235,22 @@ export default function WhatsAppPage() {
   return (
     <div className="max-w-3xl mx-auto space-y-6">
       <div data-tour="whatsapp-header">
-        <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-green-500 flex items-center justify-center">
-            <MessageSquare className="w-5 h-5 text-white" />
-          </div>
+        <div className="text-[10px] font-mono uppercase tracking-wider text-emerald-600 mb-1.5 flex items-center gap-2">
+          <span className="relative flex h-2 w-2">
+            <span className={`${step === "connected" ? "animate-ping" : ""} absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75`} />
+            <span className={`relative inline-flex rounded-full h-2 w-2 ${step === "connected" ? "bg-emerald-500" : "bg-gray-400"}`} />
+          </span>
+          {step === "connected" ? "CONECTADO · BOT ACTIVO" : "CANAL · WHATSAPP BUSINESS"}
+        </div>
+        <h1 className="text-2xl font-display font-bold text-gray-900 flex items-center gap-2.5">
+          <span className="inline-grid place-items-center w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-green-600 text-white shadow-sm shadow-emerald-500/30">
+            <MessageSquare className="w-4.5 h-4.5" />
+          </span>
           WhatsApp
         </h1>
-        <p className="text-gray-500 text-sm mt-1">
-          Conectá tu número de WhatsApp para atención automática con IA
+        <p className="text-gray-500 text-sm mt-1.5 max-w-2xl">
+          Conectá tu número de WhatsApp Business y dejá que el agente IA responda a tus clientes
+          automáticamente 24/7. Tu número sigue funcionando normal en tu celular.
         </p>
       </div>
 
@@ -261,40 +269,69 @@ export default function WhatsAppPage() {
 
       {/* Sin configurar */}
       {step === "not_configured" && (
-        <div data-tour="whatsapp-connect-card" className="bg-white rounded-xl border border-gray-200/60 p-8">
-          <div className="text-center mb-8">
-            <div className="w-16 h-16 rounded-2xl bg-green-50 flex items-center justify-center mx-auto mb-4">
-              <Smartphone className="w-8 h-8 text-green-600" />
-            </div>
-            <h2 className="text-xl font-semibold text-gray-900 mb-2">
-              Vincular WhatsApp
-            </h2>
-            <p className="text-gray-500 text-sm max-w-md mx-auto">
-              Al vincular tu número, los agentes IA responderán automáticamente
-              a los mensajes de tus clientes por WhatsApp.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-            <div className="text-center p-4 rounded-xl bg-gray-50 border border-gray-100">
-              <Bot className="w-6 h-6 text-green-600 mx-auto mb-2" />
-              <p className="text-xs font-medium text-gray-700">Respuestas automáticas con IA</p>
-            </div>
-            <div className="text-center p-4 rounded-xl bg-gray-50 border border-gray-100">
-              <Users className="w-6 h-6 text-blue-600 mx-auto mb-2" />
-              <p className="text-xs font-medium text-gray-700">Atención 24/7 a clientes</p>
-            </div>
-            <div className="text-center p-4 rounded-xl bg-gray-50 border border-gray-100">
-              <Shield className="w-6 h-6 text-purple-600 mx-auto mb-2" />
-              <p className="text-xs font-medium text-gray-700">Conexión segura y privada</p>
+        <div data-tour="whatsapp-connect-card" className="relative bg-white rounded-2xl border border-gray-200/60 overflow-hidden">
+          {/* Header con gradiente */}
+          <div className="relative bg-gradient-to-br from-emerald-50 via-green-50 to-white p-8 text-center border-b border-gray-100">
+            <div className="absolute inset-0 opacity-40 pointer-events-none" style={{
+              backgroundImage: "radial-gradient(circle at 50% 0%, rgba(16,185,129,0.15) 0%, transparent 60%)",
+            }} />
+            <div className="relative">
+              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-500 to-green-600 text-white flex items-center justify-center mx-auto mb-4 shadow-lg shadow-emerald-500/30">
+                <Smartphone className="w-8 h-8" />
+              </div>
+              <h2 className="text-xl font-display font-bold text-gray-900 mb-2">
+                Vincular WhatsApp Business
+              </h2>
+              <p className="text-gray-600 text-sm max-w-md mx-auto leading-relaxed">
+                Una vez vinculado, tu agente IA atiende a tus clientes automáticamente — productos,
+                precios, stock, todo en tiempo real.
+              </p>
             </div>
           </div>
 
-          <div className="max-w-sm mx-auto">
+          <div className="p-8">
+            {/* Features grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-8">
+              <div className="p-4 rounded-xl bg-gradient-to-br from-emerald-50 to-white border border-emerald-100">
+                <div className="w-9 h-9 rounded-lg bg-emerald-100 flex items-center justify-center mb-3">
+                  <Bot className="w-4.5 h-4.5 text-emerald-600" />
+                </div>
+                <p className="text-xs font-semibold text-gray-900 mb-0.5">IA conversacional</p>
+                <p className="text-[11px] text-gray-500 leading-snug">Responde con tu catálogo y tono</p>
+              </div>
+              <div className="p-4 rounded-xl bg-gradient-to-br from-blue-50 to-white border border-blue-100">
+                <div className="w-9 h-9 rounded-lg bg-blue-100 flex items-center justify-center mb-3">
+                  <Users className="w-4.5 h-4.5 text-blue-600" />
+                </div>
+                <p className="text-xs font-semibold text-gray-900 mb-0.5">Atención 24/7</p>
+                <p className="text-[11px] text-gray-500 leading-snug">Sin pausas, sin sueldo</p>
+              </div>
+              <div className="p-4 rounded-xl bg-gradient-to-br from-purple-50 to-white border border-purple-100">
+                <div className="w-9 h-9 rounded-lg bg-purple-100 flex items-center justify-center mb-3">
+                  <Shield className="w-4.5 h-4.5 text-purple-600" />
+                </div>
+                <p className="text-xs font-semibold text-gray-900 mb-0.5">Conexión segura</p>
+                <p className="text-[11px] text-gray-500 leading-snug">Tu chat sigue 100% privado</p>
+              </div>
+            </div>
+
+            {/* Pasos */}
+            <div className="mb-6 p-4 rounded-xl bg-gray-50/80 border border-gray-100">
+              <p className="text-[10px] font-mono uppercase tracking-wider text-gray-500 mb-3">
+                Cómo se hace · 3 pasos
+              </p>
+              <ol className="space-y-2 text-xs text-gray-600">
+                <li className="flex gap-2.5"><span className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 font-bold grid place-items-center text-[10px] flex-shrink-0 mt-0.5">1</span><span>Apretás <strong className="text-gray-900">"Vincular número"</strong> y te aparece un QR.</span></li>
+                <li className="flex gap-2.5"><span className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 font-bold grid place-items-center text-[10px] flex-shrink-0 mt-0.5">2</span><span>En tu celular: WhatsApp → <strong className="text-gray-900">Dispositivos vinculados</strong> → <strong className="text-gray-900">Vincular dispositivo</strong>.</span></li>
+                <li className="flex gap-2.5"><span className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 font-bold grid place-items-center text-[10px] flex-shrink-0 mt-0.5">3</span><span>Escaneás el QR y listo — el agente empieza a responder en segundos.</span></li>
+              </ol>
+            </div>
+
+            {/* CTA */}
             <button
               onClick={handleConnect}
               disabled={loading}
-              className="w-full flex items-center justify-center gap-2 bg-green-600 text-white px-5 py-3.5 rounded-lg font-medium text-sm hover:bg-green-700 disabled:opacity-50 transition"
+              className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-500 to-green-600 text-white px-5 py-3.5 rounded-xl font-semibold text-sm hover:from-emerald-600 hover:to-green-700 disabled:opacity-50 transition-all shadow-sm shadow-emerald-500/30"
             >
               {loading ? (
                 <Loader2 className="w-4 h-4 animate-spin" />

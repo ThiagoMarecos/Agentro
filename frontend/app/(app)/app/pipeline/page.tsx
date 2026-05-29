@@ -38,6 +38,10 @@ import {
   DollarSign,
   AlertCircle,
   MessageSquare,
+  Kanban,
+  Activity,
+  TrendingUp,
+  Users,
 } from "lucide-react";
 
 const STAGE_LABELS: Record<string, string> = {
@@ -94,69 +98,78 @@ function timeAgo(dateStr: string | null): string {
 
 function SessionCard({ session }: { session: SalesSessionListItem }) {
   const router = useRouter();
-  const priorityColors: Record<string, string> = {
-    high: "bg-red-100 text-red-700",
-    medium: "bg-yellow-100 text-yellow-700",
-    low: "bg-gray-100 text-gray-600",
+  const priorityMeta: Record<string, { label: string; cls: string; dot: string }> = {
+    high:   { label: "ALTA",  cls: "text-rose-700 bg-rose-100",   dot: "bg-rose-500" },
+    medium: { label: "MEDIA", cls: "text-amber-700 bg-amber-100", dot: "bg-amber-500" },
+    low:    { label: "BAJA",  cls: "text-gray-600 bg-gray-100",   dot: "bg-gray-400" },
   };
+  const prio = priorityMeta[session.priority] || priorityMeta.medium;
 
   const handleClick = () => {
     router.push(`/app/conversations?conv=${session.conversation_id}`);
   };
 
+  const initial = (session.customer_name || session.customer_email || "?").charAt(0).toUpperCase();
+
   return (
-    <div
+    <button
+      type="button"
       onClick={handleClick}
-      className="bg-white rounded-lg border border-gray-200 p-3 shadow-sm hover:shadow-md hover:border-indigo-300 hover:bg-indigo-50/30 transition-all cursor-pointer group"
+      className="w-full text-left bg-white rounded-xl border border-gray-200 p-3 hover:shadow-md hover:border-indigo-300 hover:-translate-y-0.5 transition-all cursor-pointer group block"
     >
-      <div className="flex items-start justify-between mb-2">
-        <div className="flex items-center gap-2 min-w-0">
-          <div className="w-7 h-7 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0">
-            <User className="w-3.5 h-3.5 text-indigo-600" />
-          </div>
-          <div className="min-w-0">
-            <p className="text-sm font-medium text-gray-900 truncate">
-              {session.customer_name || session.customer_email || "Cliente"}
-            </p>
-            {session.customer_email && session.customer_name && (
-              <p className="text-xs text-gray-400 truncate">{session.customer_email}</p>
-            )}
-          </div>
+      {/* Header con avatar + priority */}
+      <div className="flex items-start gap-2.5 mb-2">
+        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-500 text-white flex items-center justify-center flex-shrink-0 text-xs font-semibold shadow-sm">
+          {initial}
         </div>
-        <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${priorityColors[session.priority] || priorityColors.medium}`}>
-          {session.priority}
+        <div className="min-w-0 flex-1">
+          <p className="text-[13px] font-semibold text-gray-900 truncate leading-tight">
+            {session.customer_name || session.customer_email || "Cliente anónimo"}
+          </p>
+          {session.customer_email && session.customer_name && (
+            <p className="text-[11px] text-gray-400 truncate mt-0.5">{session.customer_email}</p>
+          )}
+        </div>
+        <span className={`inline-flex items-center gap-1 text-[9px] font-mono font-bold px-1.5 py-0.5 rounded ${prio.cls} flex-shrink-0`}>
+          <span className={`w-1 h-1 rounded-full ${prio.dot}`} />
+          {prio.label}
         </span>
       </div>
 
+      {/* Valor estimado */}
       {session.estimated_value && (
-        <div className="flex items-center gap-1 mb-1.5">
-          <DollarSign className="w-3.5 h-3.5 text-green-600" />
-          <span className="text-sm font-semibold text-green-700">
+        <div className="flex items-center gap-1.5 mb-2 px-2 py-1 rounded-lg bg-emerald-50">
+          <DollarSign className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />
+          <span className="text-xs font-bold text-emerald-700">
             {formatPrice(Number(session.estimated_value), session.currency)}
           </span>
         </div>
       )}
 
+      {/* Última acción del agente */}
       {session.last_agent_action && (
-        <p className="text-xs text-gray-500 mb-1.5 truncate">{session.last_agent_action}</p>
+        <p className="text-[11px] text-gray-500 mb-2 line-clamp-2 leading-snug">
+          “{session.last_agent_action}”
+        </p>
       )}
 
-      <div className="flex items-center justify-between text-xs text-gray-400">
+      {/* Footer: tiempo + follow-ups + arrow */}
+      <div className="flex items-center justify-between text-[10px] text-gray-400 pt-2 border-t border-gray-100">
         <div className="flex items-center gap-1">
           <Clock className="w-3 h-3" />
           <span>{timeAgo(session.stage_entered_at)}</span>
         </div>
         <div className="flex items-center gap-2">
           {session.follow_up_count > 0 && (
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1 text-amber-600">
               <AlertCircle className="w-3 h-3" />
-              <span>{session.follow_up_count} follow-ups</span>
+              <span className="font-medium">{session.follow_up_count}</span>
             </div>
           )}
-          <MessageSquare className="w-3 h-3 text-indigo-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+          <MessageSquare className="w-3.5 h-3.5 text-indigo-500 opacity-0 group-hover:opacity-100 transition-opacity" />
         </div>
       </div>
-    </div>
+    </button>
   );
 }
 
@@ -216,40 +229,115 @@ export default function PipelinePage() {
     (s) => ["lost", "abandoned"].includes(s.stage)
   );
 
+  // Stats agregados
+  const totalActive = activeStages.reduce((sum, s) => sum + s.count, 0);
+  const totalCompleted = pipeline.stages
+    .filter((s) => ["completed", "order_created"].includes(s.stage))
+    .reduce((sum, s) => sum + s.count, 0);
+  const totalLost = terminalStages.reduce((sum, s) => sum + s.count, 0);
+  const pipelineValue = activeStages.reduce((sum, stage) => {
+    return sum + stage.sessions.reduce((s, sess) => s + Number(sess.estimated_value || 0), 0);
+  }, 0);
+
   return (
     <div className="space-y-6">
-      <div data-tour="pipeline-header" className="flex items-center justify-between">
+      {/* ── Header ── */}
+      <div data-tour="pipeline-header" className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Pipeline de Ventas</h1>
-          <p className="text-sm text-gray-500 mt-1">
-            {pipeline.total} sesiones activas
+          <div className="text-[10px] font-mono uppercase tracking-wider text-indigo-500 mb-1.5 flex items-center gap-2">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+            </span>
+            LIVE · ACTUALIZACIÓN EN VIVO
+          </div>
+          <h1 className="text-2xl font-display font-bold text-gray-900 flex items-center gap-2.5">
+            <span className="inline-grid place-items-center w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-500 text-white shadow-sm shadow-indigo-500/30">
+              <Kanban className="w-4.5 h-4.5" />
+            </span>
+            Pipeline IA
+          </h1>
+          <p className="text-gray-500 text-sm mt-1.5 max-w-2xl">
+            El embudo de ventas vivo de tu agente IA. Cada cliente que chatea aparece como una sesión
+            que se mueve entre etapas según cómo progresa la conversación. Se actualiza cada 10 segundos.
           </p>
         </div>
       </div>
 
-      <div data-tour="pipeline-board" className="overflow-x-auto pb-4">
-        <div className="flex gap-4 min-w-max">
+      {/* ── Stat cards ── */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="p-4 rounded-xl bg-white border border-gray-200/60 flex items-center gap-3">
+          <div className="w-10 h-10 rounded-lg bg-indigo-50 flex items-center justify-center">
+            <Activity className="w-5 h-5 text-indigo-500" />
+          </div>
+          <div>
+            <p className="text-xl font-bold text-gray-900 leading-none">{totalActive}</p>
+            <p className="text-xs text-gray-400 mt-0.5">Sesiones activas</p>
+          </div>
+        </div>
+        <div className="p-4 rounded-xl bg-white border border-gray-200/60 flex items-center gap-3">
+          <div className="w-10 h-10 rounded-lg bg-emerald-50 flex items-center justify-center">
+            <DollarSign className="w-5 h-5 text-emerald-500" />
+          </div>
+          <div>
+            <p className="text-xl font-bold text-gray-900 leading-none">
+              {formatPrice(pipelineValue, currentStore?.currency)}
+            </p>
+            <p className="text-xs text-gray-400 mt-0.5">Valor en pipeline</p>
+          </div>
+        </div>
+        <div className="p-4 rounded-xl bg-white border border-gray-200/60 flex items-center gap-3">
+          <div className="w-10 h-10 rounded-lg bg-green-50 flex items-center justify-center">
+            <TrendingUp className="w-5 h-5 text-green-500" />
+          </div>
+          <div>
+            <p className="text-xl font-bold text-gray-900 leading-none">{totalCompleted}</p>
+            <p className="text-xs text-gray-400 mt-0.5">Convertidos</p>
+          </div>
+        </div>
+        <div className="p-4 rounded-xl bg-white border border-gray-200/60 flex items-center gap-3">
+          <div className="w-10 h-10 rounded-lg bg-rose-50 flex items-center justify-center">
+            <Users className="w-5 h-5 text-rose-500" />
+          </div>
+          <div>
+            <p className="text-xl font-bold text-gray-900 leading-none">{totalLost}</p>
+            <p className="text-xs text-gray-400 mt-0.5">Perdidos / abandonados</p>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Kanban board ── */}
+      <div data-tour="pipeline-board" className="overflow-x-auto pb-4 -mx-2 px-2">
+        <div className="flex gap-3 min-w-max">
           {activeStages.map((stage) => (
             <div key={stage.stage} className="w-72 flex-shrink-0">
-              <div className={`rounded-t-lg px-3 py-2 ${STAGE_HEADER_COLORS[stage.stage]} text-white`}>
+              {/* Column header */}
+              <div className={`rounded-t-xl px-3.5 py-2.5 ${STAGE_HEADER_COLORS[stage.stage]} text-white shadow-sm`}>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-semibold">
+                  <span className="text-xs font-semibold uppercase tracking-wide">
                     {STAGE_LABELS[stage.stage] || stage.stage}
                   </span>
-                  <span className="text-xs bg-white/20 rounded-full px-2 py-0.5">
+                  <span className="text-[11px] bg-white/25 rounded-full px-2 py-0.5 font-mono font-semibold">
                     {stage.count}
                   </span>
                 </div>
               </div>
-              <div className={`rounded-b-lg border border-t-0 p-2 min-h-[200px] space-y-2 ${STAGE_COLORS[stage.stage] || "bg-gray-50 border-gray-200"}`}>
-                {stage.sessions.length === 0 && (
-                  <p className="text-center text-xs text-gray-400 py-8">
-                    Sin sesiones
-                  </p>
+              {/* Column body */}
+              <div className={`rounded-b-xl border border-t-0 p-2 min-h-[280px] space-y-2 ${STAGE_COLORS[stage.stage] || "bg-gray-50 border-gray-200"}`}>
+                {stage.sessions.length === 0 ? (
+                  <div className="text-center py-10 px-4">
+                    <div className="w-8 h-8 rounded-full bg-white/60 mx-auto mb-2 grid place-items-center">
+                      <Activity className="w-3.5 h-3.5 text-gray-400" />
+                    </div>
+                    <p className="text-[11px] text-gray-400 leading-snug">
+                      Sin sesiones en esta etapa
+                    </p>
+                  </div>
+                ) : (
+                  stage.sessions.map((session) => (
+                    <SessionCard key={session.id} session={session} />
+                  ))
                 )}
-                {stage.sessions.map((session) => (
-                  <SessionCard key={session.id} session={session} />
-                ))}
               </div>
             </div>
           ))}
@@ -257,11 +345,14 @@ export default function PipelinePage() {
       </div>
 
       {terminalStages.some((s) => s.count > 0) && (
-        <div>
-          <h2 className="text-lg font-semibold text-gray-700 mb-3">
-            Sesiones terminales
-          </h2>
-          <div className="flex gap-4">
+        <div className="pt-2">
+          <div className="flex items-center gap-2 mb-3">
+            <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">
+              Sesiones terminales
+            </h2>
+            <span className="text-xs text-gray-400">·  para análisis post-mortem</span>
+          </div>
+          <div className="flex gap-3 overflow-x-auto pb-2">
             {terminalStages.map((stage) => (
               <div key={stage.stage} className="w-72 flex-shrink-0">
                 <div className={`rounded-t-lg px-3 py-2 ${STAGE_HEADER_COLORS[stage.stage]} text-white`}>
