@@ -2,18 +2,30 @@
 Schemas de autenticación.
 """
 
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field, field_validator
 
 
 class UserCreate(BaseModel):
     email: EmailStr
-    password: str
-    full_name: str | None = None
+    # 6 chars mínimo (UX), 72 bytes máximo (límite de bcrypt).
+    # Pydantic valida en CHARACTERS, no en bytes — pero 64 chars deja
+    # margen seguro para caracteres multibyte (emoji, acentos, etc.)
+    password: str = Field(..., min_length=6, max_length=64)
+    full_name: str | None = Field(None, max_length=200)
+
+    @field_validator("password")
+    @classmethod
+    def password_bytes_within_limit(cls, v: str) -> str:
+        # Doble check: si por algún motivo entró con muchos bytes multibyte,
+        # devolvemos error claro en lugar de explotar más adelante.
+        if len(v.encode("utf-8")) > 72:
+            raise ValueError("La contraseña es demasiado larga. Usá menos caracteres o evitá emojis.")
+        return v
 
 
 class UserLogin(BaseModel):
     email: EmailStr
-    password: str
+    password: str = Field(..., min_length=1, max_length=200)
 
 
 class TokenResponse(BaseModel):

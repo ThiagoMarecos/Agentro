@@ -1,32 +1,51 @@
 """
 Seguridad: JWT, hashing de contraseñas, OAuth.
+
+Hashing:
+  - Usamos bcrypt directo (no passlib) porque bcrypt 4.x agregó una
+    validación estricta de 72 bytes que rompe el flujo de passlib 1.7.4.
+  - El hash producido es 100% compatible con el formato que generaba
+    passlib ($2b$...), así que los usuarios viejos siguen autenticando.
 """
 
 from datetime import datetime, timedelta
 from typing import Optional
 
+import bcrypt
 from jose import JWTError, jwt
-from passlib.context import CryptContext
 
 from app.config import get_settings
 
 settings = get_settings()
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+# Límite hardcodeado de bcrypt: 72 bytes. Cortamos a 72 BYTES (no chars).
+_BCRYPT_MAX_BYTES = 72
 
 
-def _truncate_password(password: str) -> str:
-    """Trunca contraseña a 72 bytes (límite de bcrypt)."""
-    return password.encode("utf-8")[:72].decode("utf-8", errors="ignore")
+def _to_bcrypt_bytes(password: str) -> bytes:
+    """Codifica a UTF-8 y trunca a 72 bytes (límite hardcodeado de bcrypt)."""
+    if not isinstance(password, str):
+        raise TypeError("password debe ser str")
+    return password.encode("utf-8")[:_BCRYPT_MAX_BYTES]
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """Verifica contraseña contra hash."""
-    return pwd_context.verify(_truncate_password(plain_password), hashed_password)
+    """Verifica contraseña contra hash. Robusto a hashes vacíos / corruptos."""
+    if not plain_password or not hashed_password:
+        return False
+    try:
+        return bcrypt.checkpw(
+            _to_bcrypt_bytes(plain_password),
+            hashed_password.encode("utf-8"),
+        )
+    except (ValueError, TypeError):
+        return False
 
 
 def get_password_hash(password: str) -> str:
-    """Genera hash de contraseña."""
-    return pwd_context.hash(_truncate_password(password))
+    """Genera hash bcrypt de la contraseña (formato $2b$...)."""
+    hashed = bcrypt.hashpw(_to_bcrypt_bytes(password), bcrypt.gensalt())
+    return hashed.decode("utf-8")
 
 
 def create_access_token(
