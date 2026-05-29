@@ -3,6 +3,28 @@
 import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useStore } from "@/lib/context/StoreContext";
+import { useAuth } from "@/app/providers/AuthProvider";
+import { DashboardTour, type TourStep } from "@/components/onboarding-tour/DashboardTour";
+
+const PIPELINE_TOUR_STEPS: TourStep[] = [
+  {
+    selector: '[data-tour="pipeline-header"]',
+    placement: "bottom",
+    title: "Pipeline IA — el embudo de ventas vivo",
+    body: "Cada vez que un cliente chatea (web, WhatsApp, IG), el agente IA crea una 'sesión de venta' que aparece acá. Las sesiones activas son las que están en curso ahora mismo.",
+  },
+  {
+    selector: '[data-tour="pipeline-board"]',
+    placement: "top",
+    title: "Las etapas del embudo",
+    body: "Cada columna es una etapa: descubrimiento, calificación, presentación, negociación, cierre. El agente mueve a los clientes según cómo va la conversación. Vos ves en tiempo real cuántos clientes están en cada etapa y dónde se traba el embudo.",
+  },
+  {
+    centered: true,
+    title: "¿Cómo usar el pipeline?",
+    body: "Click en cualquier card para ver la conversación completa, lo que el cliente está mirando, su intención y tomar control si querés cerrar vos. Las sesiones terminales (vendido, abandonado, escalado) quedan más abajo para análisis. Te ayuda a saber: qué etapa está cuello de botella, qué clientes están calientes y dónde el bot necesita ayuda.",
+  },
+];
 import {
   getSalesPipeline,
   PipelineResponse,
@@ -140,6 +162,7 @@ function SessionCard({ session }: { session: SalesSessionListItem }) {
 
 export default function PipelinePage() {
   const { currentStore } = useStore();
+  const { user } = useAuth();
   const [pipeline, setPipeline] = useState<PipelineResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -195,7 +218,7 @@ export default function PipelinePage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div data-tour="pipeline-header" className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Pipeline de Ventas</h1>
           <p className="text-sm text-gray-500 mt-1">
@@ -204,7 +227,7 @@ export default function PipelinePage() {
         </div>
       </div>
 
-      <div className="overflow-x-auto pb-4">
+      <div data-tour="pipeline-board" className="overflow-x-auto pb-4">
         <div className="flex gap-4 min-w-max">
           {activeStages.map((stage) => (
             <div key={stage.stage} className="w-72 flex-shrink-0">
@@ -265,6 +288,14 @@ export default function PipelinePage() {
             ))}
           </div>
         </div>
+      )}
+
+      {/* Tour de la página de pipeline */}
+      {user && (
+        <DashboardTour
+          steps={PIPELINE_TOUR_STEPS}
+          storageKey={`agentro:tour-pipeline:${user.id}`}
+        />
       )}
     </div>
   );

@@ -2,6 +2,28 @@
 
 import { useEffect, useState } from "react";
 import { useStore } from "@/lib/context/StoreContext";
+import { useAuth } from "@/app/providers/AuthProvider";
+import { DashboardTour, type TourStep } from "@/components/onboarding-tour/DashboardTour";
+
+const TEAM_TOUR_STEPS: TourStep[] = [
+  {
+    selector: '[data-tour="team-header"]',
+    placement: "bottom",
+    title: "Tu equipo de ventas",
+    body: "Acá invitás colaboradores con distintos roles: vendedores (atienden chats y crean ventas), gerentes (todo menos facturación) y soporte (responde casos asignados). Cada uno entra con su email y solo ve lo que su rol le permite.",
+  },
+  {
+    selector: '[data-tour="team-invite-btn"]',
+    placement: "left",
+    title: "Invitar nuevo miembro",
+    body: "Click acá → poné el email + el rol. El sistema le manda un mail con un link único para crear su cuenta. Si todavía no se registra, queda en 'pendiente' y vos podés cancelar la invitación cuando quieras.",
+  },
+  {
+    centered: true,
+    title: "¿Cómo trabaja el equipo con el agente IA?",
+    body: "El agente IA atiende chats automáticamente. Cuando un cliente está caliente o pide algo específico (presupuesto grande, queja, devolución), el agente escala a un humano. Si tenés vendedores en el equipo, la sesión les llega como notificación y la toman desde la bandeja del Pipeline. Si estás solo, te llegan a vos.",
+  },
+];
 import {
   listTeamMembers,
   listInvitations,
@@ -40,6 +62,7 @@ const STATUS_LABELS: Record<string, string> = {
 
 export default function TeamPage() {
   const { currentStore } = useStore();
+  const { user } = useAuth();
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [invitations, setInvitations] = useState<Invitation[]>([]);
   const [loading, setLoading] = useState(true);
@@ -107,7 +130,7 @@ export default function TeamPage() {
 
   return (
     <div>
-      <div className="flex items-start justify-between mb-2 gap-4">
+      <div data-tour="team-header" className="flex items-start justify-between mb-2 gap-4">
         <div>
           <h1 className="text-2xl font-display font-bold text-gray-900">Equipo</h1>
           <p className="text-gray-400 text-sm mt-1">
@@ -117,6 +140,7 @@ export default function TeamPage() {
         </div>
         <button
           onClick={() => setInviteOpen(true)}
+          data-tour="team-invite-btn"
           className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium transition shrink-0"
         >
           <Plus className="w-4 h-4" />
@@ -268,6 +292,14 @@ export default function TeamPage() {
             setInviteOpen(false);
             await reload();
           }}
+        />
+      )}
+
+      {/* Tour de la página de equipo */}
+      {user && (
+        <DashboardTour
+          steps={TEAM_TOUR_STEPS}
+          storageKey={`agentro:tour-team:${user.id}`}
         />
       )}
     </div>

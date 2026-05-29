@@ -17,6 +17,34 @@ import {
 } from "lucide-react";
 import { useStore } from "@/lib/context/StoreContext";
 import { useStoreSettings } from "@/lib/hooks/useStoreSettings";
+import { useAuth } from "@/app/providers/AuthProvider";
+import { DashboardTour, type TourStep } from "@/components/onboarding-tour/DashboardTour";
+
+const SETTINGS_TOUR_STEPS: TourStep[] = [
+  {
+    selector: '[data-tour="settings-header"]',
+    placement: "bottom",
+    title: "Configuración de tu tienda",
+    body: "Acá centralizás todo lo importante que NO es producto ni diseño: datos del negocio, métodos de pago, envíos, SEO, tono del agente IA y datos de contacto.",
+  },
+  {
+    selector: '[data-tour="settings-tabs"]',
+    placement: "right",
+    title: "Las secciones",
+    body: "General (nombre, descripción, moneda) · Marca (logo, favicon) · Región (país, timezone, idioma) · Contacto (email, teléfono, dirección) · SEO (meta tags para Google) · Zona de peligro (eliminar tienda). Cambiá entre tabs sin perder cambios pendientes.",
+  },
+  {
+    selector: '[data-tour="settings-save"]',
+    placement: "left",
+    title: "Acordate de guardar",
+    body: "Cualquier cambio que hagas en cualquier tab queda pendiente hasta que apretás 'Guardar'. Si cambiás de tab sin guardar, los cambios se mantienen en el formulario — pero se pierden si refrescás. Es buena costumbre guardar al terminar cada sección.",
+  },
+  {
+    centered: true,
+    title: "Métodos de pago y envíos",
+    body: "Esos dos viven en sus propias secciones del sidebar (POS para métodos de pago presenciales y la tab de Envíos de cada pedido). Para configurar Mercado Pago, Stripe, o las zonas de envío con sus costos, vamos a tener una sección dedicada en la próxima actualización. Por ahora, podés cobrar transfer/efectivo desde el POS sin problemas.",
+  },
+];
 import { uploadImage } from "@/lib/api/products";
 import { deleteStore } from "@/lib/api/stores";
 import { ImageUploader } from "@/components/ui/ImageUploader";
@@ -108,6 +136,7 @@ const labelCls = "block text-sm font-medium text-gray-700 mb-1.5";
 export default function SettingsPage() {
   const router = useRouter();
   const { currentStore, refresh: refreshStores } = useStore();
+  const { user } = useAuth();
   const { settings, update, isLoading, error, refresh } = useStoreSettings(
     currentStore?.id ?? null
   );
@@ -214,7 +243,7 @@ export default function SettingsPage() {
 
   return (
     <div className="max-w-4xl mx-auto">
-      <div className="flex items-center justify-between mb-8">
+      <div data-tour="settings-header" className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-2xl font-display font-bold text-gray-900">Configuración</h1>
           <p className="text-sm text-gray-400 mt-1">Configuración de {currentStore.name}</p>
@@ -223,6 +252,7 @@ export default function SettingsPage() {
           <button
             onClick={handleSave}
             disabled={saving}
+            data-tour="settings-save"
             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 transition disabled:opacity-50"
           >
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
@@ -251,7 +281,7 @@ export default function SettingsPage() {
 
       <div className="flex flex-col sm:flex-row gap-6">
         {/* Tabs */}
-        <nav className="sm:w-52 flex-shrink-0">
+        <nav data-tour="settings-tabs" className="sm:w-52 flex-shrink-0">
           <div className="flex sm:flex-col gap-1">
             {TABS.map((t) => {
               const Icon = t.icon;
@@ -465,6 +495,14 @@ export default function SettingsPage() {
           )}
         </div>
       </div>
+
+      {/* Tour de la página de configuración */}
+      {user && (
+        <DashboardTour
+          steps={SETTINGS_TOUR_STEPS}
+          storageKey={`agentro:tour-settings:${user.id}`}
+        />
+      )}
     </div>
   );
 }

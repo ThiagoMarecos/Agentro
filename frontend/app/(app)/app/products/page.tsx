@@ -4,7 +4,42 @@ import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useStore } from "@/lib/context/StoreContext";
+import { useAuth } from "@/app/providers/AuthProvider";
 import { ProductStatusBadge } from "@/components/products/ProductStatusBadge";
+import { DashboardTour, type TourStep } from "@/components/onboarding-tour/DashboardTour";
+
+const PRODUCTS_TOUR_STEPS: TourStep[] = [
+  {
+    selector: '[data-tour="products-header"]',
+    placement: "bottom",
+    title: "Tu catálogo de productos",
+    body: "Acá ves todo lo que vendés con foto, precio, stock y estado. Activos (visibles al público), borradores (en preparación) y archivados (ocultos). El contador arriba te muestra cuántos productos tenés cargados.",
+  },
+  {
+    selector: '[data-tour="products-create"]',
+    placement: "left",
+    title: "Añadir producto manualmente",
+    body: "Click acá para crear uno desde cero: nombre, fotos, precio, stock, categoría, variantes (talles/colores) y descripción. Soporta múltiples imágenes por producto.",
+  },
+  {
+    selector: '[data-tour="products-import"]',
+    placement: "bottom",
+    title: "Importar desde otra web",
+    body: "Si ya tenés tienda en otra plataforma (Shopify, Tienda Nube, WooCommerce o un sitio cualquiera), pegás la URL y trae los productos automáticamente con foto, precio y descripción.",
+  },
+  {
+    selector: '[data-tour="products-filters"]',
+    placement: "bottom",
+    title: "Buscador y filtros",
+    body: "Buscás por nombre o SKU, filtrás por estado (activo/borrador/archivado) y por categoría. Útil cuando tu catálogo crece — encontrás cualquier producto en segundos.",
+  },
+  {
+    selector: '[data-tour="products-table"]',
+    placement: "top",
+    title: "La tabla con acciones",
+    body: "Cada fila tiene editar, duplicar y eliminar. Podés seleccionar varios con los checkbox para acciones en bulk (ej: eliminar 20 a la vez). El stock en rojo te avisa cuando algo está por agotarse.",
+  },
+];
 import {
   getProducts,
   deleteProduct,
@@ -133,6 +168,7 @@ function ConfirmModal({
 
 export default function ProductsPage() {
   const { currentStore } = useStore();
+  const { user } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [products, setProducts] = useState<ProductListItem[]>([]);
@@ -283,7 +319,7 @@ export default function ProductsPage() {
   return (
     <div>
       {/* Header */}
-      <div className="flex justify-between items-center mb-6">
+      <div data-tour="products-header" className="flex justify-between items-center mb-6">
         <div>
           <h1 className="text-2xl font-display font-bold text-gray-900">Productos</h1>
           <p className="text-sm text-gray-400 mt-0.5">
@@ -297,6 +333,7 @@ export default function ProductsPage() {
         <div className="flex items-center gap-2">
           <Link
             href="/app/products/import-from-url"
+            data-tour="products-import"
             className="flex items-center gap-2 bg-white border border-gray-200 text-gray-700 px-4 py-2.5 rounded-lg font-medium text-sm hover:bg-gray-50 hover:border-gray-300 transition"
           >
             <Globe className="w-4 h-4 text-gray-500" />
@@ -304,6 +341,7 @@ export default function ProductsPage() {
           </Link>
           <Link
             href="/app/products/new"
+            data-tour="products-create"
             className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2.5 rounded-lg font-medium text-sm hover:bg-indigo-700 transition shadow-sm shadow-indigo-500/20"
           >
             <Plus className="w-4 h-4" />
@@ -313,7 +351,7 @@ export default function ProductsPage() {
       </div>
 
       {/* Filters */}
-      <div className="flex flex-wrap gap-3 mb-5">
+      <div data-tour="products-filters" className="flex flex-wrap gap-3 mb-5">
         <div className="relative flex-1 min-w-[200px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <input
@@ -390,7 +428,7 @@ export default function ProductsPage() {
       )}
 
       {/* Table */}
-      <div className="overflow-x-auto rounded-xl border border-gray-200/60 bg-white">
+      <div data-tour="products-table" className="overflow-x-auto rounded-xl border border-gray-200/60 bg-white">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-gray-100">
@@ -595,6 +633,14 @@ export default function ProductsPage() {
         onConfirm={handleBulkDelete}
         onCancel={() => { if (!bulkDeleting) setShowDeleteModal(false); }}
       />
+
+      {/* Tour de la página de productos */}
+      {user && (
+        <DashboardTour
+          steps={PRODUCTS_TOUR_STEPS}
+          storageKey={`agentro:tour-products:${user.id}`}
+        />
+      )}
     </div>
   );
 }

@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import Link from "next/link";
 import { useStore } from "@/lib/context/StoreContext";
+import { useAuth } from "@/app/providers/AuthProvider";
+import { DashboardTour, type TourStep } from "@/components/onboarding-tour/DashboardTour";
 import { useSearchParams } from "next/navigation";
 import {
   getProducts,
@@ -44,8 +46,35 @@ interface CartItem {
 //                       PAGE
 // ═════════════════════════════════════════════════════
 
+const POS_TOUR_STEPS: TourStep[] = [
+  {
+    selector: '[data-tour="pos-header"]',
+    placement: "bottom",
+    title: "Punto de Venta (POS)",
+    body: "Acá hacés ventas presenciales rápidas, sin pasar por el storefront online. Ideal para cuando alguien viene al local. Comparte el mismo stock y catálogo que tu tienda web.",
+  },
+  {
+    selector: '[data-tour="pos-products"]',
+    placement: "right",
+    title: "Buscar productos",
+    body: "Tocá un producto para sumarlo al carrito. Buscás por nombre o SKU con F2. Si un producto está agotado, no aparece o se ve atenuado. Cada venta descuenta stock automáticamente.",
+  },
+  {
+    selector: '[data-tour="pos-cart"]',
+    placement: "left",
+    title: "Carrito + cobro",
+    body: "El carrito acumula items. Ajustás cantidad, aplicás descuentos, elegís método de pago (efectivo, transferencia, tarjeta — los configurás en 'Métodos de pago' arriba) y apretás F8 para cobrar. La venta queda como pedido en la sección Pedidos.",
+  },
+  {
+    centered: true,
+    title: "Caja registradora (apertura/cierre Z)",
+    body: "El botón 'Abrir caja' arriba registra el efectivo con el que arrancás el día. Al final, 'Cerrar Z' te genera el reporte de ventas vs efectivo en caja. Sirve para control diario y para cuadrar con los vendedores. NO obligatorio — podés vender sin abrir caja, pero perdés esa trazabilidad.",
+  },
+];
+
 export default function POSPage() {
   const { currentStore } = useStore();
+  const { user } = useAuth();
   const searchParams = useSearchParams();
   const fromChat = searchParams.get("from_chat");
 
@@ -298,7 +327,7 @@ export default function POSPage() {
   return (
     <div className="h-[calc(100vh-7rem)]">
       {/* ── Header ── */}
-      <div className="flex items-center justify-between mb-4 gap-4 flex-wrap">
+      <div data-tour="pos-header" className="flex items-center justify-between mb-4 gap-4 flex-wrap">
         <div>
           <h1 className="text-2xl font-display font-bold text-gray-900 inline-flex items-center gap-2">
             <ShoppingCart className="w-6 h-6 text-indigo-500" /> POS
@@ -356,7 +385,7 @@ export default function POSPage() {
         {/* ────────────────────────────────────────── */}
         {/*  Productos (columna izquierda)             */}
         {/* ────────────────────────────────────────── */}
-        <div className="bg-white border border-gray-200 rounded-xl overflow-hidden flex flex-col">
+        <div data-tour="pos-products" className="bg-white border border-gray-200 rounded-xl overflow-hidden flex flex-col">
           <div className="p-4 border-b border-gray-100">
             <div className="flex items-center gap-2 mb-3">
               <span className="grid place-items-center w-6 h-6 rounded-full bg-indigo-100 text-indigo-700 text-xs font-bold">1</span>
@@ -429,7 +458,7 @@ export default function POSPage() {
         {/* ────────────────────────────────────────── */}
         {/*  Carrito + cobro (columna derecha)         */}
         {/* ────────────────────────────────────────── */}
-        <div className="bg-white border border-gray-200 rounded-xl flex flex-col overflow-hidden">
+        <div data-tour="pos-cart" className="bg-white border border-gray-200 rounded-xl flex flex-col overflow-hidden">
           {/* Items del carrito */}
           <div className="flex-1 overflow-y-auto">
             {cart.length === 0 ? (
@@ -828,6 +857,14 @@ export default function POSPage() {
           sale={completedSale}
           storeName={currentStore?.name || ""}
           onClose={() => setCompletedSale(null)}
+        />
+      )}
+
+      {/* Tour del POS */}
+      {user && (
+        <DashboardTour
+          steps={POS_TOUR_STEPS}
+          storageKey={`agentro:tour-pos:${user.id}`}
         />
       )}
     </div>

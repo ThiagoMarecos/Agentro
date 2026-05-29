@@ -3,7 +3,29 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useStore } from "@/lib/context/StoreContext";
+import { useAuth } from "@/app/providers/AuthProvider";
 import { getOrders, updateOrderStatus } from "@/lib/api/stores";
+import { DashboardTour, type TourStep } from "@/components/onboarding-tour/DashboardTour";
+
+const ORDERS_TOUR_STEPS: TourStep[] = [
+  {
+    selector: '[data-tour="orders-header"]',
+    placement: "bottom",
+    title: "Tus pedidos en un solo lugar",
+    body: "Todos los pedidos que vienen de tu tienda online + del POS aparecen acá. Online y presencial comparten misma bandeja, mismo stock, mismas estadísticas.",
+  },
+  {
+    selector: '[data-tour="orders-stats"]',
+    placement: "bottom",
+    title: "Resumen rápido",
+    body: "Total · Pendientes (esperan acción tuya: pago o envío) · En proceso (ya pagados, en preparación) · Completados. Para ver pedidos por estado, click en cualquier card.",
+  },
+  {
+    centered: true,
+    title: "Cómo manejar un pedido",
+    body: "Click en una fila para abrir el detalle: items, cliente, dirección, método de pago, total. Desde ahí cambiás el estado (pendiente → pagado → enviado → entregado), agregás notas internas y mandás el link de seguimiento al cliente.",
+  },
+];
 import { formatPrice } from "@/lib/utils/formatPrice";
 import {
   ShoppingBag,
@@ -186,6 +208,7 @@ function StatusDropdown({
 /* ── Main page ─────────────────────────────────────── */
 export default function OrdersPage() {
   const { currentStore } = useStore();
+  const { user } = useAuth();
   const router = useRouter();
 
   const [orders, setOrders] = useState<Order[]>([]);
@@ -288,7 +311,7 @@ export default function OrdersPage() {
       )}
 
       {/* ── Header ── */}
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
+      <div data-tour="orders-header" className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
         <div>
           <h1 className="text-2xl font-display font-bold text-gray-900">Pedidos</h1>
           <p className="text-sm text-gray-400 mt-0.5">
@@ -303,7 +326,7 @@ export default function OrdersPage() {
 
       {/* ── Stats cards ── */}
       {!loading && orders.length > 0 && (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
+        <div data-tour="orders-stats" className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
           <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-white border border-gray-200/60">
             <div className="w-9 h-9 rounded-lg bg-indigo-50 flex items-center justify-center">
               <ShoppingBag className="w-4 h-4 text-indigo-500" />
@@ -548,6 +571,14 @@ export default function OrdersPage() {
             </div>
           )}
         </div>
+      )}
+
+      {/* Tour de la página de pedidos */}
+      {user && (
+        <DashboardTour
+          steps={ORDERS_TOUR_STEPS}
+          storageKey={`agentro:tour-orders:${user.id}`}
+        />
       )}
     </div>
   );

@@ -2,6 +2,28 @@
 
 import { useState, useRef } from "react";
 import { useStore } from "@/lib/context/StoreContext";
+import { useAuth } from "@/app/providers/AuthProvider";
+import { DashboardTour, type TourStep } from "@/components/onboarding-tour/DashboardTour";
+
+const APPEARANCE_TOUR_STEPS: TourStep[] = [
+  {
+    selector: '[data-tour="appearance-header"]',
+    placement: "bottom",
+    title: "El look de tu tienda",
+    body: "Acá controlás todo lo visual: plantilla, colores, tipografía, banners y secciones del home. Lo que cambies se aplica en vivo a tu storefront público.",
+  },
+  {
+    selector: '[data-tour="appearance-tabs"]',
+    placement: "bottom",
+    title: "Las pestañas de personalización",
+    body: "Diseño = plantilla + colores + fuentes. Secciones del Home = banners, sliders y bloques que aparecen en la portada de tu tienda. Cambiá entre tabs para configurar cada parte sin perder lo que ya tocaste.",
+  },
+  {
+    centered: true,
+    title: "Tip: previsualizá en vivo",
+    body: "Mientras editás colores y tipografías, podés abrir tu storefront público en otra pestaña (el botón 'Ver mi tienda' arriba). Cada cambio que guardás se ve al instante refrescando. Probá distintas combos hasta que te guste.",
+  },
+];
 import { useStoreTheme } from "@/lib/hooks/useStoreTheme";
 import { SectionHeader } from "@/components/admin/SectionHeader";
 import { SettingsSection } from "@/components/admin/SettingsSection";
@@ -350,6 +372,7 @@ function BrandingUpload({
 
 export default function AppearancePage() {
   const { currentStore, refresh } = useStore();
+  const { user } = useAuth();
   const {
     theme,
     presets,
@@ -461,10 +484,12 @@ export default function AppearancePage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-display font-bold text-gray-900 mb-2">Apariencia</h1>
-      <p className="text-gray-400 text-sm mb-6">
-        Elegí la plantilla de tu tienda y personalizá colores, tipografía y estilos.
-      </p>
+      <div data-tour="appearance-header">
+        <h1 className="text-2xl font-display font-bold text-gray-900 mb-2">Apariencia</h1>
+        <p className="text-gray-400 text-sm mb-6">
+          Elegí la plantilla de tu tienda y personalizá colores, tipografía y estilos.
+        </p>
+      </div>
 
       {error && (
         <div className="mb-6 p-4 rounded-lg bg-red-50 border border-red-200 text-red-600 text-sm">
@@ -472,7 +497,7 @@ export default function AppearancePage() {
         </div>
       )}
 
-      <div className="flex border-b border-gray-200 mb-6">
+      <div data-tour="appearance-tabs" className="flex border-b border-gray-200 mb-6">
         {TABS.map((tab) => (
           <button
             key={tab.id}
@@ -875,6 +900,14 @@ export default function AppearancePage() {
           {saving ? "Guardando..." : "Guardar cambios"}
         </button>
       </div>
+
+      {/* Tour de la página de apariencia */}
+      {user && (
+        <DashboardTour
+          steps={APPEARANCE_TOUR_STEPS}
+          storageKey={`agentro:tour-appearance:${user.id}`}
+        />
+      )}
     </div>
   );
 }

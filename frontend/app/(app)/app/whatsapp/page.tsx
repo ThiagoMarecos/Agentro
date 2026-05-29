@@ -2,6 +2,28 @@
 
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useStore } from "@/lib/context/StoreContext";
+import { useAuth } from "@/app/providers/AuthProvider";
+import { DashboardTour, type TourStep } from "@/components/onboarding-tour/DashboardTour";
+
+const WHATSAPP_TOUR_STEPS: TourStep[] = [
+  {
+    selector: '[data-tour="whatsapp-header"]',
+    placement: "bottom",
+    title: "Conectá tu WhatsApp Business",
+    body: "Esta sección integra tu número de WhatsApp con Agentro. Una vez vinculado, el agente IA responde a tus clientes en automático con tu catálogo, precios y stock real. Atiende 24/7 sin que vos hagas nada.",
+  },
+  {
+    selector: '[data-tour="whatsapp-connect-card"]',
+    placement: "top",
+    title: "Cómo se conecta",
+    body: "Apretás 'Vincular número de WhatsApp' y te aparece un código QR. Lo escaneás desde WhatsApp → Dispositivos vinculados, igual que WhatsApp Web. Listo: el agente empieza a responder de inmediato. Tu número sigue funcionando normal en tu celular.",
+  },
+  {
+    centered: true,
+    title: "¿Y si necesito intervenir manualmente?",
+    body: "En cualquier momento podés 'tomar control' de un chat desde el Pipeline IA — el bot se pausa y vos respondés directo. Cuando le devolvés el control, sigue desde donde quedó. También podés configurar reglas para que escale automáticamente a un humano (clientes VIP, montos altos, etc.).",
+  },
+];
 import {
   getWhatsAppStatus,
   connectWhatsApp,
@@ -32,6 +54,7 @@ type Step = "loading" | "not_configured" | "waiting_scan" | "connected";
 
 export default function WhatsAppPage() {
   const { currentStore } = useStore();
+  const { user } = useAuth();
   const [step, setStep] = useState<Step>("loading");
   const [channel, setChannel] = useState<WhatsAppChannel | null>(null);
   const [qrCode, setQrCode] = useState<string | null>(null);
@@ -211,7 +234,7 @@ export default function WhatsAppPage() {
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
-      <div>
+      <div data-tour="whatsapp-header">
         <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-green-500 flex items-center justify-center">
             <MessageSquare className="w-5 h-5 text-white" />
@@ -238,7 +261,7 @@ export default function WhatsAppPage() {
 
       {/* Sin configurar */}
       {step === "not_configured" && (
-        <div className="bg-white rounded-xl border border-gray-200/60 p-8">
+        <div data-tour="whatsapp-connect-card" className="bg-white rounded-xl border border-gray-200/60 p-8">
           <div className="text-center mb-8">
             <div className="w-16 h-16 rounded-2xl bg-green-50 flex items-center justify-center mx-auto mb-4">
               <Smartphone className="w-8 h-8 text-green-600" />
@@ -437,6 +460,14 @@ export default function WhatsAppPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Tour de la página de WhatsApp */}
+      {user && (
+        <DashboardTour
+          steps={WHATSAPP_TOUR_STEPS}
+          storageKey={`agentro:tour-whatsapp:${user.id}`}
+        />
       )}
     </div>
   );
