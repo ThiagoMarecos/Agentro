@@ -156,59 +156,61 @@ export default function InvitationsAdminPage() {
   return (
     <div className="max-w-7xl mx-auto">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-violet-50 text-violet-600 flex items-center justify-center">
+      <div className="flex items-start sm:items-center justify-between mb-6 gap-3 flex-wrap">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-10 h-10 rounded-xl bg-violet-50 text-violet-600 flex items-center justify-center flex-shrink-0">
             <Inbox className="w-5 h-5" />
           </div>
-          <div>
+          <div className="min-w-0">
             <h1 className="text-xl font-bold text-gray-900">Pedidos de invitación</h1>
-            <p className="text-sm text-gray-500">
-              Solicitudes recibidas desde el formulario público <code className="text-xs bg-gray-100 px-1.5 py-0.5 rounded">/request-invite</code>
+            <p className="text-sm text-gray-500 truncate">
+              Recibidos desde <code className="text-xs bg-gray-100 px-1.5 py-0.5 rounded">/request-invite</code>
             </p>
           </div>
         </div>
         <button
           onClick={load}
           disabled={loading}
-          className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-white border border-gray-200 text-gray-700 text-sm hover:bg-gray-50 transition disabled:opacity-50"
+          className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-white border border-gray-200 text-gray-700 text-sm hover:bg-gray-50 transition disabled:opacity-50 flex-shrink-0"
         >
           {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-          Recargar
+          <span className="hidden sm:inline">Recargar</span>
         </button>
       </div>
 
-      {/* Filtros */}
-      <div className="flex flex-wrap items-center gap-2 mb-4">
-        {FILTERS.map((f) => {
-          const active = filter === f.v;
-          const count = (counts as any)[f.v] ?? 0;
-          return (
-            <button
-              key={f.v}
-              onClick={() => setFilter(f.v)}
-              className={`px-3 py-1.5 rounded-full text-sm font-medium border transition ${
-                active
-                  ? "bg-violet-600 text-white border-violet-600"
-                  : "bg-white text-gray-600 border-gray-200 hover:border-gray-300"
-              }`}
-            >
-              {f.label}
-              <span className={`ml-2 text-xs ${active ? "text-violet-200" : "text-gray-400"}`}>
-                {count}
-              </span>
-            </button>
-          );
-        })}
-        <div className="flex-1" />
-        <div className="relative">
+      {/* Filtros + buscador */}
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-4">
+        <div className="flex flex-wrap items-center gap-2 -mx-1 px-1 overflow-x-auto pb-1">
+          {FILTERS.map((f) => {
+            const active = filter === f.v;
+            const count = (counts as any)[f.v] ?? 0;
+            return (
+              <button
+                key={f.v}
+                onClick={() => setFilter(f.v)}
+                className={`px-3 py-1.5 rounded-full text-sm font-medium border transition whitespace-nowrap flex-shrink-0 ${
+                  active
+                    ? "bg-violet-600 text-white border-violet-600"
+                    : "bg-white text-gray-600 border-gray-200 hover:border-gray-300"
+                }`}
+              >
+                {f.label}
+                <span className={`ml-2 text-xs ${active ? "text-violet-200" : "text-gray-400"}`}>
+                  {count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+        <div className="sm:flex-1" />
+        <div className="relative sm:w-72">
           <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Buscar por nombre, email, negocio..."
-            className="pl-9 pr-3 py-2 w-72 rounded-lg border border-gray-200 bg-white text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
+            placeholder="Buscar..."
+            className="pl-9 pr-3 py-2 w-full rounded-lg border border-gray-200 bg-white text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
           />
         </div>
       </div>
@@ -231,55 +233,94 @@ export default function InvitationsAdminPage() {
             <p className="text-sm">No hay solicitudes {filter !== "all" ? `con estado "${STATUS_META[filter as InvitationStatus].label.toLowerCase()}"` : ""}.</p>
           </div>
         ) : (
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-gray-100 bg-gray-50/50 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">
-                <th className="px-5 py-3">Solicitante</th>
-                <th className="px-5 py-3">Negocio</th>
-                <th className="px-5 py-3">Origen</th>
-                <th className="px-5 py-3">Estado</th>
-                <th className="px-5 py-3">Recibido</th>
-                <th className="px-5 py-3 w-10"></th>
-              </tr>
-            </thead>
-            <tbody>
+          <>
+            {/* Mobile: cards */}
+            <div className="md:hidden divide-y divide-gray-100">
               {filtered.map((it) => {
                 const meta = STATUS_META[it.status] || STATUS_META.pending;
                 return (
-                  <tr
+                  <button
                     key={it.id}
+                    type="button"
                     onClick={() => setSelected(it)}
-                    className="border-b border-gray-50 hover:bg-violet-50/30 cursor-pointer transition"
+                    className="w-full text-left px-4 py-4 hover:bg-violet-50/30 active:bg-violet-50/60 transition"
                   >
-                    <td className="px-5 py-4">
-                      <div className="font-medium text-gray-900">{it.full_name}</div>
-                      <div className="text-xs text-gray-500 truncate max-w-[220px]">{it.email}</div>
-                    </td>
-                    <td className="px-5 py-4">
-                      <div className="font-medium text-gray-900 truncate max-w-[180px]">{it.business_name}</div>
-                      <div className="text-xs text-gray-500">{BUSINESS_LABEL[it.business_type] || it.business_type}</div>
-                    </td>
-                    <td className="px-5 py-4 text-gray-600">
-                      {it.referral_source ? REFERRAL_LABEL[it.referral_source] || it.referral_source : <span className="text-gray-300">—</span>}
-                    </td>
-                    <td className="px-5 py-4">
-                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${meta.cls}`}>
+                    <div className="flex items-start justify-between gap-3 mb-2">
+                      <div className="min-w-0 flex-1">
+                        <div className="font-semibold text-gray-900 text-sm truncate">{it.full_name}</div>
+                        <div className="text-xs text-gray-500 truncate">{it.email}</div>
+                      </div>
+                      <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-medium border whitespace-nowrap flex-shrink-0 ${meta.cls}`}>
                         <span className={`w-1.5 h-1.5 rounded-full ${meta.dot}`} />
                         {meta.label}
                       </span>
-                    </td>
-                    <td className="px-5 py-4 text-gray-500 text-xs">
-                      <div className="flex items-center gap-1">
+                    </div>
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="min-w-0">
+                        <div className="text-xs font-medium text-gray-700 truncate">{it.business_name}</div>
+                        <div className="text-[11px] text-gray-400 truncate">{BUSINESS_LABEL[it.business_type] || it.business_type}</div>
+                      </div>
+                      <div className="text-[11px] text-gray-400 flex items-center gap-1 flex-shrink-0">
                         <Clock className="w-3 h-3" />
                         {timeAgo(it.created_at)}
                       </div>
-                    </td>
-                    <td className="px-5 py-4 text-right text-gray-300">›</td>
-                  </tr>
+                    </div>
+                  </button>
                 );
               })}
-            </tbody>
-          </table>
+            </div>
+
+            {/* Desktop: tabla */}
+            <table className="hidden md:table w-full text-sm">
+              <thead>
+                <tr className="border-b border-gray-100 bg-gray-50/50 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">
+                  <th className="px-5 py-3">Solicitante</th>
+                  <th className="px-5 py-3">Negocio</th>
+                  <th className="px-5 py-3">Origen</th>
+                  <th className="px-5 py-3">Estado</th>
+                  <th className="px-5 py-3">Recibido</th>
+                  <th className="px-5 py-3 w-10"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((it) => {
+                  const meta = STATUS_META[it.status] || STATUS_META.pending;
+                  return (
+                    <tr
+                      key={it.id}
+                      onClick={() => setSelected(it)}
+                      className="border-b border-gray-50 hover:bg-violet-50/30 cursor-pointer transition"
+                    >
+                      <td className="px-5 py-4">
+                        <div className="font-medium text-gray-900">{it.full_name}</div>
+                        <div className="text-xs text-gray-500 truncate max-w-[220px]">{it.email}</div>
+                      </td>
+                      <td className="px-5 py-4">
+                        <div className="font-medium text-gray-900 truncate max-w-[180px]">{it.business_name}</div>
+                        <div className="text-xs text-gray-500">{BUSINESS_LABEL[it.business_type] || it.business_type}</div>
+                      </td>
+                      <td className="px-5 py-4 text-gray-600">
+                        {it.referral_source ? REFERRAL_LABEL[it.referral_source] || it.referral_source : <span className="text-gray-300">—</span>}
+                      </td>
+                      <td className="px-5 py-4">
+                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${meta.cls}`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${meta.dot}`} />
+                          {meta.label}
+                        </span>
+                      </td>
+                      <td className="px-5 py-4 text-gray-500 text-xs">
+                        <div className="flex items-center gap-1">
+                          <Clock className="w-3 h-3" />
+                          {timeAgo(it.created_at)}
+                        </div>
+                      </td>
+                      <td className="px-5 py-4 text-right text-gray-300">›</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </>
         )}
       </div>
 

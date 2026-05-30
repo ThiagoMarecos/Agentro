@@ -17,6 +17,8 @@ import {
   Bot,
   Sparkles,
   Inbox,
+  Menu,
+  X,
 } from "lucide-react";
 import { useEffect } from "react";
 import { listInvitationRequests } from "@/lib/api/invitations-admin";
@@ -62,7 +64,21 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { user, logout } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const [pendingInvites, setPendingInvites] = useState<number>(0);
+
+  // Cerrar drawer al cambiar de ruta
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [pathname]);
+
+  // Bloquear scroll del body cuando el drawer mobile esta abierto
+  useEffect(() => {
+    if (mobileOpen) {
+      document.body.style.overflow = "hidden";
+      return () => { document.body.style.overflow = ""; };
+    }
+  }, [mobileOpen]);
 
   // Carga contador de invitaciones pendientes (cada 60s)
   useEffect(() => {
@@ -84,20 +100,49 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen bg-gray-50 flex" style={{ colorScheme: "light" }}>
-      <aside className={`${collapsed ? "w-[72px]" : "w-64"} bg-white border-r border-gray-200/60 flex flex-col transition-all duration-300 flex-shrink-0`}>
+      {/* Backdrop mobile */}
+      {mobileOpen && (
+        <div
+          className="md:hidden fixed inset-0 bg-gray-900/40 backdrop-blur-[2px] z-40 animate-in fade-in duration-200"
+          onClick={() => setMobileOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+
+      <aside
+        className={`
+          ${collapsed ? "md:w-[72px]" : "md:w-64"}
+          fixed md:static inset-y-0 left-0 z-50
+          w-72 max-w-[85vw]
+          bg-white border-r border-gray-200/60 flex flex-col
+          transition-transform md:transition-all duration-300 flex-shrink-0
+          ${mobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}
+        `}
+      >
         {/* Logo */}
-        <div className={`h-16 flex items-center border-b border-gray-100 ${collapsed ? "justify-center px-2" : "justify-between px-5"}`}>
-          {!collapsed && (
-            <Link href="/admin" className="flex items-center gap-2">
+        <div className={`h-16 flex items-center border-b border-gray-100 ${collapsed ? "md:justify-center md:px-2 justify-between px-5" : "justify-between px-5"}`}>
+          {(!collapsed || mobileOpen) && (
+            <Link href="/admin" onClick={() => setMobileOpen(false)} className={`flex items-center gap-2 ${collapsed ? "md:hidden" : ""}`}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src="/logo-black.png" alt="Agentro" className="h-6 w-auto" />
               <span className="text-[10px] font-semibold bg-violet-100 text-violet-700 px-1.5 py-0.5 rounded-md uppercase tracking-wide">
                 Admin
               </span>
             </Link>
           )}
+          {/* Close mobile */}
+          <button
+            onClick={() => setMobileOpen(false)}
+            className="md:hidden p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition"
+            aria-label="Cerrar menú"
+          >
+            <X className="w-5 h-5" />
+          </button>
+          {/* Collapse desktop */}
           <button
             onClick={() => setCollapsed(!collapsed)}
-            className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition"
+            className="hidden md:flex p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition"
+            aria-label={collapsed ? "Expandir sidebar" : "Colapsar sidebar"}
           >
             <ChevronLeft className={`w-4 h-4 transition-transform duration-300 ${collapsed ? "rotate-180" : ""}`} />
           </button>
@@ -192,25 +237,34 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
       </aside>
 
       <div className="flex-1 flex flex-col min-w-0">
-        <header className="h-16 bg-white border-b border-gray-200/60 flex items-center justify-between px-6 flex-shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-violet-50 flex items-center justify-center text-violet-600">
+        <header className="h-16 bg-white border-b border-gray-200/60 flex items-center justify-between px-4 sm:px-6 flex-shrink-0 gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            {/* Hamburger mobile */}
+            <button
+              onClick={() => setMobileOpen(true)}
+              className="md:hidden p-2 -ml-1 rounded-lg hover:bg-gray-100 text-gray-600 transition flex-shrink-0"
+              aria-label="Abrir menú"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+            <div className="hidden sm:flex w-8 h-8 rounded-lg bg-violet-50 items-center justify-center text-violet-600 flex-shrink-0">
               <Shield className="w-4 h-4" />
             </div>
-            <div>
-              <p className="text-sm font-medium text-gray-900">Panel de Administración</p>
-              <p className="text-xs text-gray-400">Gestión global de Agentro</p>
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-gray-900 truncate">Panel de Administración</p>
+              <p className="text-xs text-gray-400 truncate hidden sm:block">Gestión global de Agentro</p>
             </div>
           </div>
           <Link
             href="/app"
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-gray-50 text-gray-600 text-sm font-medium hover:bg-gray-100 transition"
+            className="inline-flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg bg-gray-50 text-gray-600 text-sm font-medium hover:bg-gray-100 transition flex-shrink-0"
           >
-            Ir al Panel de Tienda
+            <span className="hidden sm:inline">Ir al Panel de Tienda</span>
+            <span className="sm:hidden">Tienda</span>
           </Link>
         </header>
 
-        <main className="flex-1 p-6 overflow-auto">{children}</main>
+        <main className="flex-1 p-4 sm:p-6 overflow-auto">{children}</main>
       </div>
     </div>
   );

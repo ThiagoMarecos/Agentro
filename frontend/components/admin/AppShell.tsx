@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
@@ -22,6 +22,9 @@ import {
   Globe,
   UserPlus,
   ScanLine,
+  Menu,
+  X,
+  ExternalLink,
 } from "lucide-react";
 import { useAuth } from "@/app/providers/AuthProvider";
 import { useStore } from "@/lib/context/StoreContext";
@@ -71,21 +74,64 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const { user, logout } = useAuth();
   const { stores, currentStore, setCurrentStore } = useStore();
   const [collapsed, setCollapsed] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  // Cerrar el drawer mobile al cambiar de ruta
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [pathname]);
+
+  // Bloquear scroll del body cuando el drawer mobile esta abierto
+  useEffect(() => {
+    if (mobileOpen) {
+      document.body.style.overflow = "hidden";
+      return () => { document.body.style.overflow = ""; };
+    }
+  }, [mobileOpen]);
 
   return (
     <div className="min-h-screen bg-gray-50 flex" style={{ colorScheme: "light" }}>
+      {/* Backdrop mobile cuando el drawer esta abierto */}
+      {mobileOpen && (
+        <div
+          className="md:hidden fixed inset-0 bg-gray-900/40 backdrop-blur-[2px] z-40 animate-in fade-in duration-200"
+          onClick={() => setMobileOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+
       {/* Sidebar */}
-      <aside className={`${collapsed ? "w-[72px]" : "w-64"} bg-white border-r border-gray-200/60 flex flex-col transition-all duration-300 flex-shrink-0`}>
+      <aside
+        className={`
+          ${collapsed ? "md:w-[72px]" : "md:w-64"}
+          fixed md:static inset-y-0 left-0 z-50
+          w-72 max-w-[85vw]
+          bg-white border-r border-gray-200/60 flex flex-col
+          transition-transform md:transition-all duration-300 flex-shrink-0
+          ${mobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}
+        `}
+      >
         {/* Logo */}
-        <div className={`h-16 flex items-center border-b border-gray-100 ${collapsed ? "justify-center px-2" : "justify-between px-5"}`}>
-          {!collapsed && (
-            <Link href="/app">
+        <div className={`h-16 flex items-center border-b border-gray-100 ${collapsed ? "md:justify-center md:px-2 justify-between px-5" : "justify-between px-5"}`}>
+          {(!collapsed || mobileOpen) && (
+            <Link href="/app" onClick={() => setMobileOpen(false)} className={collapsed ? "md:hidden" : ""}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src="/logo-black.png" alt="Agentro" className="h-6 w-auto" />
             </Link>
           )}
+          {/* Close button mobile */}
+          <button
+            onClick={() => setMobileOpen(false)}
+            className="md:hidden p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition"
+            aria-label="Cerrar menú"
+          >
+            <X className="w-5 h-5" />
+          </button>
+          {/* Collapse button desktop */}
           <button
             onClick={() => setCollapsed(!collapsed)}
-            className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition"
+            className="hidden md:flex p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition"
+            aria-label={collapsed ? "Expandir sidebar" : "Colapsar sidebar"}
           >
             <ChevronLeft className={`w-4 h-4 transition-transform duration-300 ${collapsed ? "rotate-180" : ""}`} />
           </button>
@@ -196,38 +242,47 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       {/* Main */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Header */}
-        <header className="h-16 bg-white border-b border-gray-200/60 flex items-center justify-between px-6 flex-shrink-0">
-          <div className="flex items-center gap-3">
+        <header className="h-16 bg-white border-b border-gray-200/60 flex items-center justify-between px-4 sm:px-6 flex-shrink-0 gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            {/* Hamburger mobile */}
+            <button
+              onClick={() => setMobileOpen(true)}
+              className="md:hidden p-2 -ml-1 rounded-lg hover:bg-gray-100 text-gray-600 transition flex-shrink-0"
+              aria-label="Abrir menú"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
             {currentStore && (
               <>
-                <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600">
+                <div className="hidden sm:flex w-8 h-8 rounded-lg bg-indigo-50 items-center justify-center text-indigo-600 flex-shrink-0">
                   <Store className="w-4 h-4" />
                 </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-900">{currentStore.name}</p>
-                  <p className="text-xs text-gray-400">{currentStore.slug}.getagentro.com</p>
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-gray-900 truncate">{currentStore.name}</p>
+                  <p className="text-xs text-gray-400 truncate hidden sm:block">{currentStore.slug}.getagentro.com</p>
                 </div>
               </>
             )}
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 flex-shrink-0">
             {currentStore && (
               <Link
                 href={`/store/${currentStore.slug}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 data-tour="storefront-link"
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-50 text-indigo-600 text-sm font-medium hover:bg-indigo-100 transition"
+                className="inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-lg bg-indigo-50 text-indigo-600 text-sm font-medium hover:bg-indigo-100 transition"
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
-                Ver mi tienda
+                <ExternalLink className="w-4 h-4" />
+                <span className="hidden sm:inline">Ver mi tienda</span>
+                <span className="sm:hidden">Tienda</span>
               </Link>
             )}
           </div>
         </header>
 
         {/* Content */}
-        <main className="flex-1 p-6 overflow-auto">
+        <main className="flex-1 p-4 sm:p-6 overflow-auto">
           {currentStore && !currentStore.is_active ? (
             <div className="flex items-center justify-center h-full">
               <div className="max-w-md w-full text-center">
