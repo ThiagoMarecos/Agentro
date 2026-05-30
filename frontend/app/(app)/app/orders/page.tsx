@@ -479,8 +479,55 @@ export default function OrdersPage() {
           </button>
         </div>
       ) : (
-        /* Data table */
-        <div className="bg-white rounded-xl border border-gray-200/60 overflow-hidden">
+        <>
+          {/* Mobile: cards apiladas */}
+          <div className="md:hidden bg-white rounded-xl border border-gray-200/60 overflow-hidden divide-y divide-gray-100">
+            {filtered.map((order) => {
+              const timeAgo = order.created_at ? getTimeAgo(new Date(order.created_at)) : "";
+              return (
+                <button
+                  key={order.id}
+                  type="button"
+                  onClick={() => router.push(`/app/orders/${order.id}`)}
+                  className="w-full text-left flex items-center gap-3 p-4 hover:bg-gray-50/80 active:bg-gray-100/60 transition"
+                >
+                  <div className="w-10 h-10 rounded-lg bg-indigo-50 flex items-center justify-center flex-shrink-0">
+                    <ShoppingBag className="w-4 h-4 text-indigo-500" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-sm font-semibold text-gray-900 truncate">
+                        {order.order_number}
+                      </span>
+                      <span className="text-sm font-bold text-gray-900 flex-shrink-0">
+                        {formatPrice(Number(order.total), currency)}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between gap-2 mt-1">
+                      <div onClick={(e) => e.stopPropagation()}>
+                        <StatusDropdown
+                          currentStatus={order.status}
+                          onChangeStatus={(s) => handleStatusChange(order.id, s)}
+                        />
+                      </div>
+                      {timeAgo && (
+                        <span className="text-[11px] text-gray-400 flex-shrink-0">{timeAgo}</span>
+                      )}
+                    </div>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-gray-300 flex-shrink-0" />
+                </button>
+              );
+            })}
+            {filtered.length !== orders.length && (
+              <div className="px-4 py-3 bg-gray-50/30 text-xs text-gray-400 text-center">
+                Mostrando {filtered.length} de {orders.length}
+              </div>
+            )}
+          </div>
+
+          {/* Desktop: tabla */}
+          <div className="hidden md:block bg-white rounded-xl border border-gray-200/60 overflow-hidden">
           <table className="w-full">
             <thead>
               <tr className="border-b border-gray-100 bg-gray-50/50">
@@ -570,7 +617,8 @@ export default function OrdersPage() {
               Mostrando {filtered.length} de {orders.length} pedidos
             </div>
           )}
-        </div>
+          </div>
+        </>
       )}
 
       {/* Tour de la página de pedidos */}

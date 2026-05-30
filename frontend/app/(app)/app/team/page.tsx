@@ -159,7 +159,59 @@ export default function TeamPage() {
         <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3">
           Miembros ({members.length})
         </h2>
-        <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+        {/* Mobile: cards */}
+        <div className="md:hidden bg-white border border-gray-200 rounded-xl overflow-hidden divide-y divide-gray-100">
+          {members.map((m) => (
+            <div key={m.id} className="flex items-start gap-3 p-4">
+              {m.avatar_url ? (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img src={m.avatar_url} alt="" className="w-10 h-10 rounded-full object-cover flex-shrink-0" />
+              ) : (
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-violet-500 text-white grid place-items-center text-sm font-semibold flex-shrink-0">
+                  {(m.full_name || m.email).charAt(0).toUpperCase()}
+                </div>
+              )}
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-semibold text-gray-900 truncate">
+                  {m.full_name || m.email.split("@")[0]}
+                </div>
+                <div className="text-xs text-gray-500 truncate">{m.email}</div>
+                <div className="mt-2 flex items-center gap-2 flex-wrap">
+                  {m.role === "owner" ? (
+                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${ROLE_BADGE[m.role] || "bg-gray-100 text-gray-700"}`}>
+                      <ShieldCheck className="w-3 h-3" />
+                      {ROLE_LABELS[m.role]}
+                    </span>
+                  ) : (
+                    <select
+                      value={m.role}
+                      onChange={(e) => onChangeRole(m.id, e.target.value as AssignableRole)}
+                      className="text-xs px-2 py-1 border border-gray-200 rounded bg-white text-gray-700"
+                    >
+                      <option value="manager">Gerente</option>
+                      <option value="support">Soporte</option>
+                      <option value="seller">Vendedor/a</option>
+                    </select>
+                  )}
+                  <span className="text-[11px] text-gray-400">
+                    {new Date(m.joined_at).toLocaleDateString("es-AR")}
+                  </span>
+                </div>
+              </div>
+              {m.role !== "owner" && (
+                <button
+                  onClick={() => onRemove(m.id, m.full_name || m.email)}
+                  className="p-2 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition flex-shrink-0"
+                  aria-label="Quitar miembro"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+        {/* Desktop: tabla */}
+        <div className="hidden md:block bg-white border border-gray-200 rounded-xl overflow-hidden">
           <table className="w-full">
             <thead className="bg-gray-50 text-xs text-gray-500 uppercase tracking-wide">
               <tr>
@@ -235,8 +287,8 @@ export default function TeamPage() {
           <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3">
             Invitaciones pendientes ({pendingInvitations.length})
           </h2>
-          <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-            <table className="w-full">
+          <div className="bg-white border border-gray-200 rounded-xl overflow-x-auto">
+            <table className="w-full min-w-[600px]">
               <thead className="bg-gray-50 text-xs text-gray-500 uppercase tracking-wide">
                 <tr>
                   <th className="text-left px-4 py-3 font-medium">Email</th>

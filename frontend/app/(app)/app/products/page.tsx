@@ -319,8 +319,8 @@ export default function ProductsPage() {
   return (
     <div>
       {/* Header */}
-      <div data-tour="products-header" className="flex justify-between items-center mb-6">
-        <div>
+      <div data-tour="products-header" className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-6">
+        <div className="min-w-0">
           <h1 className="text-2xl font-display font-bold text-gray-900">Productos</h1>
           <p className="text-sm text-gray-400 mt-0.5">
             {loading
@@ -330,22 +330,24 @@ export default function ProductsPage() {
               : `${total} producto${total !== 1 ? "s" : ""} en tu catálogo`}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-shrink-0">
           <Link
             href="/app/products/import-from-url"
             data-tour="products-import"
-            className="flex items-center gap-2 bg-white border border-gray-200 text-gray-700 px-4 py-2.5 rounded-lg font-medium text-sm hover:bg-gray-50 hover:border-gray-300 transition"
+            className="flex items-center gap-2 bg-white border border-gray-200 text-gray-700 px-3 sm:px-4 py-2.5 rounded-lg font-medium text-sm hover:bg-gray-50 hover:border-gray-300 transition"
           >
             <Globe className="w-4 h-4 text-gray-500" />
-            Importar de otro sitio
+            <span className="hidden sm:inline">Importar de otro sitio</span>
+            <span className="sm:hidden">Importar</span>
           </Link>
           <Link
             href="/app/products/new"
             data-tour="products-create"
-            className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2.5 rounded-lg font-medium text-sm hover:bg-indigo-700 transition shadow-sm shadow-indigo-500/20"
+            className="flex items-center gap-2 bg-indigo-600 text-white px-3 sm:px-4 py-2.5 rounded-lg font-medium text-sm hover:bg-indigo-700 transition shadow-sm shadow-indigo-500/20"
           >
             <Plus className="w-4 h-4" />
-            Añadir producto
+            <span className="hidden sm:inline">Añadir producto</span>
+            <span className="sm:hidden">Añadir</span>
           </Link>
         </div>
       </div>
@@ -427,8 +429,119 @@ export default function ProductsPage() {
         <div className="mb-4 p-3 rounded-lg bg-red-50 text-red-600 text-sm border border-red-200">{error}</div>
       )}
 
-      {/* Table */}
-      <div data-tour="products-table" className="overflow-x-auto rounded-xl border border-gray-200/60 bg-white">
+      {/* Mobile: cards apiladas */}
+      <div className="md:hidden rounded-xl border border-gray-200/60 bg-white overflow-hidden divide-y divide-gray-100">
+        {loading ? (
+          Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="flex items-center gap-3 p-4 animate-pulse">
+              <div className="w-14 h-14 rounded-xl bg-gray-100 flex-shrink-0" />
+              <div className="flex-1 space-y-1.5">
+                <div className="h-3 w-3/4 bg-gray-100 rounded" />
+                <div className="h-3 w-1/2 bg-gray-50 rounded" />
+              </div>
+            </div>
+          ))
+        ) : products.length === 0 ? (
+          <div className="p-10 text-center">
+            <div className="w-14 h-14 rounded-2xl bg-indigo-50 mx-auto mb-3 flex items-center justify-center">
+              <Package className="w-7 h-7 text-indigo-300" />
+            </div>
+            <p className="font-semibold text-gray-900 text-sm">
+              {hasFilters ? "Sin resultados" : "Sin productos"}
+            </p>
+            <p className="text-gray-400 text-xs mt-1 max-w-xs mx-auto">
+              {hasFilters ? "Probá con otros filtros." : "Añadí tu primer producto para empezar a vender."}
+            </p>
+            {!hasFilters ? (
+              <Link
+                href="/app/products/new"
+                className="inline-flex items-center gap-1.5 mt-4 bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 transition"
+              >
+                <Plus className="w-4 h-4" /> Añadir
+              </Link>
+            ) : (
+              <button
+                onClick={() => { setSearch(""); setStatusFilter(""); setCategoryFilter(""); setSkip(0); }}
+                className="inline-flex items-center gap-1.5 mt-4 px-4 py-2 rounded-lg border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition"
+              >
+                <X className="w-3.5 h-3.5" /> Limpiar
+              </button>
+            )}
+          </div>
+        ) : (
+          products.map((p) => {
+            const isSelected = selectedIds.has(p.id);
+            return (
+              <div
+                key={p.id}
+                className={`flex items-start gap-3 p-4 ${isSelected ? "bg-indigo-50/40" : ""}`}
+              >
+                <button
+                  onClick={() => toggleSelect(p.id)}
+                  className="text-gray-400 hover:text-indigo-600 transition mt-1 flex-shrink-0"
+                  aria-label={isSelected ? "Deseleccionar" : "Seleccionar"}
+                >
+                  {isSelected ? (
+                    <CheckSquare className="w-5 h-5 text-indigo-600" />
+                  ) : (
+                    <Square className="w-5 h-5" />
+                  )}
+                </button>
+                <Link
+                  href={`/app/products/${p.id}`}
+                  className="w-14 h-14 rounded-xl bg-gray-100 overflow-hidden flex items-center justify-center flex-shrink-0"
+                >
+                  {p.cover_image_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={p.cover_image_url} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <Package className="w-5 h-5 text-gray-300" />
+                  )}
+                </Link>
+                <div className="flex-1 min-w-0">
+                  <Link
+                    href={`/app/products/${p.id}`}
+                    className="font-semibold text-gray-900 text-sm truncate block leading-tight"
+                  >
+                    {p.name}
+                  </Link>
+                  <div className="flex items-center gap-2 mt-1 flex-wrap">
+                    <ProductStatusBadge status={p.status} />
+                    <StockBadge qty={p.stock_quantity ?? 0} />
+                  </div>
+                  <div className="flex items-center justify-between mt-2">
+                    <span className="text-sm font-bold text-gray-800">
+                      {formatPrice(Number(p.price), currentStore?.currency)}
+                    </span>
+                    <span className="text-[11px] text-gray-400 truncate ml-2">
+                      {p.category_name || "Sin categoría"}
+                    </span>
+                  </div>
+                </div>
+                <div className="flex flex-col gap-1 flex-shrink-0">
+                  <button
+                    onClick={() => handleDuplicate(p.id)}
+                    className="p-2 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition"
+                    aria-label="Duplicar"
+                  >
+                    <Copy className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => handleDelete(p.id, p.name)}
+                    className="p-2 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-600 transition"
+                    aria-label="Eliminar"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
+
+      {/* Desktop: tabla */}
+      <div data-tour="products-table" className="hidden md:block overflow-x-auto rounded-xl border border-gray-200/60 bg-white">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-gray-100">
