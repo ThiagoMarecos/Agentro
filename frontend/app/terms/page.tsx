@@ -2,7 +2,16 @@
  * Términos de Uso — Agentro
  */
 
+import type { Metadata } from "next";
 import Link from "next/link";
+
+export const metadata: Metadata = {
+  title: "Términos de uso",
+  description:
+    "Términos y condiciones de uso de Agentro: derechos, responsabilidades, propiedad intelectual, política de uso aceptable y condiciones de la beta cerrada.",
+  alternates: { canonical: "/terms" },
+  robots: { index: true, follow: true },
+};
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (

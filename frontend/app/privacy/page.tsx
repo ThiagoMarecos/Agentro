@@ -2,7 +2,16 @@
  * Política de Privacidad — Agentro
  */
 
+import type { Metadata } from "next";
 import Link from "next/link";
+
+export const metadata: Metadata = {
+  title: "Política de privacidad",
+  description:
+    "Cómo Agentro recopila, usa y protege tus datos personales y los datos de tus clientes. Cumplimiento de protección de datos y políticas de retención.",
+  alternates: { canonical: "/privacy" },
+  robots: { index: true, follow: true },
+};
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (

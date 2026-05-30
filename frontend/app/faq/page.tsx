@@ -2,7 +2,22 @@
  * FAQ - Landing pública
  */
 
+import type { Metadata } from "next";
 import Link from "next/link";
+
+export const metadata: Metadata = {
+  title: "Preguntas frecuentes (FAQ)",
+  description:
+    "Todo lo que necesitás saber sobre Agentro: cómo funciona el agente IA, integración con WhatsApp Business, precios, seguridad, soporte y cómo unirte a la beta cerrada.",
+  alternates: { canonical: "/faq" },
+  openGraph: {
+    title: "FAQ — Agentro",
+    description:
+      "Preguntas frecuentes sobre el agente de IA, WhatsApp, precios y la beta cerrada.",
+    url: "/faq",
+    type: "website",
+  },
+};
 
 export default function FAQPage() {
   return (

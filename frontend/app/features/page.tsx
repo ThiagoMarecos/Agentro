@@ -2,7 +2,22 @@
  * Página de features - Landing pública
  */
 
+import type { Metadata } from "next";
 import Link from "next/link";
+
+export const metadata: Metadata = {
+  title: "Features — Cómo funciona el agente de IA de ventas",
+  description:
+    "Descubrí cómo el agente IA de Agentro atiende WhatsApp 24/7, muestra tu catálogo, responde precios y stock en tiempo real, y escala a un humano cuando hace falta. Tienda online, POS y CRM unificados.",
+  alternates: { canonical: "/features" },
+  openGraph: {
+    title: "Features — Agentro",
+    description:
+      "Agente IA que vende por WhatsApp + tienda online + POS + CRM en una sola plataforma.",
+    url: "/features",
+    type: "website",
+  },
+};
 
 export default function FeaturesPage() {
   return (
