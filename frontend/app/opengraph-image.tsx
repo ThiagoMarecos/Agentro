@@ -4,6 +4,10 @@ import { ImageResponse } from "next/og";
  * Open Graph image dinámica para la home y rutas que no tengan su propia.
  * Next.js genera esto en build time y lo sirve en /opengraph-image.
  * 1200x630 es el tamaño recomendado por OG / Twitter / WhatsApp.
+ *
+ * IMPORTANTE: @vercel/og usa Satori y requiere `display: flex` o `display: none`
+ * en cualquier <div> que tenga más de un hijo. Por eso TODOS los divs acá
+ * tienen display flex explícito.
  */
 
 export const runtime = "edge";
@@ -28,20 +32,7 @@ export default async function OGImage() {
           fontFamily: "system-ui, -apple-system, sans-serif",
         }}
       >
-        {/* Top gloss line */}
-        <div
-          style={{
-            position: "absolute",
-            top: 0,
-            left: "20%",
-            right: "20%",
-            height: "2px",
-            background:
-              "linear-gradient(90deg, transparent, rgba(179,155,255,0.8) 50%, transparent)",
-          }}
-        />
-
-        {/* Logo mark */}
+        {/* Logo mark + nombre */}
         <div
           style={{
             display: "flex",
@@ -52,6 +43,7 @@ export default async function OGImage() {
         >
           <div
             style={{
+              display: "flex",
               width: "48px",
               height: "48px",
               borderRadius: "12px",
@@ -63,6 +55,7 @@ export default async function OGImage() {
           />
           <div
             style={{
+              display: "flex",
               fontSize: "32px",
               fontWeight: 700,
               color: "white",
@@ -73,9 +66,12 @@ export default async function OGImage() {
           </div>
         </div>
 
-        {/* Tagline */}
+        {/* Tagline (cada parte en flex para que Satori esté contento) */}
         <div
           style={{
+            display: "flex",
+            flexWrap: "wrap",
+            justifyContent: "center",
             fontSize: "80px",
             fontWeight: 700,
             color: "white",
@@ -83,12 +79,14 @@ export default async function OGImage() {
             letterSpacing: "-0.03em",
             lineHeight: 1.05,
             marginBottom: "32px",
-            maxWidth: "960px",
+            maxWidth: "1000px",
+            gap: "16px",
           }}
         >
-          La IA vende.{" "}
+          <span style={{ display: "flex" }}>La IA vende.</span>
           <span
             style={{
+              display: "flex",
               background: "linear-gradient(135deg, #b39bff, #8b6fff)",
               backgroundClip: "text",
               color: "transparent",
@@ -101,6 +99,7 @@ export default async function OGImage() {
         {/* Sub */}
         <div
           style={{
+            display: "flex",
             fontSize: "26px",
             color: "#9ba0c0",
             textAlign: "center",
@@ -109,8 +108,7 @@ export default async function OGImage() {
             marginBottom: "60px",
           }}
         >
-          El agente de IA que atiende WhatsApp 24/7, muestra tu catálogo y te pasa el cliente listo
-          para cobrar.
+          El agente de IA que atiende WhatsApp 24/7, muestra tu catálogo y te pasa el cliente listo para cobrar.
         </div>
 
         {/* Bottom kicker */}
@@ -118,7 +116,7 @@ export default async function OGImage() {
           style={{
             display: "flex",
             alignItems: "center",
-            gap: "20px",
+            gap: "16px",
             padding: "12px 24px",
             borderRadius: "100px",
             border: "1px solid rgba(139,111,255,0.4)",
@@ -132,6 +130,7 @@ export default async function OGImage() {
         >
           <div
             style={{
+              display: "flex",
               width: "10px",
               height: "10px",
               borderRadius: "50%",
@@ -139,7 +138,7 @@ export default async function OGImage() {
               boxShadow: "0 0 12px #8b6fff",
             }}
           />
-          getagentro.com · beta cerrada
+          <span style={{ display: "flex" }}>getagentro.com · beta cerrada</span>
         </div>
       </div>
     ),
