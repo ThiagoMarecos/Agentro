@@ -199,6 +199,20 @@ export function DashboardTour({
     }
   }, [mounted, forceShow, storageKey]);
 
+  // Marcar como visto EN CUANTO se muestra el tour (no en cuanto se cierra).
+  // Asi si el user navega a otra ruta sin cerrar el tour, no le vuelve a aparecer
+  // la proxima vez. Trade-off: si en su primer momento de "wow se mostro" cierra
+  // el browser sin verlo, perdio la oportunidad. Pero es preferible a "siempre
+  // me sale el tutorial" cuando navega rapido sin cerrar.
+  useEffect(() => {
+    if (!active || forceShow) return;
+    try {
+      window.localStorage.setItem(storageKey, "1");
+    } catch {
+      /* ignore */
+    }
+  }, [active, forceShow, storageKey]);
+
   const step = steps[idx];
 
   // Calcular rect del target + iluminarlo cuando cambia el step / resize / scroll
