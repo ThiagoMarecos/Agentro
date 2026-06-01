@@ -32,6 +32,7 @@ from app.services.agent_tools.notification_tools import (
 )
 from app.services.agent_tools.store_tools import (
     tool_get_store_info,
+    tool_get_payment_methods,
     tool_get_store_discounts,
     tool_escalate_to_human,
     tool_handoff_to_seller,
@@ -64,6 +65,7 @@ TOOL_EXECUTORS = {
     "move_stage": tool_move_stage,
     "notify_owner": tool_notify_owner,
     "get_store_info": tool_get_store_info,
+    "get_payment_methods": tool_get_payment_methods,
     "get_store_discounts": tool_get_store_discounts,
     "escalate_to_human": tool_escalate_to_human,
     "handoff_to_seller": tool_handoff_to_seller,
@@ -77,7 +79,7 @@ _DEFAULT_SAFE_TOOLS = {
     "product_search", "product_detail", "check_availability",
     "recommend_product", "send_product_image", "send_product_gallery",
     "list_categories",
-    "get_store_info", "get_store_discounts",
+    "get_store_info", "get_payment_methods", "get_store_discounts",
     "update_notebook", "move_stage",
     "notify_owner", "escalate_to_human", "handoff_to_seller",
 }

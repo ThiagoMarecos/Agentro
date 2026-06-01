@@ -42,6 +42,56 @@ def tool_get_store_info(db: Session, session: SalesSession, **params) -> str:
     }, ensure_ascii=False)
 
 
+def tool_get_payment_methods(db: Session, session: SalesSession, **params) -> str:
+    """
+    Lista los métodos de pago configurados y activos de la tienda.
+    El agente la usa cuando el cliente pregunta "cómo pago" o equivalente.
+    """
+    from app.models.payment import PaymentMethod
+
+    methods = (
+        db.query(PaymentMethod)
+        .filter(
+            PaymentMethod.store_id == session.store_id,
+            PaymentMethod.is_active == True,
+        )
+        .order_by(PaymentMethod.sort_order, PaymentMethod.display_name)
+        .all()
+    )
+
+    if not methods:
+        return json.dumps({
+            "methods": [],
+            "count": 0,
+            "message": (
+                "No hay métodos de pago configurados en este momento. Cuando el "
+                "asesor humano tome el caso te va a coordinar el pago."
+            ),
+        }, ensure_ascii=False)
+
+    # Catálogo de providers para enriquecer la respuesta con tipo (efectivo,
+    # transferencia, tarjeta, link de pago, etc.) — si está disponible.
+    try:
+        from app.services.payment_providers import PAYMENT_PROVIDERS
+    except Exception:
+        PAYMENT_PROVIDERS = {}
+
+    out = []
+    for m in methods:
+        info = PAYMENT_PROVIDERS.get(m.provider, {}) if isinstance(PAYMENT_PROVIDERS, dict) else {}
+        out.append({
+            "provider": m.provider,
+            "display_name": m.display_name or info.get("name") or m.provider,
+            "kind": info.get("kind") or info.get("type") or "",
+            "description": info.get("description") or "",
+        })
+
+    return json.dumps({
+        "methods": out,
+        "count": len(out),
+    }, ensure_ascii=False)
+
+
 def tool_get_store_discounts(db: Session, session: SalesSession, **params) -> str:
     """
     Consulta descuentos disponibles para un producto o categoría.
@@ -305,6 +355,24 @@ STORE_TOOL_DEFINITIONS = [
         "function": {
             "name": "get_store_info",
             "description": "Obtener información general de la tienda (nombre, industria, contacto, cantidad de productos)",
+            "parameters": {
+                "type": "object",
+                "properties": {},
+                "required": [],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_payment_methods",
+            "description": (
+                "Lista los métodos de pago configurados y activos de la tienda. "
+                "USALA OBLIGATORIAMENTE cuando el cliente pregunte 'cómo pago', "
+                "'qué métodos aceptan', 'puedo pagar con X', 'aceptan tarjeta', "
+                "etc. NO inventes métodos. Si la lista está vacía, decílo honesto "
+                "y avisá que el vendedor humano va a coordinar el pago."
+            ),
             "parameters": {
                 "type": "object",
                 "properties": {},
