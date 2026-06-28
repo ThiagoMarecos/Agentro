@@ -13,7 +13,9 @@ export type FlowNodeType =
   | "escalate"
   | "collect_data"
   | "delay"
-  | "stage";
+  | "stage"
+  | "wait"
+  | "rule";
 
 export interface FlowNode {
   id: string;
