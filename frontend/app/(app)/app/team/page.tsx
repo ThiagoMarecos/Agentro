@@ -35,7 +35,8 @@ import {
   type Invitation,
   type AssignableRole,
 } from "@/lib/api/team";
-import { Mail, Trash2, X, Plus, Copy, Check, ShieldCheck, ShieldHalf, User as UserIcon } from "lucide-react";
+import { getBillingSummary, type BillingSummary } from "@/lib/api/billing";
+import { Mail, Trash2, X, Plus, Copy, Check, ShieldCheck, ShieldHalf, User as UserIcon, Lock } from "lucide-react";
 
 const ROLE_LABELS: Record<string, string> = {
   owner: "Dueño/a",
@@ -65,6 +66,7 @@ export default function TeamPage() {
   const { user } = useAuth();
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [invitations, setInvitations] = useState<Invitation[]>([]);
+  const [billing, setBilling] = useState<BillingSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [inviteOpen, setInviteOpen] = useState(false);
@@ -73,12 +75,14 @@ export default function TeamPage() {
     if (!currentStore) return;
     setLoading(true);
     try {
-      const [m, i] = await Promise.all([
+      const [m, i, b] = await Promise.all([
         listTeamMembers(currentStore.id),
         listInvitations(currentStore.id),
+        getBillingSummary(currentStore.id).catch(() => null),
       ]);
       setMembers(m);
       setInvitations(i);
+      setBilling(b);
       setError("");
     } catch (e: any) {
       setError(e.message || "Error cargando equipo");
@@ -156,9 +160,14 @@ export default function TeamPage() {
 
       {/* Members */}
       <section className="mt-8">
-        <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3">
-          Miembros ({members.length})
-        </h2>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">
+            Miembros ({members.length})
+          </h2>
+          {billing && !billing.is_hibernating && (
+            <SellerCounter billing={billing} sellersInTeam={members.filter((m) => m.role === "seller").length} />
+          )}
+        </div>
         {/* Mobile: cards */}
         <div className="md:hidden bg-white border border-gray-200 rounded-xl overflow-hidden divide-y divide-gray-100">
           {members.map((m) => (
@@ -339,6 +348,8 @@ export default function TeamPage() {
       {inviteOpen && currentStore && (
         <InviteModal
           storeId={currentStore.id}
+          billing={billing}
+          currentSellers={members.filter((m) => m.role === "seller").length}
           onClose={() => setInviteOpen(false)}
           onCreated={async () => {
             setInviteOpen(false);
@@ -359,12 +370,47 @@ export default function TeamPage() {
 }
 
 
+function SellerCounter({
+  billing,
+  sellersInTeam,
+}: {
+  billing: BillingSummary;
+  sellersInTeam: number;
+}) {
+  const max = billing.usage.sellers_included;
+  const allowExtra = (billing.plan?.allow_extra_sellers ?? false);
+  const total = sellersInTeam;
+  const atLimit = !allowExtra && total >= max;
+
+  return (
+    <div
+      className={`text-xs px-2.5 py-1 rounded-full font-medium ${
+        atLimit
+          ? "bg-amber-100 text-amber-800 border border-amber-300"
+          : "bg-gray-100 text-gray-700 border border-gray-200"
+      }`}
+      title={
+        atLimit
+          ? "Alcanzaste el límite de vendedores. Upgrade para agregar más."
+          : `Vendedores incluidos en plan ${billing.plan?.name ?? billing.tier}`
+      }
+    >
+      Vendedores: {total}{allowExtra ? "" : `/${max}`}
+    </div>
+  );
+}
+
+
 function InviteModal({
   storeId,
+  billing,
+  currentSellers,
   onClose,
   onCreated,
 }: {
   storeId: string;
+  billing: BillingSummary | null;
+  currentSellers: number;
   onClose: () => void;
   onCreated: () => void;
 }) {
@@ -374,6 +420,15 @@ function InviteModal({
   const [error, setError] = useState("");
   const [createdInvite, setCreatedInvite] = useState<Invitation | null>(null);
   const [copied, setCopied] = useState(false);
+
+  // Gating: si elige seller y está al límite (y el plan no permite extras),
+  // el backend va a rechazar. Avisar UX para evitar el roundtrip.
+  const sellerBlocked =
+    billing != null &&
+    !billing.is_hibernating &&
+    role === "seller" &&
+    !billing.plan?.allow_extra_sellers &&
+    currentSellers >= (billing.usage.sellers_included ?? 0);
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -486,6 +541,14 @@ function InviteModal({
                 {role === "manager" && "Casi todo lo del dueño excepto billing y eliminar la tienda."}
               </div>
             </div>
+            {sellerBlocked && (
+              <div className="px-3 py-2 bg-amber-50 border border-amber-300 text-amber-900 text-xs rounded flex items-start gap-2">
+                <Lock className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
+                <span>
+                  Tu plan <strong>{billing?.plan?.name ?? billing?.tier}</strong> incluye {billing?.usage.sellers_included} vendedor{billing?.usage.sellers_included === 1 ? "" : "es"}. Upgrade a Pro para agregar más.
+                </span>
+              </div>
+            )}
             {error && <div className="px-3 py-2 bg-red-50 border border-red-200 text-red-700 text-sm rounded">{error}</div>}
             <div className="flex gap-2 pt-2">
               <button
@@ -497,7 +560,7 @@ function InviteModal({
               </button>
               <button
                 type="submit"
-                disabled={submitting || !email.trim()}
+                disabled={submitting || !email.trim() || sellerBlocked}
                 className="flex-1 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-lg text-sm font-medium"
               >
                 {submitting ? "Enviando…" : "Enviar invitación"}

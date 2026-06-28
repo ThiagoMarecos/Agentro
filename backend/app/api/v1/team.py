@@ -23,6 +23,7 @@ from sqlalchemy.orm import Session
 
 from app.config import get_settings
 from app.core.dependencies import get_current_store, require_role
+from app.core.feature_gating import can_add_seller
 from app.core.security import get_password_hash
 from app.db.session import get_db
 from app.models.store import Store, StoreMember
@@ -253,6 +254,21 @@ def create_invitation(
 ):
     """Crea una invitación + envía el email."""
     _require_manager_or_owner(store, user)
+
+    # Gating por tier: si invita a un seller, verificar que no exceda el
+    # límite del plan. En STARTER (no permite extras) bloquea al llegar a 1.
+    # En PRO/ENTERPRISE permite siempre (los extras se cobran via Stripe).
+    # En modo hibernación SIEMPRE permite (sistema apagado).
+    if payload.role == RoleEnum.SELLER.value:
+        allowed, reason = can_add_seller(db, store)
+        if not allowed:
+            raise HTTPException(
+                status_code=403,
+                detail={
+                    "code": "SELLER_LIMIT_REACHED",
+                    "message": reason or "Límite de vendedores alcanzado.",
+                },
+            )
 
     # Bloquear si ya hay un user con ese email que ya es miembro
     existing_user = db.query(User).filter(User.email == payload.email).first()

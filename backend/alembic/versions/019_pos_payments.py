@@ -117,7 +117,11 @@ def upgrade() -> None:
         batch_op.add_column(sa.Column(
             "payment_method_id",
             sa.String(36),
-            sa.ForeignKey("payment_methods.id", ondelete="SET NULL"),
+            sa.ForeignKey(
+                "payment_methods.id",
+                name="fk_orders_payment_method_id_payment_methods",
+                ondelete="SET NULL",
+            ),
             nullable=True,
         ))
         batch_op.add_column(sa.Column("payment_status", sa.String(20), nullable=True, server_default="pending"))
@@ -126,13 +130,21 @@ def upgrade() -> None:
         batch_op.add_column(sa.Column(
             "created_by_user_id",
             sa.String(36),
-            sa.ForeignKey("users.id", ondelete="SET NULL"),
+            sa.ForeignKey(
+                "users.id",
+                name="fk_orders_created_by_user_id_users",
+                ondelete="SET NULL",
+            ),
             nullable=True,
         ))
         batch_op.add_column(sa.Column(
             "cash_register_id",
             sa.String(36),
-            sa.ForeignKey("cash_registers.id", ondelete="SET NULL"),
+            sa.ForeignKey(
+                "cash_registers.id",
+                name="fk_orders_cash_register_id_cash_registers",
+                ondelete="SET NULL",
+            ),
             nullable=True,
         ))
 

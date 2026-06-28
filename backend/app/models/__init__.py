@@ -18,6 +18,9 @@ from app.models.supplier import Supplier
 from app.models.team import TeamInvitation
 from app.models.payment import PaymentMethod, CashRegister, Refund
 from app.models.invitation_request import InvitationRequest
+from app.models.plan import Plan
+from app.models.agent_flow import AgentFlow
+from app.models.discount import Discount
 
 __all__ = [
     "User",
@@ -49,4 +52,7 @@ __all__ = [
     "CashRegister",
     "Refund",
     "InvitationRequest",
+    "Plan",
+    "AgentFlow",
+    "Discount",
 ]

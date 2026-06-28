@@ -603,6 +603,50 @@ def process_message(
     conversation = _find_or_create_conversation(db, store_id, customer.id, channel)
     session = _find_or_create_session(db, store_id, conversation.id, customer.id)
 
+    # ── Dispatch: si la store eligió custom_flow Y tiene un AgentFlow activo,
+    #     delegar al flow executor en vez del FSM tradicional ────────────
+    store_obj = db.query(Store).filter(Store.id == store_id).first()
+    if (
+        store_obj
+        and getattr(store_obj, "agent_mode", "pretrained") == "custom_flow"
+        and not conversation.agent_paused
+    ):
+        from app.models.agent_flow import AgentFlow as _AgentFlow
+        from app.services import agent_flow_executor
+
+        active_flow = (
+            db.query(_AgentFlow)
+            .filter(_AgentFlow.store_id == store_id, _AgentFlow.is_active.is_(True))
+            .first()
+        )
+        if active_flow:
+            logger.info(
+                f"[agent] store {store_id[:8]} agent_mode=custom_flow → "
+                f"ejecutando flow {active_flow.id[:8]} v{active_flow.version}"
+            )
+            result = agent_flow_executor.run_flow_turn(
+                db=db,
+                store=store_obj,
+                flow=active_flow,
+                conversation=conversation,
+                session=session,
+                user_message=message,
+            )
+            return {
+                "response": result["response"],
+                "pending_media": result["pending_media"],
+                "conversation_id": conversation.id,
+                "session_id": session.id,
+                "stage": result["stage"],
+                "agent_paused": result["escalated"],
+                "via": "custom_flow",
+            }
+        else:
+            logger.info(
+                f"[agent] store {store_id[:8]} agent_mode=custom_flow pero sin "
+                f"flow activo — fallback al FSM tradicional"
+            )
+
     # ── Si un vendedor humano tomó control, el agente no responde ──
     # El mensaje del cliente igual se persiste, pero no generamos respuesta IA.
     # El vendedor lo verá en su inbox y responderá manualmente.

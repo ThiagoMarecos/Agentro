@@ -84,6 +84,21 @@ class Settings(BaseSettings):
     rate_limit_requests: int = 100
     rate_limit_window: int = 60
 
+    # Billing / sistema de tiers
+    # False = modo "hibernación": todo el sistema de planes está construido pero
+    # inactivo. Todos los stores tienen acceso full a todas las features sin pasar
+    # por gating, la página de pricing pública queda oculta y el onboarding no
+    # pide tier. Cuando estés listo para lanzar precios, setear BILLING_ENABLED=true
+    # en el .env y reiniciar — no requiere cambios de código.
+    billing_enabled: bool = False
+
+    # Stripe — para cobrar la suscripción SaaS de Agentro a los dueños de tienda.
+    # Diferente de payment_providers/stripe que es para que las TIENDAS cobren a
+    # SUS clientes. Si BILLING_ENABLED=True estos son obligatorios.
+    stripe_secret_key: str = ""
+    stripe_publishable_key: str = ""
+    stripe_webhook_secret: str = ""  # whsec_... — para validar firmas de webhook
+
     @property
     def cors_origins_list(self) -> List[str]:
         """CORS origins como lista."""

@@ -30,6 +30,11 @@ celery==5.3.6
 httpx==0.26.0
 authlib==1.3.0
 
+# Stripe — SaaS billing (subscriptions, customer portal, webhooks, coupons)
+# Para cobrar la suscripción de Agentro a los dueños de tienda.
+# Diferente de payment_providers/stripe que es para que las TIENDAS cobren a sus clientes.
+stripe>=10.0.0
+
 # AI / LLM
 openai>=1.0.0
 

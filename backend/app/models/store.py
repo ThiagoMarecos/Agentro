@@ -2,12 +2,31 @@
 Modelos de tienda (tenant).
 """
 
-from sqlalchemy import Column, String, Boolean, ForeignKey, Text, Enum, Integer
+from sqlalchemy import Column, String, Boolean, ForeignKey, Text, Enum, Integer, DateTime
 from sqlalchemy.orm import relationship
 import enum
 
 from app.db.session import Base
 from app.db.base import UUIDMixin, TimestampMixin
+
+
+class SubscriptionTierEnum(str, enum.Enum):
+    """Tiers de suscripción de la plataforma (SaaS billing — no confundir con
+    los planes de pago de la tienda hacia sus propios clientes)."""
+
+    STARTER = "starter"
+    PRO = "pro"
+    ENTERPRISE = "enterprise"
+
+
+class SubscriptionStatusEnum(str, enum.Enum):
+    """Estado del cobro recurrente de la tienda hacia Agentro."""
+
+    TRIALING = "trialing"     # En período de prueba de 14 días
+    ACTIVE = "active"         # Pagando normalmente
+    PAST_DUE = "past_due"     # Pago falló, en grace period
+    CANCELED = "canceled"     # Cancelado, ya no se cobra
+    PAUSED = "paused"         # Pausado manualmente (ej. por super admin)
 
 
 class Store(Base, UUIDMixin, TimestampMixin):
@@ -42,6 +61,25 @@ class Store(Base, UUIDMixin, TimestampMixin):
     domain_verified = Column(Boolean, default=False)
 
     is_active = Column(Boolean, default=True)
+
+    # ─── Subscription / billing (sistema de tiers SaaS) ───────────────
+    # Tier de la suscripción. Default 'starter'. Valores en SubscriptionTierEnum.
+    subscription_tier = Column(String(20), nullable=False, default="starter", index=True)
+    # Estado del cobro. Valores en SubscriptionStatusEnum.
+    subscription_status = Column(String(20), nullable=False, default="active", index=True)
+    # Cuándo vence el trial (NULL si nunca estuvo en trial o ya convirtió).
+    trial_ends_at = Column(DateTime(timezone=True), nullable=True)
+    # Stripe — se llenan cuando se confirma plan + tarjeta.
+    stripe_customer_id = Column(String(255), nullable=True, index=True)
+    stripe_subscription_id = Column(String(255), nullable=True)
+    # Beta user — early adopter con acceso full (lifetime discount).
+    # Si is_beta_user=True y beta_features_until>now: override de feature gating.
+    is_beta_user = Column(Boolean, nullable=False, default=False)
+    beta_features_until = Column(DateTime(timezone=True), nullable=True)
+
+    # Agent mode: 'pretrained' = agente curado de Agentro (default, todos los tiers)
+    #             'custom_flow' = agente sigue el AgentFlow activo (Pro+ con flow diseñado)
+    agent_mode = Column(String(20), nullable=False, default="pretrained")
 
     # Relaciones
     members = relationship("StoreMember", back_populates="store", cascade="all, delete-orphan")

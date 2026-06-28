@@ -25,6 +25,8 @@ import {
   Menu,
   X,
   ExternalLink,
+  Bot,
+  Workflow,
 } from "lucide-react";
 import { useAuth } from "@/app/providers/AuthProvider";
 import { useStore } from "@/lib/context/StoreContext";
@@ -39,6 +41,7 @@ const navItems = [
   { href: "/app/customers", label: "Clientes", icon: Users },
   { href: "/app/team", label: "Equipo", icon: UserPlus },
   { href: "/app/pipeline", label: "Pipeline IA", icon: Kanban },
+  { href: "/app/agent-flows", label: "Flujo del agente", icon: Workflow },
   { href: "/app/whatsapp", label: "WhatsApp", icon: Smartphone },
   { href: "/app/suppliers", label: "Proveedores", icon: Truck },
   { href: "/app/channels", label: "Canales", icon: Globe },

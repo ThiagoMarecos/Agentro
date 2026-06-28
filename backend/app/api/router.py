@@ -41,6 +41,9 @@ from app.api.v1 import (
     web_import,
     platform_settings,
     invitation_requests,
+    billing,
+    agent_flows,
+    admin_discounts,
 )
 
 api_router = APIRouter()
@@ -103,3 +106,12 @@ api_router.include_router(storefront.router, prefix="/storefront", tags=["storef
 
 # Invitation requests — POST público + GET admin
 api_router.include_router(invitation_requests.router, tags=["invitation-requests"])
+
+# Billing / suscripción — features, plans, me
+api_router.include_router(billing.router, prefix="/billing", tags=["billing"])
+
+# Agent Flows — editor visual de diagrama de flujo (Enterprise feature)
+api_router.include_router(agent_flows.router, prefix="/agent-flows", tags=["agent-flows"])
+
+# Super Admin — Descuentos de suscripción (Stripe Coupons)
+api_router.include_router(admin_discounts.router, prefix="/admin/discounts", tags=["admin-discounts"])

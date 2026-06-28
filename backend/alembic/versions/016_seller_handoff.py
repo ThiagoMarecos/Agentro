@@ -37,7 +37,11 @@ def upgrade() -> None:
             sa.Column(
                 "assigned_user_id",
                 sa.String(36),
-                sa.ForeignKey("users.id", ondelete="SET NULL"),
+                sa.ForeignKey(
+                    "users.id",
+                    name="fk_conversations_assigned_user_id_users",
+                    ondelete="SET NULL",
+                ),
                 nullable=True,
             )
         )

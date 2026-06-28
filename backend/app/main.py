@@ -39,6 +39,24 @@ async def lifespan(app: FastAPI):
             "Google OAuth no configurado. Configure GOOGLE_CLIENT_ID y GOOGLE_CLIENT_SECRET en .env "
             "para habilitar 'Iniciar con Google'."
         )
+
+    # Seed idempotente de planes (Starter / Pro / Enterprise) — corre en cada
+    # startup pero solo inserta los planes que falten. Si la migración 022 no
+    # se aplicó todavía, falla silenciosamente (la tabla no existe).
+    try:
+        from app.db.session import SessionLocal
+        from app.services.plans_seeder import seed_plans
+
+        db = SessionLocal()
+        try:
+            created = seed_plans(db)
+            if created:
+                logger.info(f"Plans seeder: {created} planes creados en startup")
+        finally:
+            db.close()
+    except Exception as e:
+        logger.warning(f"Plans seeder no ejecutó (tabla aún no existe?): {e}")
+
     logger.info("Iniciando Agentro API")
     yield
     logger.info("Cerrando Agentro API")
