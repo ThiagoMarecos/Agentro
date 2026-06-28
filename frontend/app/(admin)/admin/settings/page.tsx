@@ -52,23 +52,11 @@ const CATEGORY_META: Record<string, { label: string; icon: React.ElementType; co
     color: "text-purple-600 bg-purple-50",
     description: "API Key de Pexels para imágenes de stock automáticas.",
   },
-  billing: {
-    label: "Facturación SaaS",
-    icon: CreditCard,
-    color: "text-emerald-600 bg-emerald-50",
-    description: "Porcentaje de comisión que Agentro cobra por cada venta de las tiendas.",
-  },
   stripe: {
     label: "Stripe (Pagos)",
     icon: CreditCard,
     color: "text-indigo-600 bg-indigo-50",
     description: "Claves de Stripe para procesar pagos. Obtener en dashboard.stripe.com/apikeys.",
-  },
-  vps: {
-    label: "VPS / SSH",
-    icon: Shield,
-    color: "text-slate-600 bg-slate-50",
-    description: "Credenciales SSH para acceder al VPS desde la terminal integrada del panel admin.",
   },
   security: {
     label: "Seguridad",

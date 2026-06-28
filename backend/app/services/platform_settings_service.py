@@ -56,16 +56,6 @@ PLATFORM_KEYS = [
     {"key": "stripe_publishable_key", "label": "Stripe Publishable Key", "category": "stripe", "is_secret": False},
     {"key": "stripe_secret_key", "label": "Stripe Secret Key", "category": "stripe", "is_secret": True},
     {"key": "stripe_webhook_secret", "label": "Stripe Webhook Secret", "category": "stripe", "is_secret": True},
-    # Comisiones SaaS
-    {"key": "saas_commission_percent", "label": "Comisión por venta (%)", "category": "billing", "is_secret": False},
-    # VPS / SSH
-    {"key": "vps_ssh_host", "label": "VPS IP / Host", "category": "vps", "is_secret": False},
-    {"key": "vps_ssh_port", "label": "VPS SSH Port", "category": "vps", "is_secret": False},
-    {"key": "vps_ssh_user", "label": "VPS SSH User", "category": "vps", "is_secret": False},
-    {"key": "vps_ssh_password", "label": "VPS SSH Password", "category": "vps", "is_secret": True},
-    # Agente IA
-    {"key": "agent_master_prompt", "label": "Prompt maestro del agente de ventas", "category": "agent", "is_secret": False},
-    {"key": "agent_model", "label": "Modelo OpenAI del agente", "category": "agent", "is_secret": False},
     # Email transaccional (Resend) — invitaciones de equipo + notif al asignar chat
     {"key": "resend_api_key", "label": "Resend API Key", "category": "email", "is_secret": True},
     {"key": "email_from_address", "label": "Email remitente (ej: 'Agentro <hola@getagentro.com>')", "category": "email", "is_secret": False},
